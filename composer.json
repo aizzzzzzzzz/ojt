@@ -1,0 +1,15 @@
+{
+    "name": "ojt/project",
+    "description": "OJT Project",
+    "type": "project",
+    "require-dev": {
+        "phpunit/phpunit": "^9.0"
+    },
+    "authors": [
+        {
+            "name": "Your Name",
+            "email": "your.email@example.com"
+        }
+    ],
+    "require": {}
+}

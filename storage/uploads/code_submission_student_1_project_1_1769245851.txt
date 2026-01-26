@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+/* Your CSS here */
+body { font-family: sans-serif; }
+</style>
+</head>
+<body>
+<!-- Your HTML here -->
+<h1>Hello World</h1>
+
+<script>
+// Your JavaScript here
+console.log("Hello from JS!");
+</script>
+</body>
+</html>
