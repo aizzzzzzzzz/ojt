@@ -66,7 +66,10 @@ tr:hover { background:#e3f2fd; }
                 <?php if (strpos($s['file_path'], 'storage/uploads/') === 0): ?>
                     <a href="view_submission.php?submission_id=<?= $s['submission_id'] ?>" target="_blank">View Submission</a>
                 <?php else: ?>
-                    <a href="<?= htmlspecialchars($s['file_path']) ?>" target="_blank">View File</a>
+                    <!-- Employer dashboard -->
+                    <a href="view_pdf.php?file=<?= urlencode($s['file_path']) ?>" target="_blank">
+                        View Submission
+                    </a>
                 <?php endif; ?>
             </td>
             <td><?= htmlspecialchars($s['submission_date']) ?></td>

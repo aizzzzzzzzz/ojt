@@ -3,6 +3,14 @@ session_start();
 include_once __DIR__ . '/../private/config.php';
 date_default_timezone_set('Asia/Manila');
 
+$editorPreview = '';
+if (isset($_POST['code_editor'])) {
+    $code = $_POST['code_editor'];
+    ob_start();
+    eval('?>' . $code);
+    $editorPreview = ob_get_clean();
+}
+
 if (!isset($_SESSION['student_id']) || $_SESSION['role'] !== "student") {
     header("Location: student_login.php");
     exit;
@@ -216,7 +224,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_file'])) {
 $submissions_stmt = $pdo->prepare("SELECT ps.*, p.project_name FROM project_submissions ps JOIN projects p ON ps.project_id = p.project_id WHERE ps.student_id = ? ORDER BY ps.submission_date DESC");
 $submissions_stmt->execute([$student_id]);
 $submissions = $submissions_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Default code for editor
+$defaultCode = "<?php\necho 'Hello PHP!';\n?>\n<h1>Hello HTML + CSS + JS!</h1>\n<style>h1{color:#0b3d91;}</style>\n<script>console.log('Hello JS');</script>";
+$safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
 ?>
+<script>
+var defaultCode = <?php echo json_encode($defaultCode); ?>;
+var safeDefaultCode = <?php echo json_encode($safeDefaultCode); ?>;
+</script>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -227,6 +243,13 @@ $submissions = $submissions_stmt->fetchAll(PDO::FETCH_ASSOC);
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/xml/xml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/css/css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/htmlmixed/htmlmixed.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/php/php.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/clike/clike.min.js"></script>
 <style>
     body {
         margin: 0;
@@ -262,6 +285,89 @@ $submissions = $submissions_stmt->fetchAll(PDO::FETCH_ASSOC);
         font-size: 28px;
         font-weight: 600;
         color: #2c3e50;
+    }
+
+    /* Tab Switcher Styles */
+    .tab-switcher {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 20px;
+        border-bottom: 2px solid #e0e0e0;
+        padding-bottom: 10px;
+    }
+
+    .tab-button {
+        padding: 12px 24px;
+        border: none;
+        background: none;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        border-radius: 8px 8px 0 0;
+        transition: all 0.3s ease;
+        margin: 0 5px;
+    }
+
+    .tab-button.active {
+        background: linear-gradient(90deg, #28a745, #85e085);
+        color: white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .tab-button.active:hover {
+        background: linear-gradient(90deg, #28a745, #85e085);
+        color: white;
+    }
+
+    .tab-button:hover {
+        background: #f8f9fa;
+    }
+
+    .tab-content {
+        display: none;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    /* Tab Switcher Styles */
+    .tab-switcher {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 20px;
+        border-bottom: 2px solid #e0e0e0;
+        padding-bottom: 10px;
+    }
+
+    .tab-button {
+        padding: 12px 24px;
+        border: none;
+        background: none;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        border-radius: 8px 8px 0 0;
+        transition: all 0.3s ease;
+        margin: 0 5px;
+    }
+
+    .tab-button.active {
+        background: linear-gradient(90deg, #28a745, #85e085);
+        color: white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .tab-button:hover {
+        background: #f8f9fa;
+    }
+
+    .tab-content {
+        display: none;
+    }
+
+    .tab-content.active {
+        display: block;
     }
 
     .action-buttons {
@@ -571,20 +677,135 @@ $submissions = $submissions_stmt->fetchAll(PDO::FETCH_ASSOC);
         font-size: 14px;
     }
 
-    .CodeMirror {
+    /* Code Editor Split Screen Styles - ADD THIS */
+    #codeTab {
+        display: flex;
+        height: 500px;
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+
+    .editor-half, .preview-half {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .editor-half h6, .preview-half h6 {
+        margin: 0 0 10px 0;
+        font-size: 16px;
+        color: #2c3e50;
+        font-weight: 600;
+    }
+
+    #codeEditorContainer {
+        flex: 1;
         border: 1px solid #ddd;
         border-radius: 6px;
-        height: 400px;
+        overflow: hidden;
+        background: #fff;
+    }
+
+    .CodeMirror {
+        height: 100% !important;
         font-size: 14px !important;
         line-height: 1.5 !important;
     }
 
-    .CodeMirror-scroll {
-        height: 400px;
+    .fullscreen-ide .CodeMirror {
+        height: 100% !important;
+        border-radius: 0;
+        border: none;
     }
 
-    #codeEditorContainer {
-        height: 400px;
+    .CodeMirror-scroll {
+        height: 100%;
+    }
+
+    .fullscreen-ide .CodeMirror-scroll {
+        height: 100% !important;
+    }
+
+
+
+    /* Full Screen IDE Styles */
+    .fullscreen-ide {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: white;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .ide-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px;
+        background: #f8f9fa;
+        border-bottom: 1px solid #e0e0e0;
+        flex-shrink: 0;
+    }
+
+    .ide-header h4 {
+        margin: 0;
+        color: #2c3e50;
+    }
+
+    .ide-content {
+        flex: 1;
+        display: flex;
+        overflow: hidden; /* Prevent expansion */
+        min-height: 0; /* Important for nested flex containers */
+    }
+
+    .code-panel {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid #e0e0e0;
+        overflow: hidden;
+    }
+
+    .output-panel {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .panel-header {
+        padding: 10px;
+        background: #f8f9fa;
+        border-bottom: 1px solid #e0e0e0;
+        font-weight: 600;
+        color: #2c3e50;
+        flex-shrink: 0; /* Prevent header from shrinking */
+    }
+
+    .panel-content {
+        flex: 1;
+        padding: 10px;
+        overflow: hidden; /* Ensure content stays within bounds */
+        position: relative;
+    }
+
+    .fullscreen-ide .panel-content {
+        padding: 0;
+    }
+
+    .ide-controls {
+        display: flex;
+        gap: 10px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-top: 1px solid #e0e0e0;
+        flex-shrink: 0;
     }
 
     .form-group {
@@ -639,7 +860,7 @@ $submissions = $submissions_stmt->fetchAll(PDO::FETCH_ASSOC);
         margin-bottom: 10px;
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 768px) { 
         .dashboard-container {
             padding: 20px;
             margin: 10px;
@@ -712,10 +933,9 @@ $submissions = $submissions_stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="error-msg"><?= htmlspecialchars($m) ?></div>
 <?php endforeach; ?>
 
-<div class="welcome-header">
+<div class="welcome-header" id="welcomeHeader">
     <h2>Welcome, <?= htmlspecialchars($student['name'] ?? 'Student') ?></h2>
     <div class="action-buttons">
-        <a href="#projects-section" class="action-btn btn-primary" style="text-decoration:none;" onclick="document.getElementById('projects-section').scrollIntoView({behavior: 'smooth'}); return false;">📝 Projects</a>
         <a href="logout.php" class="action-btn btn-primary" style="text-decoration:none;">🚪 Logout</a>
         <button class="action-btn btn-primary" onclick="window.print()">🖨️ Print</button>
     </div>
@@ -723,114 +943,278 @@ $submissions = $submissions_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 
 
-<div class="summary">
+<div class="summary" id="summarySection">
     <p><strong>Total Hours:</strong> <?= $hours ?> hr <?= $minutes ?> min / 200h</p>
     <p><strong>Status:</strong> <span class="status <?= $statusClass ?>"><?= $statusText ?></span></p>
     <p><strong>Today:</strong> <?= $today ?></p>
 </div>
 
+<!-- Tab Switcher -->
+<div class="tab-switcher">
+<button class="tab-button active" onclick="switchTab('attendance', this)">📅 Attendance</button>
+<button class="tab-button" onclick="switchTab('projects', this)">📝 Projects</button>
+</div>
 
-<div style="margin-bottom:20px; text-align:left; padding:16px; border:1px solid #e0e0e0; background:#fff; border-radius:10px;">
-    <h3 style="margin-top:0;">Daily Task / Activity</h3>
+<!-- Attendance Tab Content -->
+<div id="attendance-tab" class="tab-content active">
+    <div style="margin-bottom:20px; text-align:left; padding:16px; border:1px solid #e0e0e0; background:#fff; border-radius:10px;">
+        <h3 style="margin-top:0;">Daily Task / Activity</h3>
 
-    <form method="POST">
-        <textarea 
-            name="daily_task" 
-            rows="4" 
-            style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc; font-size:14px;"
-            placeholder="Write what you did today..."
-        ><?= htmlspecialchars($today_row['daily_task'] ?? '') ?></textarea>
+        <form method="POST">
+            <textarea
+                name="daily_task"
+                rows="4"
+                style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc; font-size:14px;"
+                placeholder="Write what you did today..."
+            ><?= htmlspecialchars($today_row['daily_task'] ?? '') ?></textarea>
 
-        <button type="submit" name="save_task"
-            class="action-btn btn-primary"
-            style="margin-top:10px;">
-            💾 Save Task
+            <button type="submit" name="save_task"
+                class="action-btn btn-primary"
+                style="margin-top:10px;">
+                💾 Save Task
+            </button>
+        </form>
+
+        <p style="color:#777; margin-top:8px; font-size:13px;">
+            You can only write/edit your task for <strong><?= $today ?></strong>.
+        </p>
+    </div>
+
+    <div style="text-align:left; margin-bottom:20px; border-radius:10px; padding:16px; border:1px solid #e0e0e0; background:#f8f9fa;">
+    <h3 style="margin-top:0;">Attendance Actions</h3>
+    <div class="attendance-actions">
+    <?php
+    $time_in_done    = !empty($today_row['time_in']);
+    $lunch_out_done  = !empty($today_row['lunch_out']);
+    $lunch_in_done   = !empty($today_row['lunch_in']);
+    $time_out_done   = !empty($today_row['time_out']);
+    $actions = [
+        'time_in' => '🟢 Time In',
+        'lunch_out' => '🍽️ Lunch Out',
+        'lunch_in' => '🍽️ Lunch In',
+        'time_out' => '🔴 Time Out'
+    ];
+    foreach($actions as $key=>$label):
+        $done = ${$key.'_done'};
+        $disabled = '';
+        if ($key=='lunch_out' && (!$time_in_done || $done)) $disabled=true;
+        if ($key=='lunch_in' && (!$lunch_out_done || $done)) $disabled=true;
+        if ($key=='time_out' && (!$time_in_done || $done)) $disabled=true;
+    ?>
+    <form method="post" style="margin:0;">
+        <input type="hidden" name="attendance_action" value="<?= $key ?>">
+        <button type="submit" class="action-btn <?= $done||$disabled?'btn-disabled':'btn-primary' ?>" <?= $done||$disabled?'disabled':'' ?>>
+            <?= $label ?>
         </button>
     </form>
+    <?php endforeach; ?>
+    </div>
+    <p style="margin-top:10px; color:#666; font-size:14px;">Note: Buttons disable after recording.</p>
+    </div>
 
-    <p style="color:#777; margin-top:8px; font-size:13px;">
-        You can only write/edit your task for <strong><?= $today ?></strong>.
-    </p>
+    <h3>Attendance History</h3>
+
+    <!-- Desktop Table View -->
+    <div class="table-section desktop-view">
+    <table>
+    <thead>
+    <tr>
+    <th>Date</th>
+    <th>Time In</th>
+    <th>Lunch Out</th>
+    <th>Lunch In</th>
+    <th>Time Out</th>
+    <th>Status</th>
+    <th>Verified</th>
+    <th>Hours (Daily)</th>
+    <th>Task</th>
+    </tr>
+    </thead>
+    <tbody>
+    <?php foreach($attendance as $row): ?>
+    <tr>
+    <td data-label="Date"><?= htmlspecialchars($row['log_date']) ?></td>
+    <td data-label="Time In"><?= (strpos($row['time_in'], '0000') === false && !empty($row['time_in'])) ? date('H:i:s', strtotime($row['time_in'])) : '-' ?></td>
+    <td data-label="Lunch Out"><?= (strpos($row['lunch_out'], '0000') === false && !empty($row['lunch_out'])) ? date('H:i:s', strtotime($row['lunch_out'])) : '-' ?></td>
+    <td data-label="Lunch In"><?= (strpos($row['lunch_in'], '0000') === false && !empty($row['lunch_in'])) ? date('H:i:s', strtotime($row['lunch_in'])) : '-' ?></td>
+    <td data-label="Time Out"><?= (strpos($row['time_out'], '0000') === false && !empty($row['time_out'])) ? date('H:i:s', strtotime($row['time_out'])) : '-' ?></td>
+    <td data-label="Status">
+        <?php
+        $status = $row['status'] ?: '---';
+        $status_class = '';
+        if (strtolower($status) === 'present') $status_class = "style='color: green; font-weight: bold;'";
+        if (strtolower($status) === 'absent')  $status_class = "style='color: red; font-weight: bold;'";
+        if (strtolower($status) === 'excused') $status_class = "style='color: orange; font-weight: bold;'";
+        ?>
+        <span <?= $status_class ?>><?= htmlspecialchars($status) ?></span>
+    <td data-label="Verified">
+        <?php if ($row['verified'] == 1): ?>
+            <span style="color:green; font-weight:bold;">✓ Verified</span>
+        <?php else: ?>
+            <span style="color:orange; font-weight:bold;">⏳ Pending</span>
+        <?php endif; ?>
+    </td>
+    <td data-label="Hours (Daily)">
+    <?php
+    $minutesWorked = 0;
+
+    if (!empty($row['time_in']) && !empty($row['time_out']) && strpos($row['time_in'], '0000') === false && strpos($row['time_out'], '0000') === false) {
+        $minutesWorked = max(0, (strtotime($row['time_out']) - strtotime($row['time_in'])) / 60);
+
+        if (!empty($row['lunch_in']) && !empty($row['lunch_out']) && strpos($row['lunch_in'], '0000') === false && strpos($row['lunch_out'], '0000') === false) {
+            $minutesWorked -= max(0, (strtotime($row['lunch_in']) - strtotime($row['lunch_out'])) / 60);
+        }
+
+        echo floor($minutesWorked / 60) . " hr " . ($minutesWorked % 60) . " min";
+    } else {
+        echo "-";
+    }
+    ?>
+    </td>
+
+    <td data-label="Task">
+        <?= !empty($row['daily_task']) ? htmlspecialchars($row['daily_task']) : '-' ?>
+    </td>
+    </tr>
+    <?php endforeach; ?>
+    </tbody>
+    </table>
+    </div>
+
+    <!-- Mobile Card View -->
+    <div class="mobile-view">
+    <?php foreach($attendance as $row): ?>
+    <div class="attendance-card">
+        <div class="card-header">
+            <strong>Date: <?= htmlspecialchars($row['log_date']) ?></strong>
+            <span class="status-badge">
+                <?php
+                $status = $row['status'] ?: '---';
+                $status_class = '';
+                if (strtolower($status) === 'present') $status_class = "style='background: #d4edda; color: #155724;'";
+                if (strtolower($status) === 'absent')  $status_class = "style='background: #f8d7da; color: #721c24;'";
+                if (strtolower($status) === 'excused') $status_class = "style='background: #fff3cd; color: #856404;'";
+                ?>
+                <span class="status-text" <?= $status_class ?>><?= htmlspecialchars($status) ?></span>
+                <?php if ($row['verified'] == 1): ?>
+                    <span class="verified-badge">✓ Verified</span>
+                <?php else: ?>
+                    <span class="unverified-badge">✗ Not Verified</span>
+                <?php endif; ?>
+            </span>
+        </div>
+        <div class="card-body">
+            <div class="time-info">
+                <div class="time-row">
+                    <span class="label">Time In:</span>
+                    <span class="value"><?= (strpos($row['time_in'], '0000') === false && !empty($row['time_in'])) ? date('H:i:s', strtotime($row['time_in'])) : '-' ?></span>
+                </div>
+                <div class="time-row">
+                    <span class="label">Lunch Out:</span>
+                    <span class="value"><?= (strpos($row['lunch_out'], '0000') === false && !empty($row['lunch_out'])) ? date('H:i:s', strtotime($row['lunch_out'])) : '-' ?></span>
+                </div>
+                <div class="time-row">
+                    <span class="label">Lunch In:</span>
+                    <span class="value"><?= (strpos($row['lunch_in'], '0000') === false && !empty($row['lunch_in'])) ? date('H:i:s', strtotime($row['lunch_in'])) : '-' ?></span>
+                </div>
+                <div class="time-row">
+                    <span class="label">Time Out:</span>
+                    <span class="value"><?= (strpos($row['time_out'], '0000') === false && !empty($row['time_out'])) ? date('H:i:s', strtotime($row['time_out'])) : '-' ?></span>
+                </div>
+                <div class="time-row">
+                    <span class="label">Hours Worked:</span>
+                    <span class="value">
+                    <?php
+                    $minutesWorked = 0;
+                    if (!empty($row['time_in']) && !empty($row['time_out']) && strpos($row['time_in'], '0000') === false && strpos($row['time_out'], '0000') === false) {
+                        $minutesWorked = max(0, (strtotime($row['time_out']) - strtotime($row['time_in'])) / 60);
+                        if (!empty($row['lunch_in']) && !empty($row['lunch_out']) && strpos($row['lunch_in'], '0000') === false && strpos($row['lunch_out'], '0000') === false) {
+                            $minutesWorked -= max(0, (strtotime($row['lunch_in']) - strtotime($row['lunch_out'])) / 60);
+                        }
+                        echo floor($minutesWorked / 60) . " hr " . ($minutesWorked % 60) . " min";
+                    } else {
+                        echo "-";
+                    }
+                    ?>
+                    </span>
+                </div>
+            </div>
+            <div class="task-info">
+                <strong>Task:</strong>
+                <p><?= !empty($row['daily_task']) ? htmlspecialchars($row['daily_task']) : 'No task recorded' ?></p>
+            </div>
+        </div>
+    </div>
+    <?php endforeach; ?>
+    </div>
 </div>
 
-<div style="text-align:left; margin-bottom:20px; border-radius:10px; padding:16px; border:1px solid #e0e0e0; background:#f8f9fa;">
-<h3 style="margin-top:0;">Attendance Actions</h3>
-<div class="attendance-actions">
-<?php
-$time_in_done    = !empty($today_row['time_in']);
-$lunch_out_done  = !empty($today_row['lunch_out']);
-$lunch_in_done   = !empty($today_row['lunch_in']);
-$time_out_done   = !empty($today_row['time_out']);
-$actions = [
-    'time_in' => '🟢 Time In',
-    'lunch_out' => '🍽️ Lunch Out',
-    'lunch_in' => '🍽️ Lunch In',
-    'time_out' => '🔴 Time Out'
-];
-foreach($actions as $key=>$label):
-    $done = ${$key.'_done'};
-    $disabled = '';
-    if ($key=='lunch_out' && (!$time_in_done || $done)) $disabled=true;
-    if ($key=='lunch_in' && (!$lunch_out_done || $done)) $disabled=true;
-    if ($key=='time_out' && (!$time_in_done || $done)) $disabled=true;
-?>
-<form method="post" style="margin:0;">
-    <input type="hidden" name="attendance_action" value="<?= $key ?>">
-    <button type="submit" class="action-btn <?= $done||$disabled?'btn-disabled':'btn-primary' ?>" <?= $done||$disabled?'disabled':'' ?>>
-        <?= $label ?>
-    </button>
-</form>
-<?php endforeach; ?>
-</div>
-<p style="margin-top:10px; color:#666; font-size:14px;">Note: Buttons disable after recording.</p>
-</div>
-
-<!-- Projects and File Submission Section -->
-<div class="projects-section" id="projects-section">
+<!-- Projects Tab Content -->
+<div id="projects-tab" class="tab-content">
+    <div class="projects-section" id="projects-section">
     <h3>📝 OJT Projects</h3>
     <?php if (!empty($submitError)): ?>
         <div class="error-msg"><?= htmlspecialchars($submitError) ?></div>
     <?php endif; ?>
-    
-    <?php if (!empty($projects)): ?>
-        <div class="projects-grid">
-            <?php foreach ($projects as $project): ?>
-                <div class="project-card" onclick="selectProject(<?= $project['project_id'] ?>, '<?= htmlspecialchars(addslashes($project['project_name'])) ?>')">
-                    <h5><?= htmlspecialchars($project['project_name']) ?></h5>
-                    <p><?= htmlspecialchars(substr($project['description'], 0, 100)) ?>...</p>
-                    <div style="font-size: 12px; color: #999; margin-top: 10px;">
-                        <div>📅 Due: <?= date('M d, Y', strtotime($project['due_date'])) ?></div>
-                        <div>Status: <span style="color: #28a745; font-weight: bold;"><?= ucfirst($project['status']) ?></span></div>
+
+    <div id="projectsGrid" style="display:block;">
+        <?php if (!empty($projects)): ?>
+            <div class="projects-grid">
+                <?php foreach ($projects as $project): ?>
+                    <div class="project-card" onclick="selectProjectForSubmission(<?= $project['project_id'] ?>, '<?= htmlspecialchars($project['project_name']) ?>')">
+                        <h5><?= htmlspecialchars($project['project_name']) ?></h5>
+                        <p><?= htmlspecialchars(substr($project['description'], 0, 100)) ?>...</p>
+                        <div style="font-size: 12px; color: #999; margin-top: 10px;">
+                            <div>📅 Due: <?= date('M d, Y', strtotime($project['due_date'])) ?></div>
+                            <div>Status: <span style="color: #28a745; font-weight: bold;"><?= ucfirst($project['status']) ?></span></div>
+                        </div>
                     </div>
-                </div>
-            <?php endforeach; ?>
-        </div>
-    <?php else: ?>
-        <p style="color: #999;">No projects available yet.</p>
-    <?php endif; ?>
+                <?php endforeach; ?>
+            </div>
+        <?php else: ?>
+            <p style="color: #999;">No projects available yet.</p>
+        <?php endif; ?>
+    </div>
+    </div>
 
     <!-- File Submission Section -->
     <div class="code-editor-section" id="submissionSection" style="display:none;">
-        <h4>📤 Submit for <span id="selectedProjectName"></span></h4>
+        <h4>📤 Submit for: <span id="selectedProjectName"></span></h4>
+        <div style="margin-bottom: 15px;">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="cancelSubmission()">← Back to Projects</button>
+        </div>
+
         <form method="POST" enctype="multipart/form-data" id="submissionForm">
             <input type="hidden" name="project_id" id="projectId" value="">
             <input type="hidden" name="submission_type" id="submissionType" value="code">
-            
+
             <!-- Submission Type Toggle -->
             <div style="margin-bottom: 20px; display: flex; gap: 10px; border-bottom: 2px solid #e0e0e0; padding-bottom: 15px;">
-                <button type="button" class="btn btn-sm" id="codeTabBtn" style="border: none; border-bottom: 3px solid #28a745; padding: 8px 15px; background: none; color: #28a745; font-weight: 600;" onclick="switchTab('code')">
+                <button type="button" class="btn btn-sm" id="codeTabBtn" style="border: none; border-bottom: 3px solid #28a745; padding: 8px 15px; background: none; color: #28a745; font-weight: 600;" onclick="switchSubmissionTab('code')">
                     ✏️ Write Code
                 </button>
-                <button type="button" class="btn btn-sm" id="fileTabBtn" style="border: none; padding: 8px 15px; background: none; color: #999; font-weight: 600;" onclick="switchTab('file')">
+                <button type="button" class="btn btn-sm" id="fileTabBtn" style="border: none; padding: 8px 15px; background: none; color: #999; font-weight: 600;" onclick="switchSubmissionTab('file')">
                     📎 Upload File
                 </button>
             </div>
 
             <!-- Code Editor Tab -->
-            <div id="codeTab" style="display: block;">
-                <small style="color: #666; display: block; margin-bottom: 10px;">💡 Supports: PHP, HTML, CSS, Java, JavaScript, and more</small>
-                <textarea id="codeEditor" name="code_content" style="display:none;"></textarea>
-                <div id="codeEditorContainer" style="border: 1px solid #ddd; border-radius: 6px; margin-bottom: 15px;"></div>
+            <small style="color: #666; display: block; margin-bottom: 10px;">💡 Supports: PHP, HTML, CSS, Java, JavaScript, and more</small>
+            <div id="codeTab" style="display: none;">
+                <div class="editor-half">
+                    <h6>Code Editor:</h6>
+                    <div id="codeEditorContainer">
+                        <textarea id="codeEditor" name="code_content"><?php echo htmlspecialchars($defaultCode); ?></textarea>
+                    </div>
+                </div>
+
+                <div class="preview-half">
+                    <div class="preview-controls">
+                        <h6>Preview Output:</h6>
+                        <button type="button" id="runCodeBtn" class="btn btn-primary btn-sm">▶️ Run Code</button>
+                    </div>
+                    <iframe id="editorPreview" style="height: 100%;"></iframe>
+                </div>
             </div>
 
             <!-- File Upload Tab -->
@@ -838,7 +1222,6 @@ foreach($actions as $key=>$label):
                 <div class="form-group" style="margin-bottom: 15px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">📎 Upload File:</label>
                     <input type="file" name="submission_file" id="submissionFile" class="form-control" accept=".pdf,.doc,.docx,.txt,.zip,.rar,.php,.html,.css,.java,.js">
-                    <small style="color: #999;">Allowed: PDF, DOC, DOCX, TXT, ZIP, RAR, PHP, HTML, CSS, JAVA, JS (Max: 10MB)</small>
                 </div>
             </div>
 
@@ -848,20 +1231,23 @@ foreach($actions as $key=>$label):
                 <textarea name="remarks" class="form-control" rows="3" placeholder="Add any notes or comments about your submission..."></textarea>
             </div>
 
-            <button type="submit" name="submit_file" class="btn btn-primary submit-code-btn">📤 Submit</button>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button type="submit" name="submit_file" class="btn btn-success">📤 Submit Project</button>
+                <button type="button" class="btn btn-secondary" onclick="cancelSubmission()">Cancel</button>
+            </div>
         </form>
     </div>
 
     <!-- Submissions History -->
     <?php if (!empty($submissions)): ?>
-        <div class="submissions-list">
+        <div class="submissions-list" style="margin-top: 30px;">
             <h5>📋 Your Submissions</h5>
             <?php foreach ($submissions as $sub): ?>
                 <div class="submission-card">
                     <h6><?= htmlspecialchars($sub['project_name']) ?></h6>
                     <div class="submission-meta">
                         <div>📅 Submitted: <strong><?= date('M d, Y H:i', strtotime($sub['submission_date'])) ?></strong></div>
-                        <div>Status: <strong style="color: <?= $sub['submission_status'] == 'approved' ? '#28a745' : ($sub['submission_status'] == 'rejected' ? '#dc3545' : '#ffc107') ?>;"><?= ucfirst($sub['submission_status']) ?></strong></div>
+                        <div>Status: <strong style="color: <?= $sub['status'] == 'Approved' ? '#28a745' : ($sub['status'] == 'Rejected' ? '#dc3545' : '#ffc107') ?>;"><?= ucfirst($sub['status']) ?></strong></div>
                         <?php if (!empty($sub['remarks'])): ?>
                             <div>📝 Your Notes: <?= htmlspecialchars($sub['remarks']) ?></div>
                         <?php endif; ?>
@@ -876,142 +1262,6 @@ foreach($actions as $key=>$label):
             <?php endforeach; ?>
         </div>
     <?php endif; ?>
-</div>
-
-<h3>Attendance History</h3>
-
-<!-- Desktop Table View -->
-<div class="table-section desktop-view">
-<table>
-<thead>
-<tr>
-<th>Date</th>
-<th>Time In</th>
-<th>Lunch Out</th>
-<th>Lunch In</th>
-<th>Time Out</th>
-<th>Status</th>
-<th>Verified</th>
-<th>Hours (Daily)</th>
-<th>Task</th>
-</tr>
-</thead>
-<tbody>
-<?php foreach($attendance as $row): ?>
-<tr>
-<td data-label="Date"><?= htmlspecialchars($row['log_date']) ?></td>
-<td data-label="Time In"><?= (strpos($row['time_in'], '0000') === false && !empty($row['time_in'])) ? date('H:i:s', strtotime($row['time_in'])) : '-' ?></td>
-<td data-label="Lunch Out"><?= (strpos($row['lunch_out'], '0000') === false && !empty($row['lunch_out'])) ? date('H:i:s', strtotime($row['lunch_out'])) : '-' ?></td>
-<td data-label="Lunch In"><?= (strpos($row['lunch_in'], '0000') === false && !empty($row['lunch_in'])) ? date('H:i:s', strtotime($row['lunch_in'])) : '-' ?></td>
-<td data-label="Time Out"><?= (strpos($row['time_out'], '0000') === false && !empty($row['time_out'])) ? date('H:i:s', strtotime($row['time_out'])) : '-' ?></td>
-<td data-label="Status">
-    <?php
-    $status = $row['status'] ?: '---';
-    $status_class = '';
-    if (strtolower($status) === 'present') $status_class = "style='color: green; font-weight: bold;'";
-    if (strtolower($status) === 'absent')  $status_class = "style='color: red; font-weight: bold;'";
-    if (strtolower($status) === 'excused') $status_class = "style='color: orange; font-weight: bold;'";
-    ?>
-    <span <?= $status_class ?>><?= htmlspecialchars($status) ?></span>
-<td data-label="Verified">
-    <?php if ($row['verified'] == 1): ?>
-        <span style="color:green; font-weight:bold;">✓ Verified</span>
-    <?php else: ?>
-        <span style="color:orange; font-weight:bold;">⏳ Pending</span>
-    <?php endif; ?>
-</td>
-<td data-label="Hours (Daily)">
-<?php
-$minutesWorked = 0;
-
-if (!empty($row['time_in']) && !empty($row['time_out']) && strpos($row['time_in'], '0000') === false && strpos($row['time_out'], '0000') === false) {
-    $minutesWorked = max(0, (strtotime($row['time_out']) - strtotime($row['time_in'])) / 60);
-
-    if (!empty($row['lunch_in']) && !empty($row['lunch_out']) && strpos($row['lunch_in'], '0000') === false && strpos($row['lunch_out'], '0000') === false) {
-        $minutesWorked -= max(0, (strtotime($row['lunch_in']) - strtotime($row['lunch_out'])) / 60);
-    }
-
-    echo floor($minutesWorked / 60) . " hr " . ($minutesWorked % 60) . " min";
-} else {
-    echo "-";
-}
-?>
-</td>
-
-<td data-label="Task">
-    <?= !empty($row['daily_task']) ? htmlspecialchars($row['daily_task']) : '-' ?>
-</td>
-</tr>
-<?php endforeach; ?>
-</tbody>
-</table>
-</div>
-
-<!-- Mobile Card View -->
-<div class="mobile-view">
-<?php foreach($attendance as $row): ?>
-<div class="attendance-card">
-    <div class="card-header">
-        <strong>Date: <?= htmlspecialchars($row['log_date']) ?></strong>
-        <span class="status-badge">
-            <?php
-            $status = $row['status'] ?: '---';
-            $status_class = '';
-            if (strtolower($status) === 'present') $status_class = "style='background: #d4edda; color: #155724;'";
-            if (strtolower($status) === 'absent')  $status_class = "style='background: #f8d7da; color: #721c24;'";
-            if (strtolower($status) === 'excused') $status_class = "style='background: #fff3cd; color: #856404;'";
-            ?>
-            <span class="status-text" <?= $status_class ?>><?= htmlspecialchars($status) ?></span>
-            <?php if ($row['verified'] == 1): ?>
-                <span class="verified-badge">✓ Verified</span>
-            <?php else: ?>
-                <span class="unverified-badge">✗ Not Verified</span>
-            <?php endif; ?>
-        </span>
-    </div>
-    <div class="card-body">
-        <div class="time-info">
-            <div class="time-row">
-                <span class="label">Time In:</span>
-                <span class="value"><?= (strpos($row['time_in'], '0000') === false && !empty($row['time_in'])) ? date('H:i:s', strtotime($row['time_in'])) : '-' ?></span>
-            </div>
-            <div class="time-row">
-                <span class="label">Lunch Out:</span>
-                <span class="value"><?= (strpos($row['lunch_out'], '0000') === false && !empty($row['lunch_out'])) ? date('H:i:s', strtotime($row['lunch_out'])) : '-' ?></span>
-            </div>
-            <div class="time-row">
-                <span class="label">Lunch In:</span>
-                <span class="value"><?= (strpos($row['lunch_in'], '0000') === false && !empty($row['lunch_in'])) ? date('H:i:s', strtotime($row['lunch_in'])) : '-' ?></span>
-            </div>
-            <div class="time-row">
-                <span class="label">Time Out:</span>
-                <span class="value"><?= (strpos($row['time_out'], '0000') === false && !empty($row['time_out'])) ? date('H:i:s', strtotime($row['time_out'])) : '-' ?></span>
-            </div>
-            <div class="time-row">
-                <span class="label">Hours Worked:</span>
-                <span class="value">
-                <?php
-                $minutesWorked = 0;
-                if (!empty($row['time_in']) && !empty($row['time_out']) && strpos($row['time_in'], '0000') === false && strpos($row['time_out'], '0000') === false) {
-                    $minutesWorked = max(0, (strtotime($row['time_out']) - strtotime($row['time_in'])) / 60);
-                    if (!empty($row['lunch_in']) && !empty($row['lunch_out']) && strpos($row['lunch_in'], '0000') === false && strpos($row['lunch_out'], '0000') === false) {
-                        $minutesWorked -= max(0, (strtotime($row['lunch_in']) - strtotime($row['lunch_out'])) / 60);
-                    }
-                    echo floor($minutesWorked / 60) . " hr " . ($minutesWorked % 60) . " min";
-                } else {
-                    echo "-";
-                }
-                ?>
-                </span>
-            </div>
-        </div>
-        <div class="task-info">
-            <strong>Task:</strong>
-            <p><?= !empty($row['daily_task']) ? htmlspecialchars($row['daily_task']) : 'No task recorded' ?></p>
-        </div>
-    </div>
-</div>
-<?php endforeach; ?>
 </div>
 
 <!-- Verified Attendance Modal -->
@@ -1034,44 +1284,121 @@ if (!empty($row['time_in']) && !empty($row['time_out']) && strpos($row['time_in'
 
 </div>
 
+<!-- Full Screen IDE Modal -->
+<div id="fullscreenIDE" class="fullscreen-ide" style="display: none;">
+    <div class="ide-header">
+        <h4 id="ideProjectName">Project IDE</h4>
+        <button onclick="closeFullScreenIDE()" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;">✕</button>
+    </div>
+    <div class="ide-content">
+        <div class="code-panel">
+            <div class="panel-header">Code Editor</div>
+            <div class="panel-content">
+                <textarea id="fullscreenEditor"></textarea>
+            </div>
+        </div>
+        <div class="output-panel">
+            <div class="panel-header">Output Preview</div>
+            <div class="panel-content">
+                <iframe id="fullscreenPreview" style="width: 100%; height: 100%; border: none;"></iframe>
+            </div>
+        </div>
+    </div>
+    <div class="ide-controls">
+        <button onclick="runCode()" class="btn btn-primary">▶️ Run Code</button>
+        <button onclick="generatePDF()" class="btn btn-success">📄 Generate PDF & Submit</button>
+        <button onclick="closeFullScreenIDE()" class="btn btn-secondary">❌ Close</button>
+    </div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/htmlmixed/htmlmixed.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/css/css.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/php/php.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/clike/clike.min.js"></script>
 <script>
-// Initialize CodeMirror
-let editor = null;
+// ========== GLOBAL FUNCTIONS ==========
 
-function selectProject(projectId, projectName) {
-    document.getElementById('projectId').value = projectId;
-    document.getElementById('selectedProjectName').textContent = projectName;
-    document.getElementById('submissionSection').style.display = 'block';
-    
-    // Initialize editor if not already done
-    if (!editor) {
-        editor = CodeMirror(document.getElementById('codeEditorContainer'), {
-            lineNumbers: true,
-            theme: 'monokai',
-            indentUnit: 4,
-            indentWithTabs: false,
-            lineWrapping: true,
-            mode: null,
-            value: ''
-        });
+// Tab switching function
+function switchTab(tabName, button) {
+    // Hide all tab contents
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabContents.forEach(content => content.classList.remove('active'));
+
+    // Remove active class from all tab buttons
+    const tabButtons = document.querySelectorAll('.tab-button');
+    tabButtons.forEach(btn => btn.classList.remove('active'));
+
+    // Show selected tab content
+    document.getElementById(tabName + '-tab').classList.add('active');
+
+    // Add active class to clicked button
+    button.classList.add('active');
+
+    // Hide/show welcome header and summary based on tab
+    const welcomeHeader = document.getElementById('welcomeHeader');
+    const summarySection = document.getElementById('summarySection');
+
+    if (tabName === 'projects') {
+        if (welcomeHeader) welcomeHeader.style.display = 'none';
+        if (summarySection) summarySection.style.display = 'none';
+
+        document.getElementById('submissionSection').style.display = 'none';
+        document.getElementById('projects-section').style.display = 'block';
+
+        // Initialize CodeMirror if not already done
+        if (!window.codeEditor) {
+            // Wait a bit for the tab to be visible
+            setTimeout(initCodeEditor, 100);
+        }
+    } else {
+        if (welcomeHeader) welcomeHeader.style.display = 'flex';
+        if (summarySection) summarySection.style.display = 'block';
     }
-    
-    // Scroll to submission section
-    document.getElementById('submissionSection').scrollIntoView({ behavior: 'smooth' });
 }
 
-function switchTab(tabType) {
+// Project selection for submission
+function selectProjectForSubmission(projectId, projectName) {
+    // Show submission section
+    document.getElementById('projects-section').style.display = 'none';
+    document.getElementById('submissionSection').style.display = 'block';
+
+    // Set project info
+    document.getElementById('selectedProjectName').textContent = projectName;
+    document.getElementById('projectId').value = projectId;
+
+    // Reset form and preview
+    document.getElementById('submissionForm').reset();
+    document.getElementById('editorPreview').srcdoc = '';
+    document.getElementById('submissionFile').value = '';
+
+    // Switch to code tab by default
+    switchSubmissionTab('code');
+
+    // Initialize CodeMirror and attach events after display is set
+    setTimeout(() => {
+        if (!window.codeEditor) {
+            initCodeEditor();
+        } else {
+            // Reset editor content to default
+            window.codeEditor.setValue(<?php echo json_encode($safeDefaultCode); ?>);
+        }
+
+        // Attach run button event
+        const runBtn = document.getElementById('runCodeBtn');
+        if (runBtn) {
+            runBtn.addEventListener('click', runCodePreview);
+        }
+    }, 100);
+}
+
+function cancelSubmission() {
+    // Hide submission section, show project list
+    document.getElementById('submissionSection').style.display = 'none';
+    document.getElementById('projects-section').style.display = 'block';
+}
+
+function switchSubmissionTab(tabType) {
     const submissionType = document.getElementById('submissionType');
-    
+
     if (tabType === 'code') {
         submissionType.value = 'code';
-        document.getElementById('codeTab').style.display = 'block';
+        document.getElementById('codeTab').style.display = 'flex';
         document.getElementById('fileTab').style.display = 'none';
         document.getElementById('codeTabBtn').style.borderBottom = '3px solid #28a745';
         document.getElementById('codeTabBtn').style.color = '#28a745';
@@ -1088,35 +1415,128 @@ function switchTab(tabType) {
     }
 }
 
-
-
-// Save editor content to textarea before form submission
-document.getElementById('submissionForm').addEventListener('submit', function(e) {
-    const submissionType = document.getElementById('submissionType').value;
-    
-    if (submissionType === 'code') {
-        if (editor) {
-            document.getElementById('codeEditor').value = editor.getValue();
-        }
-        if (!editor || editor.getValue().trim() === '') {
-            e.preventDefault();
-            alert('Please write some code before submitting');
-            return false;
-        }
-    } else {
-        if (!document.getElementById('submissionFile').files.length) {
-            e.preventDefault();
-            alert('Please select a file to submit');
-            return false;
-        }
+// Run code for preview
+function runCodePreview() {
+    if (window.codeEditor) {
+        const code = window.codeEditor.getValue();
+        const iframe = document.getElementById('editorPreview');
+        iframe.srcdoc = code;
     }
-});
+}
+
+// Initialize CodeMirror editor
+function initCodeEditor() {
+    const textarea = document.getElementById('codeEditor');
+    if (!textarea) {
+        console.error('codeEditor textarea not found!');
+        return;
+    }
+    
+    // Destroy existing editor instance if it exists
+    if (window.codeEditor) {
+        window.codeEditor.toTextArea();
+        window.codeEditor = null;
+    }
+    
+    window.codeEditor = CodeMirror.fromTextArea(textarea, {
+        lineNumbers: true,
+        theme: "monokai",
+        tabSize: 4,
+        lineWrapping: true,
+        matchBrackets: true,
+        autoCloseBrackets: true,
+        mode: "application/x-httpd-php",
+        value: defaultCode || safeDefaultCode || "<?php echo 'Hello PHP!'; ?>\\n<h1>Hello HTML + CSS + JS!</h1>",
+        viewportMargin: Infinity
+    });
+    
+    // Refresh the editor to ensure proper rendering
+    setTimeout(() => {
+        if (window.codeEditor) {
+            window.codeEditor.refresh();
+            window.codeEditor.focus();
+        }
+    }, 150);
+    
+    // Add the run button event listener
+    const runBtn = document.getElementById('runCodeBtn');
+    if (runBtn) {
+        // Remove existing event listeners
+        const newRunBtn = runBtn.cloneNode(true);
+        runBtn.parentNode.replaceChild(newRunBtn, runBtn);
+        document.getElementById('runCodeBtn').addEventListener('click', runCodePreview);
+    }
+}
+
+// Full Screen IDE Functions (optional)
+function openFullScreenIDE(projectId, projectName) {
+    currentProjectId = projectId;
+    document.getElementById('ideProjectName').textContent = 'Project: ' + projectName;
+    document.getElementById('fullscreenIDE').style.display = 'flex';
+
+    if (!window.fullscreenEditor) {
+        window.fullscreenEditor = CodeMirror.fromTextArea(document.getElementById('fullscreenEditor'), {
+            lineNumbers: true,
+            theme: 'default',
+            tabSize: 4,
+            lineWrapping: true,
+            matchBrackets: true,
+            autoCloseBrackets: true,
+            mode: 'htmlmixed',
+            value: <?php echo json_encode($defaultCode); ?>
+        });
+    }
+}
+
+function closeFullScreenIDE() {
+    document.getElementById('fullscreenIDE').style.display = 'none';
+}
+
+function runCode() {
+    if (window.fullscreenEditor) {
+        const code = window.fullscreenEditor.getValue();
+        const iframe = document.getElementById('fullscreenPreview');
+        iframe.srcdoc = code;
+    }
+}
+
+// ========== DOM CONTENT LOADED ==========
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle form submission validation
+    const form = document.getElementById('submissionForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const submissionType = document.getElementById('submissionType').value;
+            
+            if (submissionType === 'code') {
+                // Save editor content to textarea
+                if (window.codeEditor) {
+                    window.codeEditor.save();
+                }
+                
+                const codeTextarea = document.getElementById('codeEditor');
+                if (!codeTextarea || codeTextarea.value.trim() === '') {
+                    e.preventDefault();
+                    alert('Please write some code before submitting');
+                    return false;
+                }
+            } else {
+                const fileInput = document.getElementById('submissionFile');
+                if (!fileInput.files.length) {
+                    e.preventDefault();
+                    alert('Please select a file to submit');
+                    return false;
+                }
+            }
+            return true;
+        });
+    }
 
 <?php if (!empty($today_row) && $today_row['verified'] == 1): ?>
     // Check if modal has already been shown today using localStorage
     const today = '<?= date('Y-m-d') ?>';
     const modalShownKey = 'attendance_modal_shown_' + today;
-    
+
     if (!localStorage.getItem(modalShownKey)) {
         var myModal = new bootstrap.Modal(document.getElementById('verifiedModal'), {});
         myModal.show();
@@ -1124,6 +1544,8 @@ document.getElementById('submissionForm').addEventListener('submit', function(e)
         localStorage.setItem(modalShownKey, 'true');
     }
 <?php endif; ?>
+});
 </script>
+
 </body>
 </html>

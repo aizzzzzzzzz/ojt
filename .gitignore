@@ -1,0 +1,9 @@
+# Vendor libraries
+lib/
+vendor/
+
+# Generated files
+storage/uploads/
+
+# PDFs
+*.pdf
