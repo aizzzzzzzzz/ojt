@@ -3,7 +3,7 @@
     "description": "OJT Project",
     "type": "project",
     "require-dev": {
-        "phpunit/phpunit": "^9.0"
+        "phpunit/phpunit": "^9.6.33"
     },
     "authors": [
         {
@@ -11,5 +11,7 @@
             "email": "domingojerome34@gmail.com"
         }
     ],
-    "require": {}
+    "require": {
+        "phpoffice/phpspreadsheet": "^5.4"
+    }
 }

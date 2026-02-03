@@ -92,7 +92,8 @@ if (!$evaluation) {
             <p><?= nl2br(htmlspecialchars($evaluation['comments'])) ?></p>
         </div>
 
-        <a href="employer_dashboard.php" class="back">⬅ Back to Dashboard</a>
+        <a href="supervisor_dashboard.php
+" class="back">⬅ Back to Dashboard</a>
     </div>
 </body>
 </html>

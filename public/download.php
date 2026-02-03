@@ -1,34 +1,41 @@
 <?php
-require_once __DIR__ . '/../private/config.php';
+session_start();
+
+if (!isset($_SESSION['employer_id']) || $_SESSION['role'] !== "employer") {
+    header("Location: employer_login.php");
+    exit;
+}
+
+include __DIR__ . '/../private/config.php';
 require_once __DIR__ . '/../includes/middleware.php';
 
-require_admin(); // only admins can download
+$employer_id = $_SESSION['employer_id'];
+$file_id = $_GET['file_id'] ?? 0;
 
-// Validate GET parameter
-$file_id = isset($_GET['file_id']) ? (int)$_GET['file_id'] : 0;
-if (!$file_id) {
-    die("Invalid file request.");
+if ($file_id) {
+    try {
+        // Verify the file belongs to this employer
+        $stmt = $pdo->prepare("SELECT * FROM uploaded_files WHERE id = ? AND employer_id = ?");
+        $stmt->execute([$file_id, $employer_id]);
+        $file = $stmt->fetch();
+        
+        if ($file && file_exists($file['filepath'])) {
+            header('Content-Type: application/octet-stream');
+            header('Content-Disposition: attachment; filename="' . basename($file['filename']) . '"');
+            header('Content-Length: ' . filesize($file['filepath']));
+            readfile($file['filepath']);
+            write_audit_log('Download Document', "Downloaded: " . $file['filename']);
+            exit;
+        } else {
+            header("Location: upload_documents.php?error=not_found");
+            exit;
+        }
+    } catch (PDOException $e) {
+        header("Location: upload_documents.php?error=database");
+        exit;
+    }
 }
 
-// Fetch file info from database
-$stmt = $pdo->prepare("SELECT filename, filepath FROM uploaded_files WHERE id = ?");
-$stmt->execute([$file_id]);
-$file = $stmt->fetch(PDO::FETCH_ASSOC);
-
-if (!$file || !file_exists($file['filepath'])) {
-    die("File not found.");
-}
-
-// Optional: Log the download
-write_audit_log('File Download', "Downloaded file: " . $file['filename']);
-
-// Serve the file
-header('Content-Description: File Transfer');
-header('Content-Type: application/octet-stream');
-header('Content-Disposition: attachment; filename="' . basename($file['filename']) . '"');
-header('Expires: 0');
-header('Cache-Control: must-revalidate');
-header('Pragma: public');
-header('Content-Length: ' . filesize($file['filepath']));
-readfile($file['filepath']);
+header("Location: upload_documents.php");
 exit;
+?>

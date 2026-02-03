@@ -31,7 +31,8 @@ tr:hover { background:#e3f2fd; }
 <body>
 <div class="dashboard-container">
 <h2>Manage Projects</h2>
-<a href="employer_dashboard.php" class="btn btn-outline-secondary mb-3">⬅ Back to Dashboard</a>
+<a href="supervisor_dashboard.php
+" class="btn btn-outline-secondary mb-3">⬅ Back to Dashboard</a>
 
 <div class="table-section">
 <table class="table table-bordered">

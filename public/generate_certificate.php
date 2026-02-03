@@ -12,7 +12,7 @@ if (!isset($_SESSION['employer_id']) || $_SESSION['role'] !== "employer") {
 $employer_id = (int)$_SESSION['employer_id'];
 
 if (!isset($_GET['student_id'])) {
-    header("Location: employer_dashboard.php");
+    header("Location: supervisor_dashboard.php");
     exit;
 }
 
@@ -24,7 +24,7 @@ $eval_check->execute([$student_id, $employer_id]);
 $evaluation = $eval_check->fetch(PDO::FETCH_ASSOC);
 
 if (!$evaluation) {
-    header("Location: employer_dashboard.php");
+    header("Location: supervisor_dashboard.php");
     exit;
 }
 
@@ -43,7 +43,7 @@ $stmt->execute([$student_id]);
 $student = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$student) {
-    header("Location: employer_dashboard.php");
+    header("Location: supervisor_dashboard.php");
     exit;
 }
 
@@ -72,7 +72,7 @@ $minutes = $total_minutes % 60;
 
 // Removed hours check for testing purposes
 // if ($hours < 200 && !isset($_GET['test_cert'])) {
-//     header("Location: employer_dashboard.php");
+//     header("Location: supervisor_dashboard.php");
 //     exit;
 // }
 
@@ -253,7 +253,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate'])) {
             <button type="submit" name="generate" class="btn">Generate PDF Certificate</button>
         </form>
 
-        <br><a href="employer_dashboard.php">Back to Dashboard</a>
+        <br><a href="supervisor_dashboard.php
+">Back to Dashboard</a>
     </div>
 </body>
 </html>

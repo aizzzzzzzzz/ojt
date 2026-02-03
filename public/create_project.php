@@ -43,7 +43,8 @@ body { font-family: "Segoe UI", sans-serif; background: #e3f2fd; padding:20px; }
 <body>
 <div class="dashboard-container">
     <h2>Create New Project</h2>
-    <a href="employer_dashboard.php" class="btn btn-outline-secondary mb-3">⬅ Back to Dashboard</a>
+    <a href="supervisor_dashboard.php
+" class="btn btn-outline-secondary mb-3">⬅ Back to Dashboard</a>
     <?php if ($success_message): ?>
         <div class="success-msg"><?= htmlspecialchars($success_message) ?></div>
     <?php endif; ?>

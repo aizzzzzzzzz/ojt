@@ -1,7 +1,7 @@
 <?php
 session_start();
 if (!isset($_SESSION['employer_id'])) {
-    header("Location: employer_login.php");
+    header("Location: supervisor_login.php");
     exit;
 }
 
@@ -42,7 +42,7 @@ tr:hover { background:#e3f2fd; }
 <body>
 <div class="dashboard-container">
 <h2>Project Submissions</h2>
-<a href="employer_dashboard.php" class="btn btn-outline-secondary mb-3">⬅ Back to Dashboard</a>
+<a href="supervisor_dashboard.php" class="btn btn-outline-secondary mb-3">⬅ Back to Dashboard</a>
 
 <div class="table-section">
 <table class="table table-bordered">
@@ -66,7 +66,6 @@ tr:hover { background:#e3f2fd; }
                 <?php if (strpos($s['file_path'], 'storage/uploads/') === 0): ?>
                     <a href="view_submission.php?submission_id=<?= $s['submission_id'] ?>" target="_blank">View Submission</a>
                 <?php else: ?>
-                    <!-- Employer dashboard -->
                     <a href="view_pdf.php?file=<?= urlencode($s['file_path']) ?>" target="_blank">
                         View Submission
                     </a>

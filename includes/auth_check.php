@@ -16,7 +16,8 @@ function require_role($required_role) {
             if ($_SESSION['role'] === 'student') {
                 header("Location: ../public/student_dashboard.php");
             } elseif ($_SESSION['role'] === 'employer') {
-                header("Location: ../public/employer_dashboard.php");
+                header("Location: ../public/supervisor_dashboard.php
+");
             } elseif ($_SESSION['role'] === 'admin') {
                 header("Location: ../public/admin_dashboard.php");
             } else {

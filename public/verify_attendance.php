@@ -29,6 +29,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-header("Location: employer_dashboard.php");
+header("Location: supervisor_dashboard.php");
 exit;
 ?>

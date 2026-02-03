@@ -7,6 +7,7 @@ if (!isset($_SESSION['employer_id']) || $_SESSION['role'] !== "employer") {
 }
 
 include __DIR__ . '/../private/config.php';
+require_once __DIR__ . '/../includes/middleware.php';
 
 $employer_id = $_SESSION['employer_id'];
 
@@ -14,7 +15,54 @@ $stmt = $pdo->prepare("SELECT * FROM employers WHERE employer_id = ?");
 $stmt->execute([$employer_id]);
 $employer = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// Read session success message for verified attendance
+// Redirect if somehow employer not found
+if (!$employer) {
+    session_destroy();
+    header("Location: employer_login.php");
+    exit;
+}
+
+$csrf_token = generate_csrf_token();
+
+// -------- Mark Student Absent --------
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_absent'])) {
+    check_csrf($_POST['csrf_token'] ?? '');
+    $student_id = $_POST['student_id'] ?? '';
+    $reason = $_POST['reason'] ?? '';
+    $date = $_POST['date'] ?? date('Y-m-d');
+    
+    if ($student_id && $reason) {
+        // Check if attendance already exists for this date
+        $checkStmt = $pdo->prepare("SELECT * FROM attendance WHERE student_id = ? AND log_date = ?");
+        $checkStmt->execute([$student_id, $date]);
+        $existing = $checkStmt->fetch();
+        
+        if ($existing) {
+            // Update existing record
+            $updateStmt = $pdo->prepare("
+                UPDATE attendance 
+                SET status = 'Absent', reason = ?, verified = 0 
+                WHERE student_id = ? AND log_date = ?
+            ");
+            $updateStmt->execute([$reason, $student_id, $date]);
+            $message = "Attendance updated to Absent";
+        } else {
+            // Insert new record
+            $insertStmt = $pdo->prepare("
+                INSERT INTO attendance (student_id, log_date, status, reason, verified) 
+                VALUES (?, ?, 'Absent', ?, 0)
+            ");
+            $insertStmt->execute([$student_id, $date, $reason]);
+            $message = "Student marked as Absent";
+        }
+        
+        write_audit_log('Mark Absent', "Student ID: $student_id, Date: $date");
+        $_SESSION['success_message'] = $message;
+        header("Location: supervisor_dashboard.php");
+        exit;
+    }
+}
+
 $success_message = '';
 if (isset($_SESSION['success_message'])) {
     $success_message = $_SESSION['success_message'];
@@ -95,7 +143,7 @@ foreach ($acc_rows as $ar) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Employer Dashboard</title>
+    <title>OJT Supervisor Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script>
         function toggleDetails(index) {
@@ -215,6 +263,19 @@ foreach ($acc_rows as $ar) {
             transform: translateY(-2px);
         }
 
+        .attendance-actions {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .attendance-actions h4 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+
         .table-section {
             overflow-x: auto;
             margin-top: 20px;
@@ -296,6 +357,22 @@ foreach ($acc_rows as $ar) {
 
         .btn-warning:hover {
             background: linear-gradient(90deg, #e0a800, #d39e00);
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: linear-gradient(90deg, #dc3545, #ff6b7a);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-danger:hover {
+            background: linear-gradient(90deg, #bd2130, #e04b59);
             transform: translateY(-2px);
         }
 
@@ -406,8 +483,8 @@ foreach ($acc_rows as $ar) {
         <?php endif; ?>
 
         <div class="welcome-section">
-            <h2>Welcome, <?= htmlspecialchars($employer['username']) ?>!</h2>
-            <p>You are logged in as <strong>Employer</strong>.</p>
+            <h2>Welcome, <?= htmlspecialchars($employer['name']) ?>!</h2>
+            <p>You are logged in as <strong>OJT Supervisor</strong>.</p>
         </div>
 
         <h3>Quick Actions</h3>
@@ -415,10 +492,6 @@ foreach ($acc_rows as $ar) {
             <div class="action-card">
                 <div class="icon">👤</div>
                 <a href="add_student.php">Add New Student</a>
-            </div>
-            <div class="action-card">
-                <div class="icon">❌</div>
-                <a href="absences.php">Mark Student Absent</a>
             </div>
             <div class="action-card">
                 <div class="icon">📋</div>
@@ -429,12 +502,46 @@ foreach ($acc_rows as $ar) {
                 <a href="manage_projects.php">Manage Projects</a>
             </div>
             <div class="action-card">
+                <div class="icon">📁</div>
+                <a href="upload_documents.php">Upload Documents</a>
+            </div>
+            <div class="action-card">
                 <div class="icon">🚪</div>
                 <a href="logout.php">Logout</a>
             </div>
         </div>
 
         <h3>Attendance Records</h3>
+        
+        <div class="attendance-actions">
+            <h4>Attendance Management</h4>
+            <form method="post" class="row g-3">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                <div class="col-md-4">
+                    <label class="form-label">Select Student</label>
+                    <select name="student_id" class="form-select" required>
+                        <option value="">Choose student...</option>
+                        <?php foreach ($students as $student): ?>
+                            <option value="<?= htmlspecialchars($student['student_id']) ?>">
+                                <?= htmlspecialchars($student['username']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Date</label>
+                    <input type="date" name="date" class="form-control" value="<?= date('Y-m-d') ?>" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Reason for Absence</label>
+                    <input type="text" name="reason" class="form-control" placeholder="Enter reason..." required>
+                </div>
+                <div class="col-12">
+                    <button type="submit" name="mark_absent" class="btn btn-danger">Mark Student Absent</button>
+                </div>
+            </form>
+        </div>
+
         <div class="table-section">
             <table class="table table-bordered align-middle">
                 <thead>
@@ -537,8 +644,8 @@ foreach ($acc_rows as $ar) {
                                     Attendance Details — <?= htmlspecialchars(
                                         $latest['last_name'] . ', ' .
                                         $latest['first_name'] .
-                                        ($latest['middle_name'] ? ' ' . $latest['middle_name'] : '')
-                                    ) ?>
+                                        ($latest['middle_name'] ? ' ' . $latest['middle_name'] : ''))
+                                    ?>
                                 </h5>
 
                                 <div class="row">

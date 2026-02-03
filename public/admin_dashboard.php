@@ -478,60 +478,7 @@ $employers = $pdo->query("SELECT employer_id, username, name, created_at FROM em
         </div></div>
     </div>
 
-    <button class="section-header" data-bs-toggle="collapse" data-bs-target="#upload-file">
-        OJT Documents
-    </button>
-        <div id="upload-file" class="collapse">
-            <div class="card mb-4">
-                <div class="card-body">
-                    <?php if (!empty($uploadError)): ?>
-                        <div class="alert alert-danger"><?= htmlspecialchars($uploadError) ?></div>
-                    <?php elseif (!empty($_SESSION['upload_success'])): ?>
-                        <div class="alert alert-success">File uploaded successfully!</div>
-                        <?php unset($_SESSION['upload_success']); ?>
-                    <?php endif; ?>
 
-                    <form method="post" enctype="multipart/form-data">
-                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                        <input type="file" name="uploaded_file" required class="form-control mb-3">
-                        <button type="submit" name="upload_file" class="btn btn-primary">Upload</button>
-                    </form>
-                    <?php
-                    $uploaded_files = $pdo->query("
-                        SELECT id, filename, admin_id, uploaded_at 
-                        FROM uploaded_files 
-                        ORDER BY uploaded_at DESC
-                    ")->fetchAll(PDO::FETCH_ASSOC);
-
-                    if ($uploaded_files):
-                    ?>
-                    <h5 class="mt-4">Uploaded Files</h5>
-                    <table class="table table-striped mt-3">
-                        <thead>
-                            <tr>
-                                <th>Filename</th>
-                                <th>Uploaded By (Admin ID)</th>
-                                <th>Date</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($uploaded_files as $file): ?>
-                            <tr>
-                                <td><?= htmlspecialchars($file['filename']) ?></td>
-                                <td><?= htmlspecialchars($file['admin_id']) ?></td>
-                                <td><?= $file['uploaded_at'] ?></td>
-                                <td>
-                                    <a href="download.php?file_id=<?= $file['id'] ?>" class="btn btn-sm btn-primary">Download</a>
-                                </td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </div>
 
     <h3 class="mb-4">OJT Supervisors</h3>
     <div>

@@ -1,6 +1,6 @@
 <?php
 session_start();
-include_once __DIR__ . '/../../private/config.php';
+include_once __DIR__ . '/../private/config.php';
 
 $message = "";
 $error = "";

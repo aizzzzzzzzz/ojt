@@ -1,4 +1,10 @@
 <?php
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+
 session_start();
 include_once __DIR__ . '/../private/config.php';
 date_default_timezone_set('Asia/Manila');
@@ -19,6 +25,219 @@ if (!isset($_SESSION['student_id']) || $_SESSION['role'] !== "student") {
 $student_id = (int)$_SESSION['student_id'];
 $today = date('Y-m-d');
 $messages = [];
+
+if (isset($_GET['export']) && $_GET['export'] == 'excel') {
+    if (ob_get_length()) ob_end_clean();
+    
+    $phpspreadsheetPath = __DIR__ . '/../vendor/autoload.php';
+    if (file_exists($phpspreadsheetPath)) {
+        require_once $phpspreadsheetPath;
+
+        try {
+            $stmt = $pdo->prepare("SELECT * FROM students WHERE student_id = ? LIMIT 1");
+            $stmt->execute([$student_id]);
+            $student = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            $start_date = $_GET['start_date'] ?? null;
+            $end_date = $_GET['end_date'] ?? null;
+
+            $sql = "SELECT * FROM attendance WHERE student_id = ?";
+            $params = [$student_id];
+
+            if ($start_date && $end_date) {
+                $sql .= " AND log_date BETWEEN ? AND ?";
+                $params[] = $start_date;
+                $params[] = $end_date;
+            }
+
+            $sql .= " ORDER BY log_date DESC";
+
+            $attendance_stmt = $pdo->prepare($sql);
+            $attendance_stmt->execute($params);
+            $attendance = $attendance_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            
+            $spreadsheet->getProperties()
+                ->setCreator("OJT System")
+                ->setLastModifiedBy("OJT System")
+                ->setTitle("Attendance History - " . ($student['first_name'] ?? 'Student'))
+                ->setSubject("Attendance Records");
+            
+            $sheet->setCellValue('A1', 'ATTENDANCE HISTORY REPORT');
+            $sheet->mergeCells('A1:I1');
+            $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
+            $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            
+            $sheet->setCellValue('A2', 'Student Name:');
+            $sheet->setCellValue('B2', ($student['first_name'] ?? '') . ' ' . ($student['last_name'] ?? ''));
+            $sheet->setCellValue('A3', 'Student ID:');
+            $sheet->setCellValue('B3', $student['student_id'] ?? '');
+            $sheet->setCellValue('A4', 'Date Range:');
+            
+            if ($start_date && $end_date) {
+                $sheet->setCellValue('B4', date('M d, Y', strtotime($start_date)) . ' to ' . date('M d, Y', strtotime($end_date)));
+            } else {
+                $sheet->setCellValue('B4', 'All Records');
+            }
+            
+            $sheet->setCellValue('A5', 'Generated On:');
+            $sheet->setCellValue('B5', date('F d, Y h:i A'));
+            
+            $headers = ['Date', 'Time In', 'Lunch Out', 'Lunch In', 'Time Out', 'Status', 'Verified', 'Hours Worked', 'Daily Task / Activity'];
+            $sheet->fromArray($headers, NULL, 'A7');
+            
+            $headerStyle = [
+                'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                'fill' => [
+                    'fillType' => Fill::FILL_SOLID, 
+                    'startColor' => ['rgb' => '2E7D32']
+                ],
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => Border::BORDER_THIN,
+                        'color' => ['rgb' => '000000'],
+                    ],
+                ],
+            ];
+            $sheet->getStyle('A7:I7')->applyFromArray($headerStyle);
+            
+            // Add data
+            $row = 8;
+            $totalMinutes = 0;
+            $verifiedCount = 0;
+            
+            foreach ($attendance as $record) {
+                $hours = '-';
+                $minutesWorked = 0;
+                
+                if (!empty($record['time_in']) && !empty($record['time_out']) && 
+                    strpos($record['time_in'], '0000') === false && 
+                    strpos($record['time_out'], '0000') === false) {
+                    
+                    $minutesWorked = max(0, (strtotime($record['time_out']) - strtotime($record['time_in'])) / 60);
+                    
+                    if (!empty($record['lunch_in']) && !empty($record['lunch_out']) && 
+                        strpos($record['lunch_in'], '0000') === false && 
+                        strpos($record['lunch_out'], '0000') === false) {
+                        $minutesWorked -= max(0, (strtotime($record['lunch_in']) - strtotime($record['lunch_out'])) / 60);
+                    }
+                    
+                    $hours = floor($minutesWorked / 60) . "h " . ($minutesWorked % 60) . "m";
+                    $totalMinutes += $minutesWorked;
+                }
+                
+                if ($record['verified'] == 1) {
+                    $verifiedCount++;
+                }
+                
+                $sheet->setCellValue('A' . $row, $record['log_date']);
+                $sheet->setCellValue('B' . $row, (!empty($record['time_in']) && strpos($record['time_in'], '0000') === false) ? date('h:i A', strtotime($record['time_in'])) : '-');
+                $sheet->setCellValue('C' . $row, (!empty($record['lunch_out']) && strpos($record['lunch_out'], '0000') === false) ? date('h:i A', strtotime($record['lunch_out'])) : '-');
+                $sheet->setCellValue('D' . $row, (!empty($record['lunch_in']) && strpos($record['lunch_in'], '0000') === false) ? date('h:i A', strtotime($record['lunch_in'])) : '-');
+                $sheet->setCellValue('E' . $row, (!empty($record['time_out']) && strpos($record['time_out'], '0000') === false) ? date('h:i A', strtotime($record['time_out'])) : '-');
+                $sheet->setCellValue('F' . $row, $record['status'] ?? '-');
+                $sheet->setCellValue('G' . $row, $record['verified'] == 1 ? 'Verified' : 'Pending');
+                $sheet->setCellValue('H' . $row, $hours);
+                $sheet->setCellValue('I' . $row, $record['daily_task'] ?? '-');
+                
+                $verifiedStyle = $sheet->getStyle('G' . $row);
+                if ($record['verified'] == 1) {
+                    $verifiedStyle->getFont()->getColor()->setRGB('008000');
+                } else {
+                    $verifiedStyle->getFont()->getColor()->setRGB('FF6B6B');
+                }
+                
+                $dataStyle = [
+                    'borders' => [
+                        'outline' => [
+                            'borderStyle' => Border::BORDER_THIN,
+                            'color' => ['rgb' => 'CCCCCC'],
+                        ],
+                    ],
+                ];
+                $sheet->getStyle('A' . $row . ':I' . $row)->applyFromArray($dataStyle);
+                
+                $row++;
+            }
+            
+            $summaryRow = $row + 2;
+            $sheet->setCellValue('A' . $summaryRow, 'SUMMARY');
+            $sheet->mergeCells('A' . $summaryRow . ':B' . $summaryRow);
+            $sheet->getStyle('A' . $summaryRow)->getFont()->setBold(true)->setSize(14);
+            
+            $summaryRow++;
+            $sheet->setCellValue('A' . $summaryRow, 'Total Days:');
+            $sheet->setCellValue('B' . $summaryRow, count($attendance));
+            
+            $summaryRow++;
+            $sheet->setCellValue('A' . $summaryRow, 'Verified Days:');
+            $sheet->setCellValue('B' . $summaryRow, $verifiedCount);
+            
+            $summaryRow++;
+            $sheet->setCellValue('A' . $summaryRow, 'Verification Rate:');
+            $verificationRate = count($attendance) > 0 ? ($verifiedCount / count($attendance)) * 100 : 0;
+            $sheet->setCellValue('B' . $summaryRow, round($verificationRate, 1) . '%');
+            
+            $summaryRow++;
+            $sheet->setCellValue('A' . $summaryRow, 'Total Hours:');
+            $totalHours = floor($totalMinutes / 60);
+            $totalMinutesRemainder = $totalMinutes % 60;
+            $sheet->setCellValue('B' . $summaryRow, $totalHours . 'h ' . $totalMinutesRemainder . 'm');
+            
+            $summaryStyle = [
+                'font' => ['bold' => true],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E8F5E9']],
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => Border::BORDER_THIN,
+                        'color' => ['rgb' => '81C784'],
+                    ],
+                ],
+            ];
+            $sheet->getStyle('A' . ($row + 2) . ':B' . $summaryRow)->applyFromArray($summaryStyle);
+            
+            foreach (range('A', 'I') as $column) {
+                $sheet->getColumnDimension($column)->setAutoSize(true);
+            }
+            
+            $sheet->getColumnDimension('I')->setWidth(40);
+            
+            $sheet->getStyle('I8:I' . ($row - 1))->getAlignment()->setWrapText(true);
+            
+            $filename = 'Attendance_History_' . ($student['first_name'] ?? 'student') . '_' . date('Y-m-d') . '.xlsx';
+            
+            while (ob_get_level()) {
+                ob_end_clean();
+            }
+            
+            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            header('Content-Disposition: attachment;filename="' . $filename . '"');
+            header('Cache-Control: max-age=0');
+            header('Cache-Control: max-age=1');
+            header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
+            header('Last-Modified: ' . gmdate('D, d M Y H:i:s') . ' GMT');
+            header('Cache-Control: cache, must-revalidate');
+            header('Pragma: public');
+            
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
+            exit;
+            
+        } catch (Exception $e) {
+            error_log("Excel Export Error: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+            $_SESSION['error'] = "Error generating Excel file. Please contact administrator.";
+            header("Location: " . $_SERVER['PHP_SELF']);
+            exit;
+        }
+    } else {
+        $_SESSION['error'] = "Excel export feature requires PhpSpreadsheet library. Please contact administrator.";
+        header("Location: " . $_SERVER['PHP_SELF']);
+        exit;
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_task'])) {
     $task = trim($_POST['daily_task']);
@@ -109,25 +328,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attendance_action']))
     }
 }
 
-// Fetch student info
 $stmt = $pdo->prepare("SELECT * FROM students WHERE student_id = ? LIMIT 1");
 $stmt->execute([$student_id]);
 $student = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// Fetch attendance history
 $attendance_stmt = $pdo->prepare("SELECT * FROM attendance WHERE student_id = ? ORDER BY log_date DESC");
 $attendance_stmt->execute([$student_id]);
 $attendance = $attendance_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Today's row
 $today_stmt = $pdo->prepare("SELECT * FROM attendance WHERE student_id = ? AND log_date = ? LIMIT 1");
 $today_stmt->execute([$student_id, $today]);
 $today_row = $today_stmt->fetch(PDO::FETCH_ASSOC);
 
-// Calculate total accumulated minutes safely
 $total_minutes = 0;
 foreach ($attendance as $row) {
-    // Only count verified attendance
     if ($row['verified'] == 1 && !empty($row['time_in']) && !empty($row['time_out'])) {
 
         $time_in = strtotime($row['time_in']);
@@ -149,12 +363,10 @@ $minutes = $total_minutes % 60;
 $statusClass = ($hours >= 200) ? 'completed' : 'in-progress';
 $statusText = ($hours >= 200) ? 'Completed' : 'In Progress';
 
-// Fetch projects for student
 $projects_stmt = $pdo->prepare("SELECT * FROM projects ORDER BY created_at DESC");
 $projects_stmt->execute();
 $projects = $projects_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Handle file submission
 $submitError = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_file'])) {
     $project_id = (int)$_POST['project_id'];
@@ -166,74 +378,104 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_file'])) {
     
     try {
         if ($submission_type === 'code') {
-            // Handle code submission
-            $code = $_POST['code_content'] ?? '';
+            $code = trim($_POST['code_content'] ?? '');
             
             if (empty($code)) {
                 $submitError = "Code cannot be empty.";
             } else {
-                // Save code to .txt file (generic code file)
                 $fileName = $student_id . '_project_' . $project_id . '_' . time() . '.txt';
                 $filePath = $uploadDir . $fileName;
                 
-                if (file_put_contents($filePath, $code) !== false) {
-                    $stmt = $pdo->prepare("INSERT INTO project_submissions (project_id, student_id, file_path, status, submission_date, remarks, submission_status) VALUES (?, ?, ?, 'submitted', NOW(), ?, 'pending')");
-                    $stmt->execute([$project_id, $student_id, $fileName]);
+                if (!is_writable($uploadDir)) {
+                    $submitError = "Upload directory is not writable.";
+                } elseif (file_put_contents($filePath, $code) === false) {
+                    $submitError = "Error saving code file. Please try again.";
+                } else {
+                    $stmt = $pdo->prepare("
+                        INSERT INTO project_submissions 
+                        (project_id, student_id, file_path, status, submission_date, remarks, submission_status) 
+                        VALUES (?, ?, ?, 'submitted', NOW(), ?, 'pending')
+                    ");
+                    
+                    $stmt->execute([$project_id, $student_id, $fileName, $remarks]);
+                    
                     $_SESSION['success'] = "Code submitted successfully!";
                     header("Location: " . $_SERVER['PHP_SELF']);
                     exit;
-                } else {
-                    $submitError = "Error saving code. Please try again.";
                 }
             }
         } else {
-            // Handle file upload
-            if (empty($_FILES['submission_file']['tmp_name'])) {
-                $submitError = "Please select a file to submit.";
+            $uploadedFile = $_FILES['submission_file'];
+            
+            if (empty($uploadedFile['tmp_name']) || $uploadedFile['error'] !== UPLOAD_ERR_OK) {
+                $submitError = "Please select a valid file to upload.";
             } else {
-                $fileName = $_FILES['submission_file']['name'];
-                $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-                $allowedExts = ['pdf', 'doc', 'docx', 'txt', 'zip', 'rar', 'php', 'html', 'css', 'java', 'js'];
+                $originalName = basename($uploadedFile['name']);
+                $fileExt = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+                $allowedExts = ['pdf', 'doc', 'docx', 'txt', 'zip', 'rar', 'php', 'html', 'css', 'java', 'js', 'py', 'cpp', 'c', 'sql'];
                 
                 if (!in_array($fileExt, $allowedExts)) {
                     $submitError = "File type not allowed. Allowed: " . implode(', ', $allowedExts);
-                } elseif ($_FILES['submission_file']['size'] > 10 * 1024 * 1024) {
-                    $submitError = "File too large (max 10MB).";
+                } elseif ($uploadedFile['size'] > 10 * 1024 * 1024) {
+                    $submitError = "File too large (maximum 10MB).";
                 } else {
-                    $uniqueFileName = $student_id . '_project_' . $project_id . '_' . time() . '_' . basename($fileName);
+                    $uniqueFileName = $student_id . '_project_' . $project_id . '_' . time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $originalName);
                     $filePath = $uploadDir . $uniqueFileName;
                     
-                    if (move_uploaded_file($_FILES['submission_file']['tmp_name'], $filePath)) {
-                        $stmt = $pdo->prepare("INSERT INTO project_submissions (project_id, student_id, file_path, status, submission_date, remarks, submission_status) VALUES (?, ?, ?, 'submitted', NOW(), ?, 'pending')");
-                        $stmt->execute([$project_id, $student_id, $uniqueFileName]);
+                    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                    $mimeType = finfo_file($finfo, $uploadedFile['tmp_name']);
+                    finfo_close($finfo);
+                    
+                    $allowedMimes = [
+                        'text/plain', 'application/pdf', 'application/msword',
+                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                        'application/zip', 'application/x-rar-compressed',
+                        'text/html', 'text/css', 'text/javascript', 'application/javascript',
+                        'text/x-php', 'text/x-java-source', 'text/x-python',
+                        'text/x-c', 'text/x-c++'
+                    ];
+                    
+                    if (!in_array($mimeType, $allowedMimes)) {
+                        $submitError = "File type verification failed. Please upload a valid file.";
+                    } elseif (!move_uploaded_file($uploadedFile['tmp_name'], $filePath)) {
+                        $submitError = "Error uploading file. Please try again.";
+                    } else {
+                        $stmt = $pdo->prepare("
+                            INSERT INTO project_submissions 
+                            (project_id, student_id, file_path, status, submission_date, remarks, submission_status) 
+                            VALUES (?, ?, ?, 'submitted', NOW(), ?, 'pending')
+                        ");
+                        
+                        $stmt->execute([$project_id, $student_id, $uniqueFileName, $remarks]);
+                        
                         $_SESSION['success'] = "File submitted successfully!";
                         header("Location: " . $_SERVER['PHP_SELF']);
                         exit;
-                    } else {
-                        $submitError = "Error uploading file. Please try again.";
                     }
                 }
             }
         }
     } catch (PDOException $e) {
-        $submitError = "Error submitting: " . $e->getMessage();
+        error_log("Database Error: " . $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine());
+        
+        if ($e->getCode() == 'HY093') {
+            $submitError = "Database error: Parameter mismatch. Please contact administrator.";
+        } else {
+            $submitError = "Database error occurred. Please try again.";
+        }
+    } catch (Exception $e) {
+        error_log("General Error: " . $e->getMessage());
+        $submitError = "An error occurred. Please try again.";
     }
 }
 
-// Fetch student's submissions
 $submissions_stmt = $pdo->prepare("SELECT ps.*, p.project_name FROM project_submissions ps JOIN projects p ON ps.project_id = p.project_id WHERE ps.student_id = ? ORDER BY ps.submission_date DESC");
 $submissions_stmt->execute([$student_id]);
 $submissions = $submissions_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Default code for editor
 $defaultCode = "<?php\necho 'Hello PHP!';\n?>\n<h1>Hello HTML + CSS + JS!</h1>\n<style>h1{color:#0b3d91;}</style>\n<script>console.log('Hello JS');</script>";
 $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
 ?>
-<script>
-var defaultCode = <?php echo json_encode($defaultCode); ?>;
-var safeDefaultCode = <?php echo json_encode($safeDefaultCode); ?>;
-</script>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -331,43 +573,116 @@ var safeDefaultCode = <?php echo json_encode($safeDefaultCode); ?>;
         display: block;
     }
 
-    /* Tab Switcher Styles */
-    .tab-switcher {
-        display: flex;
-        justify-content: center;
-        margin-bottom: 20px;
-        border-bottom: 2px solid #e0e0e0;
-        padding-bottom: 10px;
+    /* Export Panel Styles */
+    .export-panel {
+        background: #f8fff8;
+        border: 1px solid #c3e6cb;
+        border-radius: 10px;
+        padding: 20px;
+        margin: 20px 0;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     }
 
-    .tab-button {
-        padding: 12px 24px;
+    .export-panel h5 {
+        margin-top: 0;
+        color: #2c3e50;
+        margin-bottom: 15px;
+    }
+
+    .export-form {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .export-form label {
+        font-weight: 600;
+        color: #2c3e50;
+    }
+
+    .export-form .form-control {
+        border-radius: 6px;
+        border: 1px solid #ddd;
+        padding: 8px 12px;
+        font-size: 14px;
+        transition: border-color 0.3s ease;
+    }
+
+    .export-form .form-control:focus {
+        border-color: #28a745;
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+    }
+
+    .export-controls {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .date-input-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .date-input-group label {
+        font-weight: 600;
+        color: #2c3e50;
+        font-size: 14px;
+    }
+
+    .date-input-group .form-control {
+        width: 150px;
+        padding: 6px 8px;
+        font-size: 14px;
+    }
+
+    .export-buttons {
+        display: flex;
+        gap: 10px;
+        margin-left: auto;
+        justify-content: center;
+    }
+
+    .export-buttons .btn-export {
+        width: 150px;
+        padding: 6px 8px;
+        font-size: 14px;
+        text-align: center;
+    }
+
+    .btn-export {
+        padding: 10px 20px;
+        border-radius: 6px;
         border: none;
-        background: none;
-        font-size: 16px;
         font-weight: 600;
         cursor: pointer;
-        border-radius: 8px 8px 0 0;
         transition: all 0.3s ease;
-        margin: 0 5px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
 
-    .tab-button.active {
-        background: linear-gradient(90deg, #28a745, #85e085);
+    .btn-export-excel {
+        background: linear-gradient(90deg, #2E7D32, #4CAF50);
         color: white;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
-    .tab-button:hover {
-        background: #f8f9fa;
+    .btn-export-excel:hover {
+        background: linear-gradient(90deg, #1B5E20, #388E3C);
+        transform: translateY(-2px);
     }
 
-    .tab-content {
-        display: none;
+    .btn-export-all {
+        background: linear-gradient(90deg, #1565C0, #2196F3);
+        color: white;
     }
 
-    .tab-content.active {
-        display: block;
+    .btn-export-all:hover {
+        background: linear-gradient(90deg, #0D47A1, #1976D2);
+        transform: translateY(-2px);
     }
 
     .action-buttons {
@@ -677,15 +992,17 @@ var safeDefaultCode = <?php echo json_encode($safeDefaultCode); ?>;
         font-size: 14px;
     }
 
-    /* Code Editor Split Screen Styles - ADD THIS */
+    /* Code Editor Split Screen Styles */
     #codeTab {
         display: flex;
-        height: 500px;
         gap: 15px;
         margin-bottom: 15px;
+        height: calc(100vh - 320px);
+        min-height: 400px;
     }
 
-    .editor-half, .preview-half {
+    .editor-half,
+    .preview-half {
         flex: 1;
         display: flex;
         flex-direction: column;
@@ -727,8 +1044,6 @@ var safeDefaultCode = <?php echo json_encode($safeDefaultCode); ?>;
         height: 100% !important;
     }
 
-
-
     /* Full Screen IDE Styles */
     .fullscreen-ide {
         position: fixed;
@@ -760,8 +1075,8 @@ var safeDefaultCode = <?php echo json_encode($safeDefaultCode); ?>;
     .ide-content {
         flex: 1;
         display: flex;
-        overflow: hidden; /* Prevent expansion */
-        min-height: 0; /* Important for nested flex containers */
+        overflow: hidden;
+        min-height: 0;
     }
 
     .code-panel {
@@ -785,13 +1100,13 @@ var safeDefaultCode = <?php echo json_encode($safeDefaultCode); ?>;
         border-bottom: 1px solid #e0e0e0;
         font-weight: 600;
         color: #2c3e50;
-        flex-shrink: 0; /* Prevent header from shrinking */
+        flex-shrink: 0;
     }
 
     .panel-content {
         flex: 1;
         padding: 10px;
-        overflow: hidden; /* Ensure content stays within bounds */
+        overflow: hidden;
         position: relative;
     }
 
@@ -875,6 +1190,36 @@ var safeDefaultCode = <?php echo json_encode($safeDefaultCode); ?>;
             font-size: 24px;
         }
 
+        .export-form {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .export-buttons {
+            margin-left: 0;
+            justify-content: center;
+        }
+
+        .export-form .export-controls {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .export-form .date-input-group {
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        .export-form .date-input-group .form-control {
+            width: calc(100% - 50px);
+        }
+
+        .export-form .export-buttons {
+            margin-left: 0;
+            justify-content: center;
+            width: 100%;
+        }
+
         .attendance-actions {
             flex-direction: column;
         }
@@ -929,19 +1274,27 @@ var safeDefaultCode = <?php echo json_encode($safeDefaultCode); ?>;
     <div class="success-msg"><?= htmlspecialchars($_SESSION['success']) ?></div>
     <?php unset($_SESSION['success']); ?>
 <?php endif; ?>
+<?php if (!empty($_SESSION['error'])): ?>
+    <div class="error-msg"><?= htmlspecialchars($_SESSION['error']) ?></div>
+    <?php unset($_SESSION['error']); ?>
+<?php endif; ?>
 <?php if (!empty($messages)) foreach ($messages as $m): ?>
     <div class="error-msg"><?= htmlspecialchars($m) ?></div>
 <?php endforeach; ?>
 
 <div class="welcome-header" id="welcomeHeader">
-    <h2>Welcome, <?= htmlspecialchars($student['name'] ?? 'Student') ?></h2>
+    <h2>Welcome, <?= 
+        htmlspecialchars(
+            isset($student['first_name']) 
+                ? trim(explode(' ', $student['first_name'])[0]) 
+                : 'Student'
+        ) 
+    ?></h2>
     <div class="action-buttons">
         <a href="logout.php" class="action-btn btn-primary" style="text-decoration:none;">🚪 Logout</a>
         <button class="action-btn btn-primary" onclick="window.print()">🖨️ Print</button>
     </div>
 </div>
-
-
 
 <div class="summary" id="summarySection">
     <p><strong>Total Hours:</strong> <?= $hours ?> hr <?= $minutes ?> min / 200h</p>
@@ -951,8 +1304,9 @@ var safeDefaultCode = <?php echo json_encode($safeDefaultCode); ?>;
 
 <!-- Tab Switcher -->
 <div class="tab-switcher">
-<button class="tab-button active" onclick="switchTab('attendance', this)">📅 Attendance</button>
-<button class="tab-button" onclick="switchTab('projects', this)">📝 Projects</button>
+    <button class="tab-button active" onclick="switchTab('attendance', this)">Attendance</button>
+    <button class="tab-button" onclick="switchTab('export', this)">Export History</button>
+    <button class="tab-button" onclick="switchTab('projects', this)">Projects</button>
 </div>
 
 <!-- Attendance Tab Content -->
@@ -1149,6 +1503,48 @@ var safeDefaultCode = <?php echo json_encode($safeDefaultCode); ?>;
     </div>
 </div>
 
+<!-- Export Tab Content -->
+<div id="export-tab" class="tab-content">
+    <div class="export-panel">
+        <h5> Export Attendance History</h5>
+        <form method="GET" class="export-form">
+            <div class="export-controls">
+                <div class="date-input-group">
+                    <label>From:</label>
+                    <input type="date" name="start_date" class="form-control" value="<?= date('Y-m-01') ?>">
+                </div>
+
+                <div class="date-input-group">
+                    <label>To:</label>
+                    <input type="date" name="end_date" class="form-control" value="<?= date('Y-m-d') ?>">
+                </div>
+
+                <div class="export-buttons">
+                    <button type="submit" name="export" value="excel" class="btn-export btn-export-excel">
+                        📅 Export Filtered
+                    </button>
+                    <a href="?export=excel" class="btn-export btn-export-all">
+                        📋 Export All Records
+                    </a>
+                </div>
+            </div>
+            <small style="color: #666; display: block; margin-top: 10px;">
+                💡 Export your attendance history to Excel with professional formatting, including time calculations and verification status.
+            </small>
+        </form>
+    </div>
+    
+    <div style="margin-top: 30px; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background: #f8f9fa;">
+        <h5 style="margin-top: 0; color: #2c3e50;"> How to Use Export</h5>
+        <ul style="text-align: left; margin-bottom: 0;">
+            <li><strong>Filtered Export:</strong> Select a date range and click "Export Filtered" to get records for specific dates</li>
+            <li><strong>All Records:</strong> Click "Export All Records" to download your complete attendance history</li>
+            <li><strong>File Format:</strong> Exports as Excel (.xlsx) with formatting, calculations, and summaries</li>
+            <li><strong>Includes:</strong> Date, time stamps, status, verification, hours worked, and daily tasks</li>
+        </ul>
+    </div>
+</div>
+
 <!-- Projects Tab Content -->
 <div id="projects-tab" class="tab-content">
     <div class="projects-section" id="projects-section">
@@ -1213,7 +1609,10 @@ var safeDefaultCode = <?php echo json_encode($safeDefaultCode); ?>;
                         <h6>Preview Output:</h6>
                         <button type="button" id="runCodeBtn" class="btn btn-primary btn-sm">▶️ Run Code</button>
                     </div>
-                    <iframe id="editorPreview" style="height: 100%;"></iframe>
+                    <iframe
+                        id="editorPreview"
+                        style="width:100%; height:100%; border:1px solid #ddd; border-radius:6px;"
+                    ></iframe>
                 </div>
             </div>
 
@@ -1372,17 +1771,21 @@ function selectProjectForSubmission(projectId, projectName) {
 
     // Initialize CodeMirror and attach events after display is set
     setTimeout(() => {
-        if (!window.codeEditor) {
-            initCodeEditor();
+        // Reset editor content to default
+        if (window.codeEditor && typeof window.codeEditor.setValue === 'function') {
+            window.codeEditor.setValue(`<?php echo htmlspecialchars($defaultCode); ?>`);
         } else {
-            // Reset editor content to default
-            window.codeEditor.setValue(<?php echo json_encode($safeDefaultCode); ?>);
+            // Reinitialize editor if not properly set up
+            initCodeEditor();
         }
 
         // Attach run button event
         const runBtn = document.getElementById('runCodeBtn');
         if (runBtn) {
-            runBtn.addEventListener('click', runCodePreview);
+            // Remove existing event listeners
+            const newRunBtn = runBtn.cloneNode(true);
+            runBtn.parentNode.replaceChild(newRunBtn, runBtn);
+            newRunBtn.addEventListener('click', runCodePreview);
         }
     }, 100);
 }
@@ -1404,6 +1807,11 @@ function switchSubmissionTab(tabType) {
         document.getElementById('codeTabBtn').style.color = '#28a745';
         document.getElementById('fileTabBtn').style.borderBottom = 'none';
         document.getElementById('fileTabBtn').style.color = '#999';
+
+        // Initialize CodeMirror if not already done
+        if (!window.codeEditor) {
+            setTimeout(initCodeEditor, 50);
+        }
     } else {
         submissionType.value = 'file';
         document.getElementById('codeTab').style.display = 'none';
@@ -1416,11 +1824,14 @@ function switchSubmissionTab(tabType) {
 }
 
 // Run code for preview
-function runCodePreview() {
-    if (window.codeEditor) {
+function runCodePreview(event) {
+    event.preventDefault();
+    if (window.codeEditor && typeof window.codeEditor.getValue === 'function') {
         const code = window.codeEditor.getValue();
         const iframe = document.getElementById('editorPreview');
         iframe.srcdoc = code;
+    } else {
+        console.error('Code editor not initialized yet.');
     }
 }
 
@@ -1432,12 +1843,16 @@ function initCodeEditor() {
         return;
     }
     
-    // Destroy existing editor instance if it exists
-    if (window.codeEditor) {
-        window.codeEditor.toTextArea();
-        window.codeEditor = null;
+    // Clean up any existing editor
+    if (window.codeEditor && window.codeEditor.toTextArea) {
+        try {
+            window.codeEditor.toTextArea();
+        } catch (e) {
+            console.log('Error cleaning up editor:', e);
+        }
     }
     
+    // Create new editor instance
     window.codeEditor = CodeMirror.fromTextArea(textarea, {
         lineNumbers: true,
         theme: "monokai",
@@ -1446,8 +1861,12 @@ function initCodeEditor() {
         matchBrackets: true,
         autoCloseBrackets: true,
         mode: "application/x-httpd-php",
-        value: defaultCode || safeDefaultCode || "<?php echo 'Hello PHP!'; ?>\\n<h1>Hello HTML + CSS + JS!</h1>",
-        viewportMargin: Infinity
+        value: `<?php echo htmlspecialchars($defaultCode); ?>`,
+        viewportMargin: Infinity,
+        indentUnit: 4,
+        extraKeys: {
+            "Ctrl-Space": "autocomplete"
+        }
     });
     
     // Refresh the editor to ensure proper rendering
@@ -1458,14 +1877,7 @@ function initCodeEditor() {
         }
     }, 150);
     
-    // Add the run button event listener
-    const runBtn = document.getElementById('runCodeBtn');
-    if (runBtn) {
-        // Remove existing event listeners
-        const newRunBtn = runBtn.cloneNode(true);
-        runBtn.parentNode.replaceChild(newRunBtn, runBtn);
-        document.getElementById('runCodeBtn').addEventListener('click', runCodePreview);
-    }
+    return window.codeEditor;
 }
 
 // Full Screen IDE Functions (optional)
@@ -1483,7 +1895,7 @@ function openFullScreenIDE(projectId, projectName) {
             matchBrackets: true,
             autoCloseBrackets: true,
             mode: 'htmlmixed',
-            value: <?php echo json_encode($defaultCode); ?>
+            value: `<?php echo htmlspecialchars($defaultCode); ?>`
         });
     }
 }
@@ -1532,10 +1944,24 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-<?php if (!empty($today_row) && $today_row['verified'] == 1): ?>
+    // Initialize export form date ranges to current month
+    const today = new Date().toISOString().split('T')[0];
+    const firstDay = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+    
+    const startDateInput = document.querySelector('input[name="start_date"]');
+    const endDateInput = document.querySelector('input[name="end_date"]');
+    
+    if (startDateInput && !startDateInput.value) {
+        startDateInput.value = firstDay;
+    }
+    if (endDateInput && !endDateInput.value) {
+        endDateInput.value = today;
+    }
+
+    <?php if (!empty($today_row) && $today_row['verified'] == 1): ?>
     // Check if modal has already been shown today using localStorage
-    const today = '<?= date('Y-m-d') ?>';
-    const modalShownKey = 'attendance_modal_shown_' + today;
+    const todayDate = '<?= date('Y-m-d') ?>';
+    const modalShownKey = 'attendance_modal_shown_' + todayDate;
 
     if (!localStorage.getItem(modalShownKey)) {
         var myModal = new bootstrap.Modal(document.getElementById('verifiedModal'), {});
@@ -1543,7 +1969,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Mark modal as shown for today
         localStorage.setItem(modalShownKey, 'true');
     }
-<?php endif; ?>
+    <?php endif; ?>
 });
 </script>
 

@@ -1,6 +1,5 @@
 <?php
 session_start();
-error_log("File upload error: " . print_r($_FILES, true));
 
 if (!isset($_SESSION['employer_id']) || $_SESSION['role'] !== "employer") {
     header("Location: employer_login.php");
@@ -26,126 +25,104 @@ $csrf_token = generate_csrf_token();
 
 // -------- Upload File --------
 $uploadError = '';
+$uploadSuccess = false;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_file'])) {
     check_csrf($_POST['csrf_token'] ?? '');
-    
-    // Debug: Check if file is being received
-    error_log("File upload attempt detected");
-    error_log("Files array: " . print_r($_FILES, true));
-    
-    if (!empty($_FILES['uploaded_file']['tmp_name']) && $_FILES['uploaded_file']['error'] === UPLOAD_ERR_OK) {
+    if (!empty($_FILES['uploaded_file']['tmp_name'])) {
         $uploadDir = __DIR__ . '/../uploads/';
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0777, true);
-        }
+        if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
 
         $fileName = basename($_FILES['uploaded_file']['name']);
-        $fileTmpName = $_FILES['uploaded_file']['tmp_name'];
-        $fileSize = $_FILES['uploaded_file']['size'];
         $destPath = $uploadDir . uniqid() . '_' . $fileName;
-        
         $allowedTypes = ['pdf','docx','jpg','png','jpeg','txt','xlsx','pptx'];
         $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
 
+        // Check if file type is allowed
         if (!in_array($ext, $allowedTypes)) {
             $uploadError = "Invalid file type. Allowed types: " . implode(', ', $allowedTypes);
-        } elseif ($fileSize > 10*1024*1024) {
+        } elseif ($_FILES['uploaded_file']['size'] > 10*1024*1024) {
             $uploadError = "File too large (max 10MB).";
         }
 
+        // Check for duplicate file (same filename for same employer)
         if (!$uploadError) {
-            // Check if table exists, create if not
             try {
+                // Check if table exists first
                 $tableExists = $pdo->query("SHOW TABLES LIKE 'uploaded_files'")->fetch();
-                if (!$tableExists) {
-                    $createTableSQL = "
-                        CREATE TABLE uploaded_files (
-                            id INT AUTO_INCREMENT PRIMARY KEY,
-                            employer_id INT NOT NULL,
-                            filename VARCHAR(255) NOT NULL,
-                            filepath VARCHAR(500) NOT NULL,
-                            uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                            description TEXT
-                        )
-                    ";
-                    $pdo->exec($createTableSQL);
-                }
-                
-                // Check if file with same name already exists for this employer
-                $checkStmt = $pdo->prepare("SELECT id FROM uploaded_files WHERE employer_id = ? AND filename = ?");
-                $checkStmt->execute([$employer_id, $fileName]);
-                $existingFile = $checkStmt->fetch();
-                
-                if ($existingFile) {
-                    $uploadError = "A file with the name '$fileName' already exists.";
+                if ($tableExists) {
+                    $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM uploaded_files WHERE employer_id = ? AND filename = ?");
+                    $checkStmt->execute([$employer_id, $fileName]);
+                    $duplicateCount = $checkStmt->fetchColumn();
+                    
+                    if ($duplicateCount > 0) {
+                        $uploadError = "A file with the name '$fileName' already exists. Please rename your file or upload a different one.";
+                    }
                 }
             } catch (PDOException $e) {
-                $uploadError = "Database error: " . $e->getMessage();
+                // If table doesn't exist yet, no duplicates to check
             }
         }
 
-        if (!$uploadError) {
-            // Move uploaded file
-            if (move_uploaded_file($fileTmpName, $destPath)) {
-                try {
-                    // Insert file record
-                    $stmt = $pdo->prepare("INSERT INTO uploaded_files (employer_id, filename, filepath, description) VALUES (?, ?, ?, ?)");
-                    $description = $_POST['description'] ?? '';
-                    $stmt->execute([$employer_id, $fileName, $destPath, $description]);
+        // Proceed with upload if no errors
+        if (!$uploadError && move_uploaded_file($_FILES['uploaded_file']['tmp_name'], $destPath)) {
+            try {
+                // Create table if it doesn't exist
+                $createTableSQL = "
+                    CREATE TABLE IF NOT EXISTS uploaded_files (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        employer_id INT NOT NULL,
+                        filename VARCHAR(255) NOT NULL,
+                        filepath VARCHAR(500) NOT NULL,
+                        uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        description TEXT,
+                        UNIQUE KEY unique_employer_filename (employer_id, filename)
+                    )
+                ";
+                $pdo->exec($createTableSQL);
+                
+                // Insert file record with employer_id
+                $stmt = $pdo->prepare("INSERT INTO uploaded_files (employer_id, filename, filepath, description) VALUES (?, ?, ?, ?)");
+                $description = $_POST['description'] ?? '';
+                $stmt->execute([$employer_id, $fileName, $destPath, $description]);
+                
+                write_audit_log('File Upload', $fileName);
+                $uploadSuccess = true;
+                $_SESSION['success_message'] = "File '$fileName' uploaded successfully!";
+            } catch (PDOException $e) {
+                // Check if error is due to duplicate entry
+                if ($e->getCode() == 23000) { // SQLSTATE for duplicate entry
+                    $uploadError = "A file with the name '$fileName' already exists. Please rename your file or upload a different one.";
                     
-                    write_audit_log('File Upload', $fileName);
-                    
-                    // Set success message in session and redirect (PRG pattern)
-                    $_SESSION['upload_success'] = "File '$fileName' uploaded successfully!";
-                    header("Location: upload_documents.php");
-                    exit;
-                } catch (PDOException $e) {
-                    $uploadError = "Database error while saving: " . $e->getMessage();
-                    // Clean up the uploaded file if database insert failed
+                    // Delete the uploaded file since it's a duplicate
                     if (file_exists($destPath)) {
                         unlink($destPath);
                     }
+                } else {
+                    $uploadError = "Database error: " . $e->getMessage();
                 }
-            } else {
-                $uploadError = "Failed to move uploaded file. Check directory permissions.";
-                error_log("Failed to move uploaded file from $fileTmpName to $destPath");
             }
         }
     } else {
-        $uploadError = "No file selected or upload error.";
-        if (isset($_FILES['uploaded_file']['error'])) {
-            $uploadError .= " Error code: " . $_FILES['uploaded_file']['error'];
-            error_log("Upload error code: " . $_FILES['uploaded_file']['error']);
-        }
+        $uploadError = "No file selected.";
     }
-    
-    // If there was an error, store it in session for redirect
-    if ($uploadError) {
-        $_SESSION['upload_error'] = $uploadError;
-        header("Location: upload_documents.php");
-        exit;
-    }
-}
-
-// Get success/error messages from session
-$success_message = '';
-$error_message = '';
-
-if (isset($_SESSION['upload_success'])) {
-    $success_message = $_SESSION['upload_success'];
-    unset($_SESSION['upload_success']);
-}
-
-if (isset($_SESSION['upload_error'])) {
-    $uploadError = $_SESSION['upload_error'];
-    unset($_SESSION['upload_error']);
 }
 
 // Get uploaded files for this employer
 try {
-    // Check if table exists
+    // Check if table exists, create if not
     $tableExists = $pdo->query("SHOW TABLES LIKE 'uploaded_files'")->fetch();
     if (!$tableExists) {
+        $createTableSQL = "
+            CREATE TABLE uploaded_files (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                employer_id INT NOT NULL,
+                filename VARCHAR(255) NOT NULL,
+                filepath VARCHAR(500) NOT NULL,
+                uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                description TEXT
+            )
+        ";
+        $pdo->exec($createTableSQL);
         $uploaded_files = [];
     } else {
         // Get files for this employer
@@ -160,9 +137,13 @@ try {
     }
 } catch (PDOException $e) {
     $uploaded_files = [];
-    if (empty($uploadError)) {
-        $uploadError = "Error accessing database: " . $e->getMessage();
-    }
+    $uploadError = "Error accessing database: " . $e->getMessage();
+}
+
+$success_message = '';
+if (isset($_SESSION['success_message'])) {
+    $success_message = $_SESSION['success_message'];
+    unset($_SESSION['success_message']);
 }
 ?>
 <!DOCTYPE html>
@@ -451,7 +432,7 @@ try {
 
         <div class="upload-form">
             <h4>Upload New Document</h4>
-            <form method="post" enctype="multipart/form-data" id="uploadForm">
+            <form method="post" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                 
                 <div class="mb-3">
@@ -469,7 +450,7 @@ try {
                 </div>
                 
                 <div class="d-grid gap-2 d-md-flex justify-content-md-center">
-                    <button type="submit" name="upload_file" class="btn btn-primary" id="submitBtn">
+                    <button type="submit" name="upload_file" class="btn btn-primary">
                         📁 Upload Document
                     </button>
                     <a href="supervisor_dashboard.php
@@ -531,35 +512,15 @@ try {
                 <p>Total documents: <strong><?= count($uploaded_files) ?></strong></p>
             </div>
         <?php endif; ?>
-        
-        <div class="mt-4 text-center">
-            <a href="supervisor_dashboard.php
-" class="btn btn-secondary">← Back to Dashboard</a>
-        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Prevent form resubmission on page refresh
-        if (window.history.replaceState) {
-            window.history.replaceState(null, null, window.location.href);
-        }
-        
-        // Form submission handling
-        document.addEventListener('DOMContentLoaded', function() {
-            const form = document.getElementById('uploadForm');
-            const submitBtn = document.getElementById('submitBtn');
-            
-            // Prevent double submission
-            form.addEventListener('submit', function() {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '⏳ Uploading...';
-            });
-            
-            // Clear form if there's a success message
-            const successMsg = document.querySelector('.success-msg');
-            if (successMsg) {
-                form.reset();
+        // File input preview
+        document.getElementById('uploaded_file').addEventListener('change', function(e) {
+            const fileName = e.target.files[0]?.name;
+            if (fileName) {
+                console.log('Selected file:', fileName);
             }
         });
     </script>

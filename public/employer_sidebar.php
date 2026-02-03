@@ -1,7 +1,8 @@
 <div class="employer-sidebar">
     <h4 class="sidebar-title">OJT Supervisor Panel</h4>
 
-    <a href="employer_dashboard.php">🏠 Dashboard</a>
+    <a href="supervisor_dashboard.php
+">🏠 Dashboard</a>
     <a href="add_student.php">👤 Add Student</a>
     <a href="absences.php">❌ Mark Absences</a>
 

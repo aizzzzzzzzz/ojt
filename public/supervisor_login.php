@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['employer_name'] = $admin['full_name'];
         $_SESSION['role'] = 'employer'; // treated as employer
         $_SESSION['is_admin'] = true;
-        header("Location: employer_dashboard.php");
+        header("Location: supervisor_dashboard.php");
         exit;
     }
 
@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['employer_name'] = $employer['name'];
         $_SESSION['role'] = 'employer';
         $_SESSION['is_admin'] = false;
-        header("Location: employer_dashboard.php");
+        header("Location: supervisor_dashboard.php");
         exit;
     }
 

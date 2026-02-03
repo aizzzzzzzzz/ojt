@@ -18,9 +18,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['student_id'])) {
     $conn->query("DELETE FROM students WHERE student_id = $student_id");
 
     $_SESSION['success'] = "Student deleted successfully.";
-    header("Location: employer_dashboard.php");
+    header("Location: supervisor_dashboard.php");
     exit;
 } else {
-    header("Location: employer_dashboard.php");
+    header("Location: supervisor_dashboard.php");
     exit;
 }
