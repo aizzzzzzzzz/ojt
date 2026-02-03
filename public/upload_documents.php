@@ -1,7 +1,7 @@
 <?php
 session_start();
 
-if (!isset($_SESSION['employer_id']) || $_SESSION['role'] !== "employer") {
+if ((!isset($_SESSION['employer_id']) && !isset($_SESSION['uploader_type'])) || $_SESSION['role'] !== "employer") {
     header("Location: employer_login.php");
     exit;
 }
@@ -9,10 +9,21 @@ if (!isset($_SESSION['employer_id']) || $_SESSION['role'] !== "employer") {
 include __DIR__ . '/../private/config.php';
 require_once __DIR__ . '/../includes/middleware.php';
 
-$employer_id = $_SESSION['employer_id'];
+// Determine uploader type and id
+if (isset($_SESSION['employer_id'])) {
+    $uploader_type = 'employer';
+    $uploader_id = $_SESSION['employer_id'];
+    $table = 'employers';
+    $id_field = 'employer_id';
+} else {
+    $uploader_type = $_SESSION['uploader_type'];
+    $uploader_id = $_SESSION['uploader_id'];
+    $table = 'admins';
+    $id_field = 'admin_id';
+}
 
-$stmt = $pdo->prepare("SELECT * FROM employers WHERE employer_id = ?");
-$stmt->execute([$employer_id]);
+$stmt = $pdo->prepare("SELECT * FROM $table WHERE $id_field = ?");
+$stmt->execute([$uploader_id]);
 $employer = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$employer) {
@@ -50,8 +61,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_file'])) {
                 // Check if table exists first
                 $tableExists = $pdo->query("SHOW TABLES LIKE 'uploaded_files'")->fetch();
                 if ($tableExists) {
-                    $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM uploaded_files WHERE employer_id = ? AND filename = ?");
-                    $checkStmt->execute([$employer_id, $fileName]);
+                    $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM uploaded_files WHERE uploader_type = ? AND uploader_id = ? AND filename = ?");
+                    $checkStmt->execute([$uploader_type, $uploader_id, $fileName]);
                     $duplicateCount = $checkStmt->fetchColumn();
                     
                     if ($duplicateCount > 0) {
@@ -70,22 +81,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_file'])) {
                 $createTableSQL = "
                     CREATE TABLE IF NOT EXISTS uploaded_files (
                         id INT AUTO_INCREMENT PRIMARY KEY,
-                        employer_id INT NOT NULL,
+                        uploader_type ENUM('admin', 'employer') NOT NULL,
+                        uploader_id INT NOT NULL,
                         filename VARCHAR(255) NOT NULL,
                         filepath VARCHAR(500) NOT NULL,
                         uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         description TEXT,
-                        UNIQUE KEY unique_employer_filename (employer_id, filename)
+                        UNIQUE KEY unique_uploader_filename (uploader_type, uploader_id, filename)
                     )
                 ";
                 $pdo->exec($createTableSQL);
                 
-                // Insert file record with employer_id
-                $stmt = $pdo->prepare("INSERT INTO uploaded_files (employer_id, filename, filepath, description) VALUES (?, ?, ?, ?)");
+                // Insert file record with uploader_type and uploader_id
+                $stmt = $pdo->prepare("INSERT INTO uploaded_files (uploader_type, uploader_id, filename, filepath, description) VALUES (?, ?, ?, ?, ?)");
                 $description = $_POST['description'] ?? '';
-                $stmt->execute([$employer_id, $fileName, $destPath, $description]);
+                $stmt->execute([$uploader_type, $uploader_id, $fileName, $destPath, $description]);
                 
-                write_audit_log('File Upload', $fileName);
+                // FIXED: Use manual audit log with correct user info
+                write_audit_log_manual($uploader_type, $uploader_id, 'File Upload', $fileName);
                 $uploadSuccess = true;
                 $_SESSION['success_message'] = "File '$fileName' uploaded successfully!";
             } catch (PDOException $e) {
@@ -127,12 +140,12 @@ try {
     } else {
         // Get files for this employer
         $files_stmt = $pdo->prepare("
-            SELECT id, filename, uploaded_at, description 
-            FROM uploaded_files 
-            WHERE employer_id = ? 
+            SELECT id, filename, uploaded_at, description
+            FROM uploaded_files
+            WHERE uploader_type = ? AND uploader_id = ?
             ORDER BY uploaded_at DESC
         ");
-        $files_stmt->execute([$employer_id]);
+        $files_stmt->execute([$uploader_type, $uploader_id]);
         $uploaded_files = $files_stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 } catch (PDOException $e) {

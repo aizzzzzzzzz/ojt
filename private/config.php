@@ -1,6 +1,12 @@
 <?php
 // config.php - Enhanced Security Configuration
 
+// ADD THIS AT THE VERY TOP to prevent multiple includes
+if (defined('CONFIG_LOADED')) {
+    return; // Already loaded, exit early
+}
+define('CONFIG_LOADED', true);
+
 // Security Headers
 header("X-Frame-Options: DENY");
 header("X-Content-Type-Options: nosniff");
@@ -52,93 +58,103 @@ try {
     die("Database connection failed. Please try again later.");
 }
 
-// CSRF token with enhanced security
-function generate_csrf_token() {
-    if (empty($_SESSION['csrf_token'])) {
-        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-        $_SESSION['csrf_expires'] = time() + 3600; // 1 hour expiry
-    } elseif (time() > $_SESSION['csrf_expires']) {
-        // Token expired, generate new one
-        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-        $_SESSION['csrf_expires'] = time() + 3600;
+// CSRF token with enhanced security - ADD function_exists checks
+if (!function_exists('generate_csrf_token')) {
+    function generate_csrf_token() {
+        if (empty($_SESSION['csrf_token'])) {
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+            $_SESSION['csrf_expires'] = time() + 3600; // 1 hour expiry
+        } elseif (time() > $_SESSION['csrf_expires']) {
+            // Token expired, generate new one
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+            $_SESSION['csrf_expires'] = time() + 3600;
+        }
+        return $_SESSION['csrf_token'];
     }
-    return $_SESSION['csrf_token'];
 }
 
-function validate_csrf_token($token) {
-    return isset($_SESSION['csrf_token'], $_SESSION['csrf_expires']) &&
-           time() <= $_SESSION['csrf_expires'] &&
-           hash_equals($_SESSION['csrf_token'], $token);
+if (!function_exists('validate_csrf_token')) {
+    function validate_csrf_token($token) {
+        return isset($_SESSION['csrf_token'], $_SESSION['csrf_expires']) &&
+               time() <= $_SESSION['csrf_expires'] &&
+               hash_equals($_SESSION['csrf_token'], $token);
+    }
 }
 
 // Enhanced Input sanitization
-function sanitize_input($data) {
-    $data = trim($data);
-    $data = stripslashes($data);
-    $data = htmlspecialchars($data, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-    return $data;
+if (!function_exists('sanitize_input')) {
+    function sanitize_input($data) {
+        $data = trim($data);
+        $data = stripslashes($data);
+        $data = htmlspecialchars($data, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        return $data;
+    }
 }
 
 // Password validation function
-function validate_password($password) {
-    // At least 8 characters, 1 uppercase, 1 lowercase, 1 number, 1 special char
-    $pattern = '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/';
-    return preg_match($pattern, $password);
+if (!function_exists('validate_password')) {
+    function validate_password($password) {
+        // At least 8 characters, 1 uppercase, 1 lowercase, 1 number, 1 special char
+        $pattern = '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/';
+        return preg_match($pattern, $password);
+    }
 }
 
 // Rate limiting for login attempts
-function check_login_attempts($identifier) {
-    $max_attempts = 5;
-    $lockout_time = 900; // 15 minutes
+if (!function_exists('check_login_attempts')) {
+    function check_login_attempts($identifier) {
+        $max_attempts = 5;
+        $lockout_time = 900; // 15 minutes
 
-    if (!isset($_SESSION['login_attempts'])) {
-        $_SESSION['login_attempts'] = [];
-    }
+        if (!isset($_SESSION['login_attempts'])) {
+            $_SESSION['login_attempts'] = [];
+        }
 
-    $now = time();
+        $now = time();
 
-    // Clean up old attempts
-    $_SESSION['login_attempts'] = array_filter($_SESSION['login_attempts'], function($attempt) use ($now, $lockout_time) {
-        return ($now - $attempt['time']) < $lockout_time;
-    });
+        // Clean up old attempts
+        $_SESSION['login_attempts'] = array_filter($_SESSION['login_attempts'], function($attempt) use ($now, $lockout_time) {
+            return ($now - $attempt['time']) < $lockout_time;
+        });
 
-    // Check if identifier is locked out
-    foreach ($_SESSION['login_attempts'] as $attempt) {
-        if ($attempt['identifier'] === $identifier && $attempt['count'] >= $max_attempts) {
-            if (($now - $attempt['time']) < $lockout_time) {
-                return false; // Locked out
+        // Check if identifier is locked out
+        foreach ($_SESSION['login_attempts'] as $attempt) {
+            if ($attempt['identifier'] === $identifier && $attempt['count'] >= $max_attempts) {
+                if (($now - $attempt['time']) < $lockout_time) {
+                    return false; // Locked out
+                }
             }
         }
-    }
 
-    return true; // Allow attempt
+        return true; // Allow attempt
+    }
 }
 
-function record_login_attempt($identifier) {
-    $now = time();
+if (!function_exists('record_login_attempt')) {
+    function record_login_attempt($identifier) {
+        $now = time();
 
-    if (!isset($_SESSION['login_attempts'])) {
-        $_SESSION['login_attempts'] = [];
-    }
-
-    $found = false;
-    foreach ($_SESSION['login_attempts'] as &$attempt) {
-        if ($attempt['identifier'] === $identifier) {
-            $attempt['count']++;
-            $attempt['time'] = $now;
-            $found = true;
-            break;
+        if (!isset($_SESSION['login_attempts'])) {
+            $_SESSION['login_attempts'] = [];
         }
-    }
 
-    if (!$found) {
-        $_SESSION['login_attempts'][] = [
-            'identifier' => $identifier,
-            'count' => 1,
-            'time' => $now
-        ];
+        $found = false;
+        foreach ($_SESSION['login_attempts'] as &$attempt) {
+            if ($attempt['identifier'] === $identifier) {
+                $attempt['count']++;
+                $attempt['time'] = $now;
+                $found = true;
+                break;
+            }
+        }
+
+        if (!$found) {
+            $_SESSION['login_attempts'][] = [
+                'identifier' => $identifier,
+                'count' => 1,
+                'time' => $now
+            ];
+        }
     }
 }
 ?>
-
-

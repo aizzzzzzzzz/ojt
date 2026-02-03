@@ -155,7 +155,7 @@ require_once __DIR__ . '/../private/config.php';
       <div class="card-icon">🏢</div>
       <h3>Employer</h3>
       <p>Track attendance and evaluate students</p>
-      <a href="supervisor_login.php" class="btn btn-employer">Login as Employer</a>
+      <a href="supervisor_login.php" class="btn btn-employer">Login as Supervisor</a>
     </div>
 
     <div class="card">

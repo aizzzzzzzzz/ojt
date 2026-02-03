@@ -41,8 +41,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_file'])) {
         elseif ($_FILES['uploaded_file']['size'] > 5*1024*1024) $uploadError = "File too large (max 5MB).";
 
         if (!$uploadError && move_uploaded_file($_FILES['uploaded_file']['tmp_name'], $destPath)) {
-            $stmt = $pdo->prepare("INSERT INTO uploaded_files (admin_id, filename, filepath) VALUES (?, ?, ?)");
-            $stmt->execute([$_SESSION['admin_id'], $fileName, $destPath]);
+            $stmt = $pdo->prepare("INSERT INTO uploaded_files (uploader_type, uploader_id, filename, filepath) VALUES (?, ?, ?, ?)");
+            $stmt->execute(['admin', $_SESSION['admin_id'], $fileName, $destPath]);
             write_audit_log('File Upload', $fileName);
             $_SESSION['upload_success'] = true;
             header("Location: admin_dashboard.php");

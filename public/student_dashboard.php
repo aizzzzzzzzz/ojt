@@ -1,4 +1,5 @@
 <?php
+// Import PhpSpreadsheet classes at the very top
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -26,18 +27,23 @@ $student_id = (int)$_SESSION['student_id'];
 $today = date('Y-m-d');
 $messages = [];
 
+// Handle Excel Export
 if (isset($_GET['export']) && $_GET['export'] == 'excel') {
+    // Clear any existing output
     if (ob_get_length()) ob_end_clean();
     
+    // Check if PhpSpreadsheet is available
     $phpspreadsheetPath = __DIR__ . '/../vendor/autoload.php';
     if (file_exists($phpspreadsheetPath)) {
         require_once $phpspreadsheetPath;
 
         try {
+            // Fetch student info
             $stmt = $pdo->prepare("SELECT * FROM students WHERE student_id = ? LIMIT 1");
             $stmt->execute([$student_id]);
             $student = $stmt->fetch(PDO::FETCH_ASSOC);
 
+            // Fetch attendance history with optional date filter
             $start_date = $_GET['start_date'] ?? null;
             $end_date = $_GET['end_date'] ?? null;
 
@@ -56,20 +62,24 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
             $attendance_stmt->execute($params);
             $attendance = $attendance_stmt->fetchAll(PDO::FETCH_ASSOC);
 
+            // Create new Spreadsheet object
             $spreadsheet = new Spreadsheet();
             $sheet = $spreadsheet->getActiveSheet();
             
+            // Set document properties
             $spreadsheet->getProperties()
                 ->setCreator("OJT System")
                 ->setLastModifiedBy("OJT System")
                 ->setTitle("Attendance History - " . ($student['first_name'] ?? 'Student'))
                 ->setSubject("Attendance Records");
             
+            // Set main title
             $sheet->setCellValue('A1', 'ATTENDANCE HISTORY REPORT');
             $sheet->mergeCells('A1:I1');
             $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
             $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             
+            // Student info
             $sheet->setCellValue('A2', 'Student Name:');
             $sheet->setCellValue('B2', ($student['first_name'] ?? '') . ' ' . ($student['last_name'] ?? ''));
             $sheet->setCellValue('A3', 'Student ID:');
@@ -85,9 +95,11 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
             $sheet->setCellValue('A5', 'Generated On:');
             $sheet->setCellValue('B5', date('F d, Y h:i A'));
             
+            // Set headers
             $headers = ['Date', 'Time In', 'Lunch Out', 'Lunch In', 'Time Out', 'Status', 'Verified', 'Hours Worked', 'Daily Task / Activity'];
             $sheet->fromArray($headers, NULL, 'A7');
             
+            // Style headers
             $headerStyle = [
                 'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
                 'fill' => [
@@ -110,6 +122,7 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
             $verifiedCount = 0;
             
             foreach ($attendance as $record) {
+                // Calculate hours
                 $hours = '-';
                 $minutesWorked = 0;
                 
@@ -143,6 +156,7 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
                 $sheet->setCellValue('H' . $row, $hours);
                 $sheet->setCellValue('I' . $row, $record['daily_task'] ?? '-');
                 
+                // Add conditional formatting for verified status
                 $verifiedStyle = $sheet->getStyle('G' . $row);
                 if ($record['verified'] == 1) {
                     $verifiedStyle->getFont()->getColor()->setRGB('008000');
@@ -150,6 +164,7 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
                     $verifiedStyle->getFont()->getColor()->setRGB('FF6B6B');
                 }
                 
+                // Add border to data rows
                 $dataStyle = [
                     'borders' => [
                         'outline' => [
@@ -163,6 +178,7 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
                 $row++;
             }
             
+            // Add summary section
             $summaryRow = $row + 2;
             $sheet->setCellValue('A' . $summaryRow, 'SUMMARY');
             $sheet->mergeCells('A' . $summaryRow . ':B' . $summaryRow);
@@ -187,6 +203,7 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
             $totalMinutesRemainder = $totalMinutes % 60;
             $sheet->setCellValue('B' . $summaryRow, $totalHours . 'h ' . $totalMinutesRemainder . 'm');
             
+            // Style summary
             $summaryStyle = [
                 'font' => ['bold' => true],
                 'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E8F5E9']],
@@ -199,34 +216,42 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
             ];
             $sheet->getStyle('A' . ($row + 2) . ':B' . $summaryRow)->applyFromArray($summaryStyle);
             
+            // Auto-size columns
             foreach (range('A', 'I') as $column) {
                 $sheet->getColumnDimension($column)->setAutoSize(true);
             }
             
-            $sheet->getColumnDimension('I')->setWidth(40);
+            // Set column widths for specific columns
+            $sheet->getColumnDimension('I')->setWidth(40); // Wider for tasks
             
+            // Wrap text for task column
             $sheet->getStyle('I8:I' . ($row - 1))->getAlignment()->setWrapText(true);
             
+            // Set filename
             $filename = 'Attendance_History_' . ($student['first_name'] ?? 'student') . '_' . date('Y-m-d') . '.xlsx';
             
+            // Clear all output buffers
             while (ob_get_level()) {
                 ob_end_clean();
             }
             
+            // Set headers
             header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
             header('Content-Disposition: attachment;filename="' . $filename . '"');
             header('Cache-Control: max-age=0');
-            header('Cache-Control: max-age=1');
+            header('Cache-Control: max-age=1'); // For IE9
             header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
             header('Last-Modified: ' . gmdate('D, d M Y H:i:s') . ' GMT');
             header('Cache-Control: cache, must-revalidate');
             header('Pragma: public');
             
+            // Create and save file
             $writer = new Xlsx($spreadsheet);
             $writer->save('php://output');
             exit;
             
         } catch (Exception $e) {
+            // Log detailed error
             error_log("Excel Export Error: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
             $_SESSION['error'] = "Error generating Excel file. Please contact administrator.";
             header("Location: " . $_SERVER['PHP_SELF']);
@@ -328,20 +353,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attendance_action']))
     }
 }
 
+// Fetch student info
 $stmt = $pdo->prepare("SELECT * FROM students WHERE student_id = ? LIMIT 1");
 $stmt->execute([$student_id]);
 $student = $stmt->fetch(PDO::FETCH_ASSOC);
 
+// Fetch attendance history
 $attendance_stmt = $pdo->prepare("SELECT * FROM attendance WHERE student_id = ? ORDER BY log_date DESC");
 $attendance_stmt->execute([$student_id]);
 $attendance = $attendance_stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Today's row
 $today_stmt = $pdo->prepare("SELECT * FROM attendance WHERE student_id = ? AND log_date = ? LIMIT 1");
 $today_stmt->execute([$student_id, $today]);
 $today_row = $today_stmt->fetch(PDO::FETCH_ASSOC);
 
+// Calculate total accumulated minutes safely
 $total_minutes = 0;
 foreach ($attendance as $row) {
+    // Only count verified attendance
     if ($row['verified'] == 1 && !empty($row['time_in']) && !empty($row['time_out'])) {
 
         $time_in = strtotime($row['time_in']);
@@ -363,10 +393,12 @@ $minutes = $total_minutes % 60;
 $statusClass = ($hours >= 200) ? 'completed' : 'in-progress';
 $statusText = ($hours >= 200) ? 'Completed' : 'In Progress';
 
+// Fetch projects for student
 $projects_stmt = $pdo->prepare("SELECT * FROM projects ORDER BY created_at DESC");
 $projects_stmt->execute();
 $projects = $projects_stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Handle file submission
 $submitError = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_file'])) {
     $project_id = (int)$_POST['project_id'];
@@ -378,25 +410,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_file'])) {
     
     try {
         if ($submission_type === 'code') {
+            // Handle code submission
             $code = trim($_POST['code_content'] ?? '');
             
             if (empty($code)) {
                 $submitError = "Code cannot be empty.";
             } else {
+                // Save code to .txt file
                 $fileName = $student_id . '_project_' . $project_id . '_' . time() . '.txt';
                 $filePath = $uploadDir . $fileName;
                 
+                // Ensure directory exists and is writable
                 if (!is_writable($uploadDir)) {
                     $submitError = "Upload directory is not writable.";
                 } elseif (file_put_contents($filePath, $code) === false) {
                     $submitError = "Error saving code file. Please try again.";
                 } else {
+                    // Prepare and execute SQL with proper parameter count
                     $stmt = $pdo->prepare("
                         INSERT INTO project_submissions 
                         (project_id, student_id, file_path, status, submission_date, remarks, submission_status) 
                         VALUES (?, ?, ?, 'submitted', NOW(), ?, 'pending')
                     ");
                     
+                    // All 4 parameters: project_id, student_id, file_path, remarks
                     $stmt->execute([$project_id, $student_id, $fileName, $remarks]);
                     
                     $_SESSION['success'] = "Code submitted successfully!";
@@ -405,6 +442,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_file'])) {
                 }
             }
         } else {
+            // Handle file upload
             $uploadedFile = $_FILES['submission_file'];
             
             if (empty($uploadedFile['tmp_name']) || $uploadedFile['error'] !== UPLOAD_ERR_OK) {
@@ -419,9 +457,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_file'])) {
                 } elseif ($uploadedFile['size'] > 10 * 1024 * 1024) {
                     $submitError = "File too large (maximum 10MB).";
                 } else {
+                    // Generate unique filename
                     $uniqueFileName = $student_id . '_project_' . $project_id . '_' . time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $originalName);
                     $filePath = $uploadDir . $uniqueFileName;
                     
+                    // Additional security check
                     $finfo = finfo_open(FILEINFO_MIME_TYPE);
                     $mimeType = finfo_file($finfo, $uploadedFile['tmp_name']);
                     finfo_close($finfo);
@@ -440,12 +480,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_file'])) {
                     } elseif (!move_uploaded_file($uploadedFile['tmp_name'], $filePath)) {
                         $submitError = "Error uploading file. Please try again.";
                     } else {
+                        // Prepare and execute SQL with proper parameter count
                         $stmt = $pdo->prepare("
                             INSERT INTO project_submissions 
                             (project_id, student_id, file_path, status, submission_date, remarks, submission_status) 
                             VALUES (?, ?, ?, 'submitted', NOW(), ?, 'pending')
                         ");
                         
+                        // All 4 parameters: project_id, student_id, file_path, remarks
                         $stmt->execute([$project_id, $student_id, $uniqueFileName, $remarks]);
                         
                         $_SESSION['success'] = "File submitted successfully!";
@@ -456,6 +498,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_file'])) {
             }
         }
     } catch (PDOException $e) {
+        // Log detailed error for debugging
         error_log("Database Error: " . $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine());
         
         if ($e->getCode() == 'HY093') {
@@ -464,15 +507,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_file'])) {
             $submitError = "Database error occurred. Please try again.";
         }
     } catch (Exception $e) {
+        // Catch any other exceptions
         error_log("General Error: " . $e->getMessage());
         $submitError = "An error occurred. Please try again.";
     }
 }
 
+// Fetch student's submissions
 $submissions_stmt = $pdo->prepare("SELECT ps.*, p.project_name FROM project_submissions ps JOIN projects p ON ps.project_id = p.project_id WHERE ps.student_id = ? ORDER BY ps.submission_date DESC");
 $submissions_stmt->execute([$student_id]);
 $submissions = $submissions_stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Default code for editor
 $defaultCode = "<?php\necho 'Hello PHP!';\n?>\n<h1>Hello HTML + CSS + JS!</h1>\n<style>h1{color:#0b3d91;}</style>\n<script>console.log('Hello JS');</script>";
 $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
 ?>
@@ -579,26 +625,34 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
         border: 1px solid #c3e6cb;
         border-radius: 10px;
         padding: 20px;
-        margin: 20px 0;
+        margin: 20px auto;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        max-width: 800px;
+        width: 100%;
+        text-align: center;
     }
 
     .export-panel h5 {
         margin-top: 0;
         color: #2c3e50;
-        margin-bottom: 15px;
+        margin-bottom: 20px;
+        font-size: 1.25rem;
     }
 
     .export-form {
         display: flex;
-        gap: 10px;
+        flex-direction: column;
         align-items: center;
-        flex-wrap: wrap;
+        gap: 15px;
+        width: 100%;
     }
 
     .export-form label {
         font-weight: 600;
         color: #2c3e50;
+        text-align: left;
+        width: 100%;
+        max-width: 600px;
     }
 
     .export-form .form-control {
@@ -607,6 +661,7 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
         padding: 8px 12px;
         font-size: 14px;
         transition: border-color 0.3s ease;
+        height: 38px;
     }
 
     .export-form .form-control:focus {
@@ -616,45 +671,56 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
 
     .export-controls {
         display: flex;
-        gap: 15px;
-        align-items: center;
         flex-wrap: wrap;
+        justify-content: center;
+        align-items: flex-end;
+        gap: 15px;
+        width: 100%;
+        max-width: 600px;
     }
 
     .date-input-group {
         display: flex;
         flex-direction: column;
         gap: 5px;
+        flex: 1;
+        min-width: 150px;
     }
 
     .date-input-group label {
         font-weight: 600;
         color: #2c3e50;
         font-size: 14px;
+        text-align: left;
     }
 
     .date-input-group .form-control {
-        width: 150px;
+        width: 100%;
         padding: 6px 8px;
         font-size: 14px;
+        height: 38px;
     }
 
     .export-buttons {
         display: flex;
         gap: 10px;
-        margin-left: auto;
         justify-content: center;
+        width: 100%;
+        margin-top: 10px;
     }
 
     .export-buttons .btn-export {
-        width: 150px;
-        padding: 6px 8px;
+        height: 38px;
+        padding: 8px 15px;
         font-size: 14px;
-        text-align: center;
+        min-width: 150px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .btn-export {
-        padding: 10px 20px;
+        padding: 8px 15px;
         border-radius: 6px;
         border: none;
         font-weight: 600;
@@ -662,7 +728,9 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
         transition: all 0.3s ease;
         display: flex;
         align-items: center;
+        justify-content: center;
         gap: 8px;
+        height: 38px;
     }
 
     .btn-export-excel {
@@ -1190,34 +1258,38 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
             font-size: 24px;
         }
 
+        .export-panel {
+            margin: 20px 0;
+            padding: 15px;
+        }
+
         .export-form {
+            align-items: stretch;
+        }
+
+        .export-controls {
             flex-direction: column;
             align-items: stretch;
+            gap: 10px;
+        }
+
+        .date-input-group {
+            width: 100%;
+        }
+
+        .date-input-group .form-control {
+            width: 100%;
         }
 
         .export-buttons {
-            margin-left: 0;
-            justify-content: center;
-        }
-
-        .export-form .export-controls {
             flex-direction: column;
-            align-items: stretch;
+            gap: 10px;
+            margin-top: 15px;
         }
 
-        .export-form .date-input-group {
+        .export-buttons .btn-export {
             width: 100%;
-            justify-content: space-between;
-        }
-
-        .export-form .date-input-group .form-control {
-            width: calc(100% - 50px);
-        }
-
-        .export-form .export-buttons {
-            margin-left: 0;
-            justify-content: center;
-            width: 100%;
+            min-width: unset;
         }
 
         .attendance-actions {
@@ -1455,7 +1527,7 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
                 <?php else: ?>
                     <span class="unverified-badge">✗ Not Verified</span>
                 <?php endif; ?>
-            </span>
+                </span>
         </div>
         <div class="card-body">
             <div class="time-info">
@@ -1518,15 +1590,15 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
                     <label>To:</label>
                     <input type="date" name="end_date" class="form-control" value="<?= date('Y-m-d') ?>">
                 </div>
+            </div>
 
-                <div class="export-buttons">
-                    <button type="submit" name="export" value="excel" class="btn-export btn-export-excel">
-                        📅 Export Filtered
-                    </button>
-                    <a href="?export=excel" class="btn-export btn-export-all">
-                        📋 Export All Records
-                    </a>
-                </div>
+            <div class="export-buttons">
+                <button type="submit" name="export" value="excel" class="btn-export btn-export-excel">
+                    📅 Export Filtered
+                </button>
+                <a href="?export=excel" class="btn-export btn-export-all">
+                    📋 Export All Records
+                </a>
             </div>
             <small style="color: #666; display: block; margin-top: 10px;">
                 💡 Export your attendance history to Excel with professional formatting, including time calculations and verification status.
@@ -1534,8 +1606,8 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
         </form>
     </div>
     
-    <div style="margin-top: 30px; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background: #f8f9fa;">
-        <h5 style="margin-top: 0; color: #2c3e50;"> How to Use Export</h5>
+    <div style="margin-top: 30px; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background: #f8f9fa; max-width: 800px; margin: 30px auto;">
+        <h5 style="margin-top: 0; color: #2c3e50; text-align: center;"> How to Use Export</h5>
         <ul style="text-align: left; margin-bottom: 0;">
             <li><strong>Filtered Export:</strong> Select a date range and click "Export Filtered" to get records for specific dates</li>
             <li><strong>All Records:</strong> Click "Export All Records" to download your complete attendance history</li>

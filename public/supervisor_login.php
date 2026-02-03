@@ -13,7 +13,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($admin && password_verify($password, $admin['password'])) {
         // Admin logging in as employer
-        $_SESSION['employer_id'] = $admin['admin_id'];
+        $_SESSION['uploader_type'] = 'admin';
+        $_SESSION['uploader_id'] = $admin['admin_id'];
         $_SESSION['employer_name'] = $admin['full_name'];
         $_SESSION['role'] = 'employer'; // treated as employer
         $_SESSION['is_admin'] = true;
