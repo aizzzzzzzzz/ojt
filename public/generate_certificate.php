@@ -254,7 +254,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate'])) {
         </form>
 
         <br><a href="supervisor_dashboard.php
-">Back to Dashboard</a>
+">Back</a>
     </div>
 </body>
 </html>

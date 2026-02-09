@@ -428,7 +428,7 @@ if (isset($_SESSION['success_message'])) {
 <body>
     <div class="dashboard-container">
         <a href="supervisor_dashboard.php
-" class="back-link">← Back to Dashboard</a>
+" class="back-link">← Back</a>
         
         <div class="welcome-section">
             <h2>Upload Documents</h2>

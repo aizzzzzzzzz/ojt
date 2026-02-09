@@ -93,7 +93,7 @@ if (!$evaluation) {
         </div>
 
         <a href="supervisor_dashboard.php
-" class="back">⬅ Back to Dashboard</a>
+" class="back">⬅ Back</a>
     </div>
 </body>
 </html>

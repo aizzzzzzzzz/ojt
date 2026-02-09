@@ -8,15 +8,24 @@ if (!isset($_SESSION['employer_id'])) {
 include __DIR__ . '/../private/config.php';
 
 $project_id = $_GET['project_id'] ?? 0;
-
-
-
+// Update the SQL query to properly calculate submission_status
+// Change ROW_NUMBER to count from oldest to newest:
 $stmt = $pdo->prepare("
-    SELECT ps.*, s.username
+    SELECT
+        ps.*,
+        s.username,
+        p.due_date,
+        p.project_name,
+        ROW_NUMBER() OVER (PARTITION BY ps.student_id ORDER BY ps.submission_date ASC) as attempt_number,
+        CASE
+            WHEN ps.submission_date <= DATE_ADD(p.due_date, INTERVAL 1 DAY) THEN 'On Time'
+            ELSE 'Late'
+        END as calculated_status
     FROM project_submissions ps
     JOIN students s ON ps.student_id = s.student_id
+    JOIN projects p ON ps.project_id = p.project_id
     WHERE ps.project_id = ?
-    ORDER BY ps.submission_date DESC
+    ORDER BY ps.student_id, ps.submission_date DESC
 ");
 $stmt->execute([$project_id]);
 $submissions = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -42,8 +51,11 @@ tr:hover { background:#e3f2fd; }
 <body>
 <div class="dashboard-container">
 <h2>Project Submissions</h2>
-<a href="supervisor_dashboard.php" class="btn btn-outline-secondary mb-3">⬅ Back to Dashboard</a>
+<a href="manage_projects.php" class="btn btn-outline-secondary mb-3">⬅ Back</a>
 
+<?php if (!empty($submissions)): ?>
+<h3 class="mb-3"> <?= htmlspecialchars($submissions[0]['project_name']) ?></h3>
+<?php endif; ?>
 <div class="table-section">
 <table class="table table-bordered">
     <thead>
@@ -61,7 +73,15 @@ tr:hover { background:#e3f2fd; }
     <tbody>
     <?php foreach ($submissions as $s): ?>
         <tr>
-            <td><?= htmlspecialchars($s['username']) ?></td>
+            <td>
+                <?= htmlspecialchars($s['username']) ?>
+                <?php if($s['attempt_number'] > 1): ?>
+                    <br>
+                    <small class="text-muted">
+                        <span class="badge bg-info">Attempt #<?= $s['attempt_number'] ?></span>
+                    </small>
+                <?php endif; ?>
+            </td>
             <td>
                 <?php if (strpos($s['file_path'], 'storage/uploads/') === 0): ?>
                     <a href="view_submission.php?submission_id=<?= $s['submission_id'] ?>" target="_blank">View Submission</a>
@@ -73,8 +93,13 @@ tr:hover { background:#e3f2fd; }
             </td>
             <td><?= htmlspecialchars($s['submission_date']) ?></td>
             <td>
-                <span class="badge bg-<?= ($s['submission_status'] ?? 'Unknown') === 'On Time' ? 'success' : 'danger' ?>">
-                    <?= htmlspecialchars($s['submission_status'] ?? 'Unknown') ?>
+                <?php 
+                // Use calculated_status instead of submission_status
+                $statusClass = ($s['calculated_status'] === 'On Time') ? 'success' : 'danger';
+                $statusText = $s['calculated_status'];
+                ?>
+                <span class="badge bg-<?= $statusClass ?>">
+                    <?= htmlspecialchars($statusText) ?>
                 </span>
             </td>
             <td>
@@ -85,16 +110,19 @@ tr:hover { background:#e3f2fd; }
             <td><?= htmlspecialchars($s['remarks'] ?? 'N/A') ?></td>
             <td><?= htmlspecialchars($s['graded_at'] ?? 'N/A') ?></td>
             <td>
-                <?php if ($s['graded_at']): ?>
+                <?php if ($s['status'] === 'Rejected'): ?>
+                    <span class="text-danger">Rejected</span>
+                <?php elseif ($s['graded_at']): ?>
                     <span class="text-muted">Graded</span>
                 <?php else: ?>
                     <form method="POST" action="grade_submission.php">
                         <input type="hidden" name="submission_id" value="<?= $s['submission_id'] ?>">
-                        <input type="text" name="remarks" placeholder="Enter remarks" value="<?= htmlspecialchars($s['remarks'] ?? '') ?>" class="form-control mb-2">
-                        <select name="status" class="form-select mb-2">
+                        <input type="text" name="remarks" placeholder="Enter remarks" 
+                               value="<?= htmlspecialchars($s['remarks'] ?? '') ?>" class="form-control mb-2">
+                        <select name="status" class="form-select mb-2" required>
                             <option value="Pending" <?= ($s['status']=='Pending')?'selected':'' ?>>Pending</option>
-                            <option value="Approved" <?= ($s['status']=='Approved')?'selected':'' ?>>Approved</option>
-                            <option value="Rejected" <?= ($s['status']=='Rejected')?'selected':'' ?>>Rejected</option>
+                            <option value="Approved" <?= ($s['status']=='Approved')?'selected':'' ?>>Approve</option>
+                            <option value="Rejected" <?= ($s['status']=='Rejected')?'selected':'' ?>>Reject</option>
                         </select>
                         <button type="submit" class="btn btn-sm btn-success">Submit Grade</button>
                     </form>

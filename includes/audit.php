@@ -10,3 +10,11 @@ function audit_log($pdo, $action, $target = null) {
     ");
     $stmt->execute([$user_type, $user_id, $action, $target, $ip]);
 }
+
+function log_activity($pdo, $user_id, $role, $action) {
+    $stmt = $pdo->prepare("
+        INSERT INTO activity_logs (user_id, role, action)
+        VALUES (?, ?, ?)
+    ");
+    $stmt->execute([$user_id, $role, $action]);
+}

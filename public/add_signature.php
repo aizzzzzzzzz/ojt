@@ -182,7 +182,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_signature'])) {
             <button type="submit" name="add_signature" class="btn">Add Signature</button>
         </form>
         <br><a href="supervisor_dashboard.php
-">Back to Dashboard</a>
+">Back</a>
     </div>
     <script>
         const canvas = document.getElementById('signature-pad');

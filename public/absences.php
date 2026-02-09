@@ -170,7 +170,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <div style="display: flex; gap: 10px; justify-content: center;">
                 <button type="submit" class="submit-btn" style="flex: 1; padding: 12px; font-size: 14px;">Submit</button>
                 <a href="supervisor_dashboard.php
-" class="submit-btn" style="flex: 1; padding: 12px; font-size: 14px; text-decoration: none; display: inline-block; text-align: center;">Back to Dashboard</a>
+" class="submit-btn" style="flex: 1; padding: 12px; font-size: 14px; text-decoration: none; display: inline-block; text-align: center;">Back</a>
             </div>
         </form>
     </div>

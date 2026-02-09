@@ -482,11 +482,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_file'])) {
                     } else {
                         // Prepare and execute SQL with proper parameter count
                         $stmt = $pdo->prepare("
-                            INSERT INTO project_submissions 
-                            (project_id, student_id, file_path, status, submission_date, remarks, submission_status) 
+                            INSERT INTO project_submissions
+                            (project_id, student_id, file_path, status, submission_date, remarks, submission_status)
                             VALUES (?, ?, ?, 'submitted', NOW(), ?, 'pending')
+                            ON DUPLICATE KEY UPDATE
+                            file_path = VALUES(file_path),
+                            status = 'submitted',
+                            submission_date = NOW(),
+                            remarks = VALUES(remarks),
+                            submission_status = 'pending',
+                            graded_at = NULL
                         ");
-                        
+
                         // All 4 parameters: project_id, student_id, file_path, remarks
                         $stmt->execute([$project_id, $student_id, $uniqueFileName, $remarks]);
                         
@@ -1720,7 +1727,7 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
                         <div>📅 Submitted: <strong><?= date('M d, Y H:i', strtotime($sub['submission_date'])) ?></strong></div>
                         <div>Status: <strong style="color: <?= $sub['status'] == 'Approved' ? '#28a745' : ($sub['status'] == 'Rejected' ? '#dc3545' : '#ffc107') ?>;"><?= ucfirst($sub['status']) ?></strong></div>
                         <?php if (!empty($sub['remarks'])): ?>
-                            <div>📝 Your Notes: <?= htmlspecialchars($sub['remarks']) ?></div>
+                            <div>Grade: <?= htmlspecialchars($sub['remarks']) ?></div>
                         <?php endif; ?>
                         <?php if (!empty($sub['graded_at'])): ?>
                             <div>✅ Graded on: <?= date('M d, Y', strtotime($sub['graded_at'])) ?></div>

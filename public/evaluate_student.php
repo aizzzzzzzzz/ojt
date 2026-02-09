@@ -83,7 +83,7 @@ body { background:#e9f5ff; }
 <div class="container">
     <h2 class="mb-4">Final Evaluation Form</h2>
     <a href="supervisor_dashboard.php
-" class="btn btn-secondary mb-3">Back to Dashboard</a>
+" class="btn btn-secondary mb-3">Back</a>
 
     <?php if ($success): ?>
         <div class="alert alert-success"><?= $success ?></div>
