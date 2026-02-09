@@ -18,6 +18,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $_SESSION['role'] = "student";
             $_SESSION['success'] = "Login successful!";
 
+            if ($student['password_changed'] == 0) {
+                $_SESSION['change_password'] = true;
+                header("Location: change_password.php");
+                exit;
+            }
+
             header("Location: student_dashboard.php");
             exit;
         } else {

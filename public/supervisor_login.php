@@ -32,6 +32,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['employer_name'] = $employer['name'];
         $_SESSION['role'] = 'employer';
         $_SESSION['is_admin'] = false;
+
+        if ($employer['password_changed'] == 0) {
+            $_SESSION['change_password'] = true;
+            header("Location: change_password.php");
+            exit;
+        }
+
         header("Location: supervisor_dashboard.php");
         exit;
     }
