@@ -1,18 +1,19 @@
+<?php
+// Get ALL submissions for this student+project
+$historyStmt = $pdo->prepare("SELECT status, submission_date, submission_status, remarks, graded_at FROM project_submissions WHERE project_id = ? AND student_id = ? ORDER BY submission_date ASC");
+$historyStmt->execute([$project_id, $student_id]);
+$allSubmissions = $historyStmt->fetchAll(PDO::FETCH_ASSOC);
+$hasSubmissions = !empty($allSubmissions);
+?>
+
 <!-- Current Submission Status -->
-<?php if($submission): ?>
-    <?php 
-    // Get ALL submissions for this student+project
-    $historyStmt = $pdo->prepare("SELECT status, submission_date, submission_status, remarks, graded_at FROM project_submissions WHERE project_id = ? AND student_id = ? ORDER BY submission_date DESC");
-    $historyStmt->execute([$project_id, $student_id]);
-    $allSubmissions = $historyStmt->fetchAll(PDO::FETCH_ASSOC);
-    ?>
-    
+<?php if($hasSubmissions): ?>
     <div class="submission-status mb-4">
         <h5>Submission History</h5>
         <?php foreach($allSubmissions as $index => $sub): ?>
             <div class="mb-3 p-3 border rounded">
                 <div class="d-flex justify-content-between">
-                    <strong>Attempt #<?= count($allSubmissions) - $index ?></strong>
+                    <strong>Attempt #<?= $index + 1 ?></strong>
                     <span class="badge bg-<?= $sub['status'] === 'Approved' ? 'success' : ($sub['status'] === 'Rejected' ? 'danger' : 'warning') ?>">
                         <?= htmlspecialchars($sub['status']) ?>
                     </span>
@@ -50,7 +51,7 @@
     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
         <a href="student_dashboard.php" class="btn btn-secondary me-md-2">Back to Dashboard</a>
         <button type="submit" class="btn btn-primary">
-            <?= $allSubmissions ? 'Submit New Attempt' : 'Submit Project' ?>
+            <?= $hasSubmissions ? 'Submit New Attempt' : 'Submit Project' ?>
         </button>
     </div>
 </form>

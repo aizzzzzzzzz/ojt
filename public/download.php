@@ -1,7 +1,9 @@
 <?php
 session_start();
 
-if (!isset($_SESSION['employer_id']) || $_SESSION['role'] !== "employer") {
+// Check if user is logged in as employer or admin
+if ((!isset($_SESSION['employer_id']) && !isset($_SESSION['admin_id'])) ||
+    ($_SESSION['role'] !== "employer" && $_SESSION['role'] !== "admin")) {
     header("Location: employer_login.php");
     exit;
 }
@@ -9,16 +11,24 @@ if (!isset($_SESSION['employer_id']) || $_SESSION['role'] !== "employer") {
 include __DIR__ . '/../private/config.php';
 require_once __DIR__ . '/../includes/middleware.php';
 
-$employer_id = $_SESSION['employer_id'];
+// Determine uploader type and id
+if (isset($_SESSION['employer_id'])) {
+    $uploader_type = 'employer';
+    $uploader_id = $_SESSION['employer_id'];
+} else {
+    $uploader_type = 'admin';
+    $uploader_id = $_SESSION['admin_id'];
+}
+
 $file_id = $_GET['file_id'] ?? 0;
 
 if ($file_id) {
     try {
-        // Verify the file belongs to this employer
-        $stmt = $pdo->prepare("SELECT * FROM uploaded_files WHERE id = ? AND employer_id = ?");
-        $stmt->execute([$file_id, $employer_id]);
+        // Verify the file belongs to this user
+        $stmt = $pdo->prepare("SELECT * FROM uploaded_files WHERE id = ? AND uploader_type = ? AND uploader_id = ?");
+        $stmt->execute([$file_id, $uploader_type, $uploader_id]);
         $file = $stmt->fetch();
-        
+
         if ($file && file_exists($file['filepath'])) {
             header('Content-Type: application/octet-stream');
             header('Content-Disposition: attachment; filename="' . basename($file['filename']) . '"');

@@ -1,62 +1,25 @@
 <?php
 session_start();
-
-if (!isset($_SESSION['employer_id']) || $_SESSION['role'] !== "employer") {
-    header("Location: employer_login.php");
-    exit;
-}
-
-include __DIR__ . '/../private/config.php';
+include_once __DIR__ . '/../private/config.php';
 require_once __DIR__ . '/../includes/middleware.php';
 
-$employer_id = $_SESSION['employer_id'];
+include_once __DIR__ . '/../includes/supervisor_auth.php';
+include_once __DIR__ . '/../includes/supervisor_db.php';
+include_once __DIR__ . '/../includes/supervisor_attendance.php';
 
-$stmt = $pdo->prepare("SELECT * FROM employers WHERE employer_id = ?");
-$stmt->execute([$employer_id]);
-$employer = $stmt->fetch(PDO::FETCH_ASSOC);
-
-// Redirect if somehow employer not found
-if (!$employer) {
-    session_destroy();
-    header("Location: employer_login.php");
-    exit;
-}
+$employer_id = authenticate_supervisor();
+$employer = get_supervisor_info($pdo, $employer_id);
 
 $csrf_token = generate_csrf_token();
 
-// -------- Mark Student Absent --------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_absent'])) {
     check_csrf($_POST['csrf_token'] ?? '');
     $student_id = $_POST['student_id'] ?? '';
     $reason = $_POST['reason'] ?? '';
     $date = $_POST['date'] ?? date('Y-m-d');
-    
+
     if ($student_id && $reason) {
-        // Check if attendance already exists for this date
-        $checkStmt = $pdo->prepare("SELECT * FROM attendance WHERE student_id = ? AND log_date = ?");
-        $checkStmt->execute([$student_id, $date]);
-        $existing = $checkStmt->fetch();
-        
-        if ($existing) {
-            // Update existing record
-            $updateStmt = $pdo->prepare("
-                UPDATE attendance 
-                SET status = 'Absent', reason = ?, verified = 0 
-                WHERE student_id = ? AND log_date = ?
-            ");
-            $updateStmt->execute([$reason, $student_id, $date]);
-            $message = "Attendance updated to Absent";
-        } else {
-            // Insert new record
-            $insertStmt = $pdo->prepare("
-                INSERT INTO attendance (student_id, log_date, status, reason, verified) 
-                VALUES (?, ?, 'Absent', ?, 0)
-            ");
-            $insertStmt->execute([$student_id, $date, $reason]);
-            $message = "Student marked as Absent";
-        }
-        
-        write_audit_log('Mark Absent', "Student ID: $student_id, Date: $date");
+        $message = handle_mark_absent($pdo, $student_id, $date, $reason);
         $_SESSION['success_message'] = $message;
         header("Location: supervisor_dashboard.php");
         exit;
@@ -69,74 +32,10 @@ if (isset($_SESSION['success_message'])) {
     unset($_SESSION['success_message']);
 }
 
-$stmt = $pdo->query("SELECT student_id, username FROM students ORDER BY username");
-$students = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-$attendance_stmt = $pdo->prepare("
-    SELECT
-        s.student_id,
-        s.first_name,
-        s.middle_name,
-        s.last_name,
-        s.school,
-        a.log_date,
-        a.time_in,
-        a.lunch_out,
-        a.lunch_in,
-        a.time_out,
-        a.status,
-        a.reason,
-        a.verified,
-        a.daily_task,
-        CASE
-            WHEN a.time_in IS NOT NULL AND a.time_out IS NOT NULL THEN
-                CONCAT(
-                    FLOOR((
-                        TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out)
-                        - COALESCE(TIMESTAMPDIFF(MINUTE, a.lunch_out, a.lunch_in), 0)
-                    ) / 60), 'h ',
-                    MOD((
-                        TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out)
-                        - COALESCE(TIMESTAMPDIFF(MINUTE, a.lunch_out, a.lunch_in), 0)
-                    ), 60), 'm'
-                )
-            ELSE '---'
-        END AS daily_hours
-    FROM students s
-    LEFT JOIN attendance a ON s.student_id = a.student_id
-    ORDER BY s.last_name, s.first_name, s.middle_name, a.log_date
-");
-
-$attendance_stmt->execute();
-$attendance = $attendance_stmt->fetchAll(PDO::FETCH_ASSOC);
-
-$acc_stmt = $pdo->prepare("
-    SELECT student_id,
-        SUM(
-            CASE 
-                WHEN time_in IS NOT NULL AND time_out IS NOT NULL AND verified = 1 THEN
-                    TIMESTAMPDIFF(MINUTE, time_in, time_out)
-                    - COALESCE(TIMESTAMPDIFF(MINUTE, lunch_out, lunch_in), 0)
-                ELSE 0
-            END
-        ) AS total_minutes
-    FROM attendance
-    GROUP BY student_id
-");
-$acc_stmt->execute();
-$acc_rows = $acc_stmt->fetchAll(PDO::FETCH_ASSOC);
-
-$eval_stmt = $pdo->prepare("
-    SELECT DISTINCT student_id 
-    FROM evaluations
-");
-$eval_stmt->execute();
-$evaluated_students = array_flip($eval_stmt->fetchAll(PDO::FETCH_COLUMN));
-
-$acc_map = [];
-foreach ($acc_rows as $ar) {
-    $acc_map[$ar['student_id']] = (int) ($ar['total_minutes'] ?? 0);
-}
+$students = get_students_list($pdo);
+$attendance = get_attendance_records($pdo);
+$acc_map = get_total_minutes($pdo);
+$evaluated_students = get_evaluated_students($pdo);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -571,7 +470,8 @@ foreach ($acc_rows as $ar) {
                         $latest = $records[0];
 
                         $acc_minutes = $acc_map[$student_id] ?? 0;
-                        $required_minutes = 0;
+                        $required_hours = $latest['required_hours'] ?? 0;
+                        $required_minutes =0; // Convert hours to minutes
                         $eligible_for_eval = $acc_minutes >= $required_minutes;
                         $already_evaluated = isset($evaluated_students[$student_id]);
                         $acc_display = floor($acc_minutes / 60) . "h " . ($acc_minutes % 60) . "m";

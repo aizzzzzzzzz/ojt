@@ -11,7 +11,10 @@ define('CONFIG_LOADED', true);
 header("X-Frame-Options: DENY");
 header("X-Content-Type-Options: nosniff");
 header("X-XSS-Protection: 1; mode=block");
-header("Strict-Transport-Security: max-age=31536000; includeSubDomains");
+// Enable HSTS only if not on localhost to avoid SSL errors during development
+if (!in_array($_SERVER['HTTP_HOST'] ?? '', ['localhost', '127.0.0.1'])) {
+    header("Strict-Transport-Security: max-age=31536000; includeSubDomains");
+}
 header("Referrer-Policy: strict-origin-when-cross-origin");
 header("Permissions-Policy: geolocation=(), microphone=(), camera=()");
 
@@ -88,6 +91,35 @@ if (!function_exists('sanitize_input')) {
         $data = stripslashes($data);
         $data = htmlspecialchars($data, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         return $data;
+    }
+}
+
+// Enhanced logging function
+if (!function_exists('log_security_event')) {
+    function log_security_event($event, $details = '', $level = 'INFO') {
+        $logFile = __DIR__ . '/../logs/security.log';
+        $logDir = dirname($logFile);
+
+        // Create logs directory if it doesn't exist
+        if (!is_dir($logDir)) {
+            mkdir($logDir, 0755, true);
+        }
+
+        $timestamp = date('Y-m-d H:i:s');
+        $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        $user = $_SESSION['student_id'] ?? 'unknown';
+
+        $logEntry = sprintf(
+            "[%s] [%s] [%s] [%s] %s: %s\n",
+            $timestamp,
+            $level,
+            $ip,
+            $user,
+            $event,
+            $details
+        );
+
+        error_log($logEntry, 3, $logFile);
     }
 }
 

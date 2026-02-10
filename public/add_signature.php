@@ -17,7 +17,6 @@ if (!isset($_GET['student_id'])) {
 
 $student_id = (int)$_GET['student_id'];
 
-// Verify the student is associated with this employer and has been evaluated
 $eval_check = $pdo->prepare("SELECT * FROM evaluations WHERE student_id = ? AND employer_id = ?");
 $eval_check->execute([$student_id, $employer_id]);
 $evaluation = $eval_check->fetch(PDO::FETCH_ASSOC);
@@ -27,7 +26,6 @@ if (!$evaluation) {
     exit;
 }
 
-// Fetch student info
 $stmt = $pdo->prepare("SELECT *,
 CONCAT(
     first_name,
@@ -46,7 +44,6 @@ if (!$student) {
     exit;
 }
 
-// Calculate total hours (for display)
 $attendance_stmt = $pdo->prepare("SELECT * FROM attendance WHERE student_id = ? ORDER BY log_date DESC");
 $attendance_stmt->execute([$student_id]);
 $attendance = $attendance_stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -80,7 +77,6 @@ if ($emp) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_signature'])) {
     $signaturePath = 'assets/signature_' . $employer_id . '_' . $student_id . '.png';
 
-    // Handle drawn signature (canvas)
     if (!empty($_POST['signature_data'])) {
         $data = $_POST['signature_data'];
         if (preg_match('/^data:image\/(\w+);base64,/', $data, $type)) {
@@ -149,7 +145,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_signature'])) {
             exit;
         }
     }
-    // Redirect to generate certificate
     header("Location: generate_certificate.php?student_id=$student_id");
     exit;
 }

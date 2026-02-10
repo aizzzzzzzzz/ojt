@@ -3,6 +3,10 @@ session_start();
 include __DIR__ . '/../includes/auth_check.php';
 require_role('student');
 
+// Debug mode
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 include __DIR__ . '/../private/config.php';
 
 $project_id = (int)($_GET['project_id'] ?? $_POST['project_id'] ?? 0);
@@ -21,8 +25,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['project_file'])) {
         header("Location: student_dashboard.php");
         exit;
     }
-
-    // REMOVED: Don't check if rejected - allow resubmission
 
     // File validation
     $allowed_types = [
@@ -56,7 +58,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['project_file'])) {
         mkdir($uploadDir, 0777, true);
     }
 
-        // Change this section:
     // Generate unique filename with attempt number
     $extension = $allowed_types[$file_type];
 
@@ -76,28 +77,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['project_file'])) {
         exit;
     }
 
-    // Determine if submission is on time or late
+    // FIXED: Determine if submission is on time or late with better validation
     $current_time = date('Y-m-d H:i:s');
-    $submission_status = (strtotime($current_time) <= strtotime($project['due_date'] . ' 23:59:59')) ? 'On Time' : 'Late';
+    
+    // Check if due_date exists and is valid
+    if (empty($project['due_date']) || $project['due_date'] == '0000-00-00') {
+        // If no due date or invalid, consider it On Time
+        $submission_status = 'On Time';
+    } else {
+        // Ensure due_date has time component
+        $due_date_str = $project['due_date'];
+        if (strlen($due_date_str) == 10) { // YYYY-MM-DD format
+            $due_date_str .= ' 23:59:59';
+        }
+        
+        // Convert to timestamps
+        $current_timestamp = strtotime($current_time);
+        $due_timestamp = strtotime($due_date_str);
+        
+        // Debug timestamps
+        echo "<p>DEBUG: Current timestamp: $current_timestamp (" . date('Y-m-d H:i:s', $current_timestamp) . ")</p>";
+        echo "<p>DEBUG: Due timestamp: $due_timestamp (" . date('Y-m-d H:i:s', $due_timestamp) . ")</p>";
+        
+        if ($current_timestamp === false || $due_timestamp === false) {
+            // Invalid timestamps
+            $submission_status = 'On Time';
+        } else {
+            $submission_status = ($current_timestamp <= $due_timestamp) ? 'On Time' : 'Late';
+        }
+    }
+    
+    // Validate submission_status
+    if (!in_array($submission_status, ['On Time', 'Late'])) {
+        // Fallback to 'On Time' if invalid
+        $submission_status = 'On Time';
+    }
 
     // Public path for database
     $publicPath = 'storage/uploads/' . $filename;
 
     try {
-        // ALWAYS INSERT new submission (never update)
-        $stmt = $pdo->prepare("
-            INSERT INTO project_submissions (project_id, student_id, file_path, submission_date, submission_status, status)
-            VALUES (?, ?, ?, NOW(), ?, 'Pending')
+        // TEST INSERT FIRST with simpler values
+        echo "<h3>Testing INSERT with these values:</h3>";
+        echo "<ul>";
+        echo "<li>project_id: $project_id</li>";
+        echo "<li>student_id: $student_id</li>";
+        echo "<li>file_path: " . htmlspecialchars($publicPath) . "</li>";
+        echo "<li>submission_status: " . htmlspecialchars($submission_status) . "</li>";
+        echo "</ul>";
+        
+        // Test with a simple INSERT first
+        $testStmt = $pdo->prepare("
+            INSERT INTO project_submissions (project_id, student_id, file_path, submission_status, status)
+            VALUES (?, ?, ?, ?, 'Pending')
         ");
-        $stmt->execute([$project_id, $student_id, $publicPath, $submission_status]);
-
+        
+        echo "<p>Executing INSERT...</p>";
+        $testStmt->execute([$project_id, $student_id, $publicPath, $submission_status]);
+        
+        echo "<p style='color:green;'>✓ INSERT SUCCESSFUL!</p>";
+        echo "<p>Last Insert ID: " . $pdo->lastInsertId() . "</p>";
+        
         // Log activity
         if (function_exists('log_activity')) {
             log_activity($pdo, $student_id, 'student', "Submitted project: {$project['project_name']} (Attempt #{$attempt_number}, $submission_status)");
         }
 
         $_SESSION['success'] = 'Project submitted successfully! (Attempt #' . $attempt_number . ')';
-        header("Location: student_dashboard.php");
+        
+        // Comment out redirect for testing
+        // header("Location: student_dashboard.php");
+        echo "<p><a href='student_dashboard.php'>Go to Dashboard</a></p>";
         exit;
 
     } catch (PDOException $e) {
@@ -106,9 +156,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['project_file'])) {
             unlink($filePath);
         }
         
-        error_log("Database error in submit_project.php: " . $e->getMessage());
-        $_SESSION['error'] = 'Database error occurred. Please try again.';
-        header("Location: student_submit_form.php?project_id=" . $project_id);
+        // Show detailed error
+        echo "<h3 style='color:red;'>Database Error:</h3>";
+        echo "<p><strong>Message:</strong> " . htmlspecialchars($e->getMessage()) . "</p>";
+        echo "<p><strong>Error Code:</strong> " . $e->getCode() . "</p>";
+        echo "<p><strong>Error Info:</strong> " . print_r($testStmt->errorInfo(), true) . "</p>";
+        echo "<p><strong>Attempted Values:</strong></p>";
+        echo "<ul>";
+        echo "<li>project_id: $project_id</li>";
+        echo "<li>student_id: $student_id</li>";
+        echo "<li>file_path: " . htmlspecialchars($publicPath) . "</li>";
+        echo "<li>submission_status: " . htmlspecialchars($submission_status) . "</li>";
+        echo "</ul>";
+        
+        // Also test with a simpler INSERT to isolate the issue
+        echo "<h4>Testing with hardcoded values:</h4>";
+        try {
+            $test2 = $pdo->prepare("INSERT INTO project_submissions (project_id, student_id, file_path, submission_status, status) VALUES (1, 1, 'test.pdf', 'On Time', 'Pending')");
+            $test2->execute();
+            echo "<p style='color:green;'>✓ Simple test INSERT worked</p>";
+        } catch (PDOException $e2) {
+            echo "<p style='color:red;'>✗ Simple test also failed: " . $e2->getMessage() . "</p>";
+        }
         exit;
     }
 } else {

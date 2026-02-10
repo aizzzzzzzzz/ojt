@@ -10,20 +10,15 @@ session_start();
 include_once __DIR__ . '/../private/config.php';
 date_default_timezone_set('Asia/Manila');
 
-$editorPreview = '';
-if (isset($_POST['code_editor'])) {
-    $code = $_POST['code_editor'];
-    ob_start();
-    eval('?>' . $code);
-    $editorPreview = ob_get_clean();
-}
+// Include modules
+include_once __DIR__ . '/../includes/auth.php';
+include_once __DIR__ . '/../includes/db.php';
+include_once __DIR__ . '/../includes/attendance.php';
+include_once __DIR__ . '/../includes/projects.php';
+include_once __DIR__ . '/../includes/export.php';
 
-if (!isset($_SESSION['student_id']) || $_SESSION['role'] !== "student") {
-    header("Location: student_login.php");
-    exit;
-}
-
-$student_id = (int)$_SESSION['student_id'];
+// Authenticate student
+$student_id = authenticate_student();
 $today = date('Y-m-d');
 $messages = [];
 
@@ -31,7 +26,37 @@ $messages = [];
 if (isset($_GET['export']) && $_GET['export'] == 'excel') {
     // Clear any existing output
     if (ob_get_length()) ob_end_clean();
-    
+
+    // Validate date ranges and row limits
+    $start_date = $_GET['start_date'] ?? null;
+    $end_date = $_GET['end_date'] ?? null;
+
+    // Date validation
+    if ($start_date && $end_date) {
+        $start = strtotime($start_date);
+        $end = strtotime($end_date);
+        $now = time();
+
+        if ($start > $end) {
+            $_SESSION['error'] = "Start date cannot be after end date.";
+            header("Location: " . $_SERVER['PHP_SELF']);
+            exit;
+        }
+
+        if ($start > $now || $end > $now) {
+            $_SESSION['error'] = "Cannot export future dates.";
+            header("Location: " . $_SERVER['PHP_SELF']);
+            exit;
+        }
+
+        // Limit date range to maximum 1 year
+        if (($end - $start) > (365 * 24 * 60 * 60)) {
+            $_SESSION['error'] = "Date range cannot exceed 1 year.";
+            header("Location: " . $_SERVER['PHP_SELF']);
+            exit;
+        }
+    }
+
     // Check if PhpSpreadsheet is available
     $phpspreadsheetPath = __DIR__ . '/../vendor/autoload.php';
     if (file_exists($phpspreadsheetPath)) {
@@ -43,10 +68,7 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
             $stmt->execute([$student_id]);
             $student = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            // Fetch attendance history with optional date filter
-            $start_date = $_GET['start_date'] ?? null;
-            $end_date = $_GET['end_date'] ?? null;
-
+            // Fetch attendance history with optional date filter and row limit
             $sql = "SELECT * FROM attendance WHERE student_id = ?";
             $params = [$student_id];
 
@@ -56,7 +78,7 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
                 $params[] = $end_date;
             }
 
-            $sql .= " ORDER BY log_date DESC";
+            $sql .= " ORDER BY log_date DESC LIMIT 1000"; // Row limit
 
             $attendance_stmt = $pdo->prepare($sql);
             $attendance_stmt->execute($params);
@@ -265,23 +287,28 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_task'])) {
-    $task = trim($_POST['daily_task']);
-
-    $check = $pdo->prepare("SELECT id FROM attendance WHERE student_id = ? AND log_date = ? LIMIT 1");
-    $check->execute([$student_id, $today]);
-    $existing = $check->fetch(PDO::FETCH_ASSOC);
-
-    if ($existing) {
-        $upd = $pdo->prepare("UPDATE attendance SET daily_task = ? WHERE id = ?");
-        $upd->execute([$task, $existing['id']]);
+    // Validate CSRF token
+    if (!isset($_POST['csrf_token']) || !validate_csrf_token($_POST['csrf_token'])) {
+        $messages[] = "Invalid request. Please try again.";
     } else {
-        $ins = $pdo->prepare("INSERT INTO attendance (student_id, employer_id, log_date, daily_task, status) VALUES (?, NULL, ?, ?, 'present')");
-        $ins->execute([$student_id, $today, $task]);
-    }
+        $task = trim($_POST['daily_task']);
 
-    $_SESSION['success'] = "Daily task saved successfully.";
-    header("Location: ".$_SERVER['PHP_SELF']);
-    exit;
+        $check = $pdo->prepare("SELECT id FROM attendance WHERE student_id = ? AND log_date = ? LIMIT 1");
+        $check->execute([$student_id, $today]);
+        $existing = $check->fetch(PDO::FETCH_ASSOC);
+
+        if ($existing) {
+            $upd = $pdo->prepare("UPDATE attendance SET daily_task = ? WHERE id = ?");
+            $upd->execute([$task, $existing['id']]);
+        } else {
+            $ins = $pdo->prepare("INSERT INTO attendance (student_id, employer_id, log_date, daily_task, status) VALUES (?, NULL, ?, ?, 'present')");
+            $ins->execute([$student_id, $today, $task]);
+        }
+
+        $_SESSION['success'] = "Daily task saved successfully.";
+        header("Location: ".$_SERVER['PHP_SELF']);
+        exit;
+    }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attendance_action'])) {
@@ -406,7 +433,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_file'])) {
     $submission_type = $_POST['submission_type'] ?? 'code'; // 'code' or 'file'
     
     $uploadDir = __DIR__ . '/../storage/uploads/';
-    if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
+    if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
     
     try {
         if ($submission_type === 'code') {
@@ -1394,6 +1421,7 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
         <h3 style="margin-top:0;">Daily Task / Activity</h3>
 
         <form method="POST">
+            <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
             <textarea
                 name="daily_task"
                 rows="4"
@@ -1902,12 +1930,13 @@ function switchSubmissionTab(tabType) {
     }
 }
 
-// Run code for preview
+// Run code for preview (safe iframe display)
 function runCodePreview(event) {
     event.preventDefault();
     if (window.codeEditor && typeof window.codeEditor.getValue === 'function') {
         const code = window.codeEditor.getValue();
         const iframe = document.getElementById('editorPreview');
+        // Display code safely in iframe without execution
         iframe.srcdoc = code;
     } else {
         console.error('Code editor not initialized yet.');

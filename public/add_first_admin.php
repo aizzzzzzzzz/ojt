@@ -200,7 +200,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
             <button type="submit" class="btn">Create Admin Account</button>
         </form>
-        <a href="index.php" class="back-link">← Back to Home</a>
+        <a href="admin_login.php" class="back-link">← Back to Admin Login</a>
     </div>
 </body>
 </html>

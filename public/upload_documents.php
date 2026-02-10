@@ -120,7 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_file'])) {
     }
 }
 
-// Get uploaded files for this employer
+// Get uploaded files for this user
 try {
     // Check if table exists, create if not
     $tableExists = $pdo->query("SHOW TABLES LIKE 'uploaded_files'")->fetch();
@@ -128,17 +128,37 @@ try {
         $createTableSQL = "
             CREATE TABLE uploaded_files (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                employer_id INT NOT NULL,
+                uploader_type ENUM('admin', 'employer') NOT NULL,
+                uploader_id INT NOT NULL,
                 filename VARCHAR(255) NOT NULL,
                 filepath VARCHAR(500) NOT NULL,
                 uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                description TEXT
+                description TEXT,
+                UNIQUE KEY unique_uploader_filename (uploader_type, uploader_id, filename)
             )
         ";
         $pdo->exec($createTableSQL);
         $uploaded_files = [];
     } else {
-        // Get files for this employer
+        // Check if table has new structure, migrate if needed
+        $columns = $pdo->query("DESCRIBE uploaded_files")->fetchAll(PDO::FETCH_ASSOC);
+        $hasUploaderType = false;
+        $hasEmployerId = false;
+        foreach ($columns as $col) {
+            if ($col['Field'] === 'uploader_type') $hasUploaderType = true;
+            if ($col['Field'] === 'employer_id') $hasEmployerId = true;
+        }
+
+        if (!$hasUploaderType && $hasEmployerId) {
+            // Migrate old table structure
+            $pdo->exec("ALTER TABLE uploaded_files ADD COLUMN uploader_type ENUM('admin', 'employer') NOT NULL DEFAULT 'employer' AFTER id");
+            $pdo->exec("ALTER TABLE uploaded_files ADD COLUMN uploader_id INT NOT NULL DEFAULT 0 AFTER uploader_type");
+            $pdo->exec("UPDATE uploaded_files SET uploader_id = employer_id WHERE uploader_id = 0");
+            $pdo->exec("ALTER TABLE uploaded_files DROP COLUMN employer_id");
+            $pdo->exec("ALTER TABLE uploaded_files ADD UNIQUE KEY unique_uploader_filename (uploader_type, uploader_id, filename)");
+        }
+
+        // Get files for this user
         $files_stmt = $pdo->prepare("
             SELECT id, filename, uploaded_at, description
             FROM uploaded_files

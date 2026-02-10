@@ -21,8 +21,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $stmt = $pdo->prepare("INSERT INTO employers (name, username, password) VALUES (?, ?, ?)");
             if ($stmt->execute([$name, $username, $password])) {
                 $_SESSION['success'] = "Employer account created successfully!";
-                header("Location: employer_login.php");
-                exit;
+                // Removed redirect to employer_login.php - just show notification
             } else {
                 $error = "Failed to add employer. Please try again.";
             }
@@ -37,6 +36,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <html>
 <head>
     <title>Add Employer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         .success-msg {
             background: #d4edda;
@@ -83,5 +83,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     <br>
     <a href="index.php">Back to Home</a>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        <?php if (!empty($_SESSION['success'])): ?>
+            // Show success modal when page loads
+            document.addEventListener('DOMContentLoaded', function() {
+                var successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                successModal.show();
+            });
+        <?php endif; ?>
+    </script>
 </body>
 </html>
