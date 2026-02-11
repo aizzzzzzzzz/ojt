@@ -1,6 +1,11 @@
 <?php
 session_start();
 require_once __DIR__ . '/private/config.php';
+
+// Check if any admin exists
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM admins");
+$stmt->execute();
+$admin_count = $stmt->fetchColumn();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -216,7 +221,9 @@ require_once __DIR__ . '/private/config.php';
       <div class="card-icon">👨‍💼</div>
       <h3>Admin</h3>
       <a href="public/admin_login.php" class="btn btn-admin">Login as Admin</a>
+      <?php if ($admin_count == 0): ?>
       <a href="public/add_first_admin.php" class="btn btn-admin" style="margin-top: 10px; font-size: 14px; padding: 8px 16px;">First-time Setup</a>
+      <?php endif; ?>
     </div>
 
     <div class="card">

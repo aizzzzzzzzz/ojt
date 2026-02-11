@@ -2,6 +2,16 @@
 session_start();
 include_once __DIR__ . '/../private/config.php';
 
+// Check if an admin already exists
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM admins");
+$stmt->execute();
+$admin_count = $stmt->fetchColumn();
+
+if ($admin_count > 0) {
+    header("Location: admin_login.php");
+    exit;
+}
+
 $message = "";
 $error = "";
 
