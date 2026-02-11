@@ -827,6 +827,16 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
         cursor: not-allowed;
     }
 
+    .btn-logout {
+        background: linear-gradient(90deg, #dc3545, #c82333);
+        color: white;
+    }
+
+    .btn-logout:hover {
+        background: linear-gradient(90deg, #c82333, #a02622);
+        transform: translateY(-2px);
+    }
+
     .summary {
         text-align: left;
         margin-bottom: 20px;
@@ -1397,8 +1407,8 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
         ) 
     ?></h2>
     <div class="action-buttons">
-        <a href="logout.php" class="action-btn btn-primary" style="text-decoration:none;">🚪 Logout</a>
-        <button class="action-btn btn-primary" onclick="window.print()">🖨️ Print</button>
+        <a href="logout.php" class="action-btn btn-logout" style="text-decoration:none;">🚪 Logout</a>
+        <a href="download_certificate.php" class="action-btn btn-primary" style="text-decoration:none;">📄 Download Certificate</a>
     </div>
 </div>
 

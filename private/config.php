@@ -40,11 +40,11 @@ if (!isset($_SESSION['last_regeneration'])) {
     $_SESSION['last_regeneration'] = time();
 }
 
-// Database Configuration
-$host = "localhost";
-$db   = "student_db";
-$user = "root";
-$pass = "";
+// Database Configuration - Using environment variables for portability
+$host = getenv('DB_HOST') ?: "localhost";
+$db   = getenv('DB_NAME') ?: "student_db";
+$user = getenv('DB_USER') ?: "root";
+$pass = getenv('DB_PASS') ?: "";
 
 // Database connection with enhanced security
 try {
@@ -131,6 +131,25 @@ if (!function_exists('validate_password')) {
         return preg_match($pattern, $password);
     }
 }
+
+// Email Configuration
+$email_config = [
+    // SMTP Settings
+    'smtp_host' => getenv('SMTP_HOST') ?: 'smtp.gmail.com', // Default to Gmail SMTP
+    'smtp_port' => getenv('SMTP_PORT') ?: 587, // TLS port
+    'smtp_encryption' => getenv('SMTP_ENCRYPTION') ?: 'tls', // tls or ssl
+    'smtp_username' => getenv('SMTP_USERNAME') ?: 'aizjedlian@gmail.com',
+    'smtp_password' => getenv('SMTP_PASSWORD') ?: 'kriiazezwyeqqpnw',
+
+    // Email Settings
+    'from_email' => getenv('FROM_EMAIL') ?: 'noreply@yourdomain.com',
+    'from_name' => getenv('FROM_NAME') ?: 'OJT System',
+    'reply_to_email' => getenv('REPLY_TO_EMAIL') ?: 'noreply@yourdomain.com',
+    'reply_to_name' => getenv('REPLY_TO_NAME') ?: 'OJT System Support',
+
+    // Additional Settings
+    'debug_mode' => getenv('EMAIL_DEBUG') ?: false, // Set to true for debugging
+];
 
 // Rate limiting for login attempts
 if (!function_exists('check_login_attempts')) {

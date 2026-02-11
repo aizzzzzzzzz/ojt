@@ -3,6 +3,7 @@ ob_start();
 session_start();
 include_once __DIR__ . '/../private/config.php';
 require_once __DIR__ . '/../lib/fpdf.php';
+require_once __DIR__ . '/../includes/email.php';
 
 if (!isset($_SESSION['employer_id']) || $_SESSION['role'] !== "employer") {
     header("Location: employer_login.php");
@@ -69,13 +70,15 @@ foreach ($attendance as $row) {
 $hours = floor($total_minutes / 60);
 $minutes = $total_minutes % 60;
 
-// Fetch employer name
+// Fetch employer name and company
 $employer_name = "(assigned organization)";
-$emp_stmt = $pdo->prepare("SELECT name FROM employers WHERE employer_id = ?");
+$supervisor_name = "(supervisor name)";
+$emp_stmt = $pdo->prepare("SELECT name, company FROM employers WHERE employer_id = ?");
 $emp_stmt->execute([$employer_id]);
 $emp = $emp_stmt->fetch(PDO::FETCH_ASSOC);
 if ($emp) {
-    $employer_name = $emp['name'];
+    $employer_name = $emp['company']; // Use company name for certificate
+    $supervisor_name = $emp['name']; // Use supervisor name for signature
 }
 
 // Check if signature exists
@@ -95,6 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         class CertificatePDF extends FPDF {
             public $certificate_no;
             public $signaturePath;
+            public $supervisorName;
 
             function Footer() {
                 $innerMargin = 8;
@@ -113,15 +117,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $sigY = $baseY - $sigHeight - 2;
 
                     $this->Image($this->signaturePath, $sigX, $sigY, $sigWidth, $sigHeight);
-                    
+
                     $lineY = $sigY + $sigHeight;
                     $this->SetLineWidth(0.3);
                     $this->Line($sigX, $lineY, $sigX + $sigWidth, $lineY);
-                    
+
                     $this->SetXY($sigX, $lineY + 1);
                     $this->SetFont('Times','',8);
                     $this->Cell($sigWidth, 4, 'Authorized Signature', 0, 2, 'C');
-                    $this->Cell($sigWidth, 4, 'Supervisor', 0, 0, 'C');
+                    $this->Cell($sigWidth, 4, $this->supervisorName, 0, 0, 'C');
                 }
             }
         }
@@ -131,6 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdf = new CertificatePDF('L', 'mm', 'A4');
         $pdf->certificate_no = $certificate_no;
         $pdf->signaturePath = $signaturePath;
+        $pdf->supervisorName = $supervisor_name; // Use the supervisor name for signature
         $pdf->SetAutoPageBreak(false);
         $pdf->AddPage();
 
@@ -180,7 +185,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdf->Ln(3);
 
         $pdf->SetFont('Times','B',14);
-        $pdf->Cell(0, 4, "equivalent to $hours hours and $minutes minutes of supervised practical training", 0, 1, 'C');
+        $pdf->Cell(0, 4, "200 hours of supervised practical training", 0, 1, 'C');
         $pdf->Ln(3);
 
         $pdf->SetFont('Times','',12);
@@ -216,6 +221,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $student_id, $employer_id, $certificate_no, $certificatePath, $total_hours,
             $certificatePath, $total_hours
         ]);
+
+        // Send email notification to student about certificate availability
+        if (!empty($student['email'])) {
+            $email_result = send_evaluation_notification($student['email'], $student['name'], $employer_name);
+            if ($email_result !== true) {
+                error_log("Failed to send certificate notification: " . $email_result);
+            }
+        }
 
         // Output for download
         $pdf->Output('D', 'certificate_' . $student_id . '.pdf');
@@ -483,12 +496,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </form>
             <?php endif; ?>
-        </div>
-        
-        <div class="back-link">
-            <a href="supervisor_dashboard.php">
-                ← Return to Supervisor Dashboard
-            </a>
         </div>
     </div>
 </body>

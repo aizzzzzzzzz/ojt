@@ -32,7 +32,7 @@ if (isset($_SESSION['success_message'])) {
     unset($_SESSION['success_message']);
 }
 
-$students = get_students_list($pdo);
+$students = get_students_list($pdo, $_SESSION['employer_id'] ?? null);
 $attendance = get_attendance_records($pdo);
 $acc_map = get_total_minutes($pdo);
 $evaluated_students = get_evaluated_students($pdo);
@@ -471,8 +471,9 @@ $evaluated_students = get_evaluated_students($pdo);
 
                         $acc_minutes = $acc_map[$student_id] ?? 0;
                         $required_hours = $latest['required_hours'] ?? 0;
-                        $required_minutes =0; // Convert hours to minutes
+                        $required_minutes = 0; // Convert hours to minutes
                         $eligible_for_eval = $acc_minutes >= $required_minutes;
+                        $completed_hours = $acc_minutes >= $required_minutes;
                         $already_evaluated = isset($evaluated_students[$student_id]);
                         $acc_display = floor($acc_minutes / 60) . "h " . ($acc_minutes % 60) . "m";
 
@@ -523,6 +524,14 @@ $evaluated_students = get_evaluated_students($pdo);
                                 <a href="evaluate_student.php?student_id=<?= $student_id ?>" class="btn btn-warning btn-sm">
                                     📝 Evaluate Student
                                 </a>
+                            <?php elseif ($already_evaluated && $completed_hours): ?>
+                                <div style="display: flex; flex-direction: column; gap: 5px;">
+                                    <span style="color:green; font-weight:bold;">✔ Evaluation Completed</span>
+                                    <form method="POST" action="delete_student.php" style="margin:0;" onsubmit="return confirm('Are you sure you want to delete this student? This action cannot be undone.');">
+                                        <input type="hidden" name="student_id" value="<?= htmlspecialchars($student_id) ?>">
+                                        <button type="submit" class="btn btn-danger btn-sm">🗑️ Delete Student</button>
+                                    </form>
+                                </div>
                             <?php elseif ($already_evaluated): ?>
                                 <span style="color:green; font-weight:bold;">✔ Evaluation Completed</span>
                             <?php else: ?>

@@ -1,6 +1,4 @@
 <?php
-ob_start();
-session_start();
 include_once __DIR__ . '/../private/config.php';
 
 if (!isset($_SESSION['employer_id']) || $_SESSION['role'] !== "employer") {
@@ -76,19 +74,23 @@ if ($emp) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_signature'])) {
     $signaturePath = 'assets/signature_' . $employer_id . '_' . $student_id . '.png';
+    $signature_saved = false;
 
     if (!empty($_POST['signature_data'])) {
         $data = $_POST['signature_data'];
         if (preg_match('/^data:image\/(\w+);base64,/', $data, $type)) {
             $data = substr($data, strpos($data, ',') + 1);
-            $data = base64_decode($data);
-            if (!is_dir('assets')) {
-                mkdir('assets', 0777, true);
+            $decoded_data = base64_decode($data);
+            if ($decoded_data !== false && !empty($decoded_data)) {
+                if (!is_dir('assets')) {
+                    mkdir('assets', 0777, true);
+                }
+                file_put_contents($signaturePath, $decoded_data);
+                $signature_saved = true;
             }
-            file_put_contents($signaturePath, $data);
         }
     }
-    
+
     elseif (!empty($_FILES['signature_file']['tmp_name'])) {
         $upload_error = '';
         if ($_FILES['signature_file']['error'] !== UPLOAD_ERR_OK) {
@@ -128,6 +130,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_signature'])) {
                             } else {
                                 if (!imagepng($dst, $signaturePath)) {
                                     $upload_error = 'Failed to save image.';
+                                } else {
+                                    $signature_saved = true;
                                 }
                             }
                             imagedestroy($dst);
@@ -145,8 +149,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_signature'])) {
             exit;
         }
     }
-    header("Location: generate_certificate.php?student_id=$student_id");
-    exit;
+
+    if ($signature_saved) {
+        header("Location: generate_certificate.php?student_id=$student_id");
+        exit;
+    } else {
+        $error = "Please draw a signature on the canvas or upload a signature file.";
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -169,6 +178,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_signature'])) {
         <p><strong>Student:</strong> <?= htmlspecialchars($student['name']) ?></p>
         <p><strong>Hours Completed:</strong> <?= $hours ?> hr <?= $minutes ?> min</p>
         <p><strong>Employer:</strong> <?= htmlspecialchars($employer_name) ?></p>
+        <?php if (isset($error)): ?>
+            <p style="color: red;"><?= htmlspecialchars($error) ?></p>
+        <?php endif; ?>
         <form method="post" enctype="multipart/form-data">
             <h4>Draw Signature</h4>
             <canvas id="signature-pad" class="signature-pad" width="400" height="200"></canvas><br>
@@ -176,12 +188,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_signature'])) {
             <input type="hidden" name="signature_data" id="signature-data">
             <button type="submit" name="add_signature" class="btn">Add Signature</button>
         </form>
-        <br><a href="supervisor_dashboard.php
-">Back</a>
+        <br><a href="supervisor_dashboard.php">Back</a>
     </div>
     <script>
         const canvas = document.getElementById('signature-pad');
         const ctx = canvas.getContext('2d');
+        const blankDataURL = canvas.toDataURL();
         let drawing = false;
         canvas.addEventListener('mousedown', startDrawing);
         canvas.addEventListener('mousemove', draw);
@@ -203,8 +215,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_signature'])) {
         function clearSignature() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
-        document.querySelector('form').addEventListener('submit', function() {
+        document.querySelector('form').addEventListener('submit', function(e) {
             const dataURL = canvas.toDataURL();
+            if (dataURL === blankDataURL) {
+                e.preventDefault();
+                alert('Please draw a signature on the canvas before submitting.');
+                return false;
+            }
             document.getElementById('signature-data').value = dataURL;
         });
     </script>

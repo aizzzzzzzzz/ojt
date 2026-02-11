@@ -21,6 +21,58 @@ function handle_project_submission($pdo, $student_id, $project_id, $submission_t
             }
 
             submit_project($pdo, $project_id, $student_id, $fileName, $remarks);
+
+            // Send email notification about project submission
+            $student_stmt = $pdo->prepare("SELECT first_name, last_name, email FROM students WHERE student_id = ?");
+            $student_stmt->execute([$student_id]);
+            $student = $student_stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($student && !empty($student['email'])) {
+                $student_name = $student['first_name'] . ' ' . $student['last_name'];
+                $subject = "OJT Project Submission Confirmation";
+                $body = "
+                    <html>
+                    <head>
+                        <style>
+                            body { font-family: Arial, sans-serif; }
+                            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                            .header { background: #007bff; color: white; padding: 20px; text-align: center; }
+                            .content { padding: 20px; background: #f8f9fa; }
+                            .footer { text-align: center; padding: 10px; color: #666; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class='container'>
+                            <div class='header'>
+                                <h2>Project Submission Received</h2>
+                            </div>
+                            <div class='content'>
+                                <p>Dear <strong>$student_name</strong>,</p>
+                                <p>Your project submission has been received and is being reviewed by your supervisor.</p>
+                                <p><strong>Submission Details:</strong></p>
+                                <ul>
+                                    <li>Project ID: $project_id</li>
+                                    <li>Submission Type: Code</li>
+                                    <li>Submitted at: " . date('Y-m-d H:i:s') . "</li>
+                                </ul>
+                                <p>You will be notified once your submission has been graded.</p>
+                            </div>
+                            <div class='footer'>
+                                <p>This is an automated message from the OJT System.</p>
+                            </div>
+                        </div>
+                    </body>
+                    </html>
+                ";
+
+                $altBody = "Dear $student_name,\n\nYour project submission has been received and is being reviewed by your supervisor.\n\nSubmission Details:\n- Project ID: $project_id\n- Submission Type: Code\n- Submitted at: " . date('Y-m-d H:i:s') . "\n\nYou will be notified once your submission has been graded.\n\nThis is an automated message from the OJT System.";
+
+                $email_result = send_email($student['email'], $subject, $body, $altBody);
+                if ($email_result !== true) {
+                    error_log("Failed to send project submission notification: " . $email_result);
+                }
+            }
+
             return "Code submitted successfully!";
         } else {
             if (empty($uploaded_file['tmp_name']) || $uploaded_file['error'] !== UPLOAD_ERR_OK) {
@@ -62,6 +114,58 @@ function handle_project_submission($pdo, $student_id, $project_id, $submission_t
             }
 
             submit_project($pdo, $project_id, $student_id, $uniqueFileName, $remarks);
+
+            // Send email notification about project submission
+            $student_stmt = $pdo->prepare("SELECT first_name, last_name, email FROM students WHERE student_id = ?");
+            $student_stmt->execute([$student_id]);
+            $student = $student_stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($student && !empty($student['email'])) {
+                $student_name = $student['first_name'] . ' ' . $student['last_name'];
+                $subject = "OJT Project Submission Confirmation";
+                $body = "
+                    <html>
+                    <head>
+                        <style>
+                            body { font-family: Arial, sans-serif; }
+                            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                            .header { background: #007bff; color: white; padding: 20px; text-align: center; }
+                            .content { padding: 20px; background: #f8f9fa; }
+                            .footer { text-align: center; padding: 10px; color: #666; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class='container'>
+                            <div class='header'>
+                                <h2>Project Submission Received</h2>
+                            </div>
+                            <div class='content'>
+                                <p>Dear <strong>$student_name</strong>,</p>
+                                <p>Your project submission has been received and is being reviewed by your supervisor.</p>
+                                <p><strong>Submission Details:</strong></p>
+                                <ul>
+                                    <li>Project ID: $project_id</li>
+                                    <li>File: $originalName</li>
+                                    <li>Submitted at: " . date('Y-m-d H:i:s') . "</li>
+                                </ul>
+                                <p>You will be notified once your submission has been graded.</p>
+                            </div>
+                            <div class='footer'>
+                                <p>This is an automated message from the OJT System.</p>
+                            </div>
+                        </div>
+                    </body>
+                    </html>
+                ";
+
+                $altBody = "Dear $student_name,\n\nYour project submission has been received and is being reviewed by your supervisor.\n\nSubmission Details:\n- Project ID: $project_id\n- File: $originalName\n- Submitted at: " . date('Y-m-d H:i:s') . "\n\nYou will be notified once your submission has been graded.\n\nThis is an automated message from the OJT System.";
+
+                $email_result = send_email($student['email'], $subject, $body, $altBody);
+                if ($email_result !== true) {
+                    error_log("Failed to send project submission notification: " . $email_result);
+                }
+            }
+
             return "File submitted successfully!";
         }
     } catch (PDOException $e) {

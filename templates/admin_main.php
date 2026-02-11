@@ -1,5 +1,9 @@
-<h3 data-bs-toggle="collapse" data-bs-target="#add-employer" style="cursor:pointer;">Add New Supervisor ⬇</h3>
-    <div id="add-employer" class="collapse">
+
+
+
+
+<h3>Add New Supervisor</h3>
+    <div id="add-employer">
         <div class="card p-3"><div class="card-body">
             <?php if (!empty($addEmployerError)): ?>
                 <div class="error-msg"><?= htmlspecialchars($addEmployerError) ?></div>
@@ -7,15 +11,19 @@
             <form method="post">
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                 <div class="row">
-                    <div class="col-md-4 mb-3">
+                    <div class="col-md-3 mb-3">
                         <label class="form-label">Username</label>
                         <input type="text" name="username" required class="form-control">
                     </div>
-                    <div class="col-md-4 mb-3">
+                    <div class="col-md-3 mb-3">
                         <label class="form-label">Full Name</label>
                         <input type="text" name="name" required class="form-control">
                     </div>
-                    <div class="col-md-4 mb-3">
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Company</label>
+                        <input type="text" name="company" required class="form-control">
+                    </div>
+                    <div class="col-md-3 mb-3">
                         <label class="form-label">Password</label>
                         <input type="password" name="password" required class="form-control">
                     </div>
@@ -33,7 +41,7 @@
             <thead><tr>
                 <th>Username</th>
                 <th>Name</th>
-                <th>Created</th>
+                <th>Company</th>
                 <th>Action</th>
             </tr></thead>
             <tbody>
@@ -41,7 +49,7 @@
                 <tr>
                     <td><?= htmlspecialchars($emp['username']) ?></td>
                     <td><?= htmlspecialchars($emp['name']) ?></td>
-                    <td><?= $emp['created_at'] ?></td>
+                    <td><?= htmlspecialchars($emp['company']) ?></td>
                     <td>
                         <form method="post" style="display:inline;">
                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">

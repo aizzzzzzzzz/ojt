@@ -11,11 +11,39 @@ if (!isset($_SESSION['student_id']) && !isset($_SESSION['employer_id'])) {
 $submission_id = $_GET['submission_id'] ?? 0;
 if (!$submission_id) die("Invalid submission ID.");
 
-// Fetch submission details
-$stmt = $pdo->prepare("SELECT file_path FROM project_submissions WHERE submission_id = ?");
-$stmt->execute([$submission_id]);
+// Determine user type and ID
+$userType = '';
+$userId = 0;
+
+if (isset($_SESSION['student_id'])) {
+    $userType = 'student';
+    $userId = (int)$_SESSION['student_id'];
+} elseif (isset($_SESSION['employer_id'])) {
+    $userType = 'employer';
+    $userId = (int)$_SESSION['employer_id'];
+} else {
+    header("Location: index.php");
+    exit;
+}
+
+// Fetch submission details with authorization check
+if ($userType === 'student') {
+    // Student can only view their own submissions
+    $stmt = $pdo->prepare("SELECT file_path FROM project_submissions WHERE submission_id = ? AND student_id = ?");
+    $stmt->execute([$submission_id, $userId]);
+} else {
+    // Employer can only view submissions for projects they created
+    $stmt = $pdo->prepare("
+        SELECT ps.file_path
+        FROM project_submissions ps
+        INNER JOIN projects p ON ps.project_id = p.project_id
+        WHERE ps.submission_id = ? AND p.created_by = ?
+    ");
+    $stmt->execute([$submission_id, $userId]);
+}
+
 $submission = $stmt->fetch(PDO::FETCH_ASSOC);
-if (!$submission) die("Submission not found.");
+if (!$submission) die("Submission not found or access denied.");
 
 // Correct path to storage/uploads/
 $full_path = __DIR__ . '/../storage/uploads/' . $submission['file_path'];

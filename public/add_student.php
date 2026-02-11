@@ -2,6 +2,12 @@
 session_start();
 require '../private/config.php';
 
+// Check if user is logged in as admin, supervisor, or employer
+if (!isset($_SESSION['role']) || ($_SESSION['role'] !== 'admin' && $_SESSION['role'] !== 'employer')) {
+    header('Location: ../index.php');
+    exit;
+}
+
 $success = "";
 $error = "";
 
@@ -10,6 +16,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $first_name     = trim($_POST['first_name']);
     $middle_name    = trim($_POST['middle_name']);
     $last_name      = trim($_POST['last_name']);
+    $email          = trim($_POST['email']);
     $password       = $_POST['password'];
     $required_hours = trim($_POST['required_hours']);
     $course         = trim($_POST['course']);
@@ -24,11 +31,48 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         } else {
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
-            $stmt = $pdo->prepare("INSERT INTO students (username, password, first_name, middle_name, last_name, required_hours, course, school) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-            if ($stmt->execute([$username, $hashed_password, $first_name, $middle_name, $last_name, $required_hours, $course, $school])) {
+            $created_by = null;
+            $company_id = null;
+            
+            // Debug: Log session data
+            error_log("DEBUG add_student.php - Session role: " . $_SESSION['role']);
+            error_log("DEBUG add_student.php - Session employer_id: " . ($_SESSION['employer_id'] ?? 'NOT SET'));
+            
+            if ($_SESSION['role'] === 'employer') {
+                $created_by = $_SESSION['employer_id'];
+                
+                // Get company_id from the supervisor who is creating the student
+                if ($created_by) {
+                    error_log("DEBUG add_student.php - Looking for employer_id: " . $created_by);
+                    $companyStmt = $pdo->prepare("SELECT company_id FROM employers WHERE employer_id = ?");
+                    $companyStmt->execute([$created_by]);
+                    $companyData = $companyStmt->fetch();
+                    
+                    if ($companyData) {
+                        $company_id = $companyData['company_id'];
+                        error_log("DEBUG add_student.php - Found company_id: " . $company_id);
+                    } else {
+                        error_log("DEBUG add_student.php - No employer found with ID: " . $created_by);
+                    }
+                }
+            }
+            
+            // If admin is adding, company_id should be NULL
+            if ($_SESSION['role'] === 'admin') {
+                error_log("DEBUG add_student.php - Admin adding student, company_id will be NULL");
+            }
+
+            error_log("DEBUG add_student.php - Final values - created_by: " . $created_by . ", company_id: " . $company_id);
+            
+            $stmt = $pdo->prepare("INSERT INTO students (username, password, first_name, middle_name, last_name, email, required_hours, course, school, created_by, company_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            
+            if ($stmt->execute([$username, $hashed_password, $first_name, $middle_name, $last_name, $email, $required_hours, $course, $school, $created_by, $company_id])) {
                 $success = "Student added successfully!";
+                error_log("DEBUG add_student.php - Student added successfully with company_id: " . $company_id);
             } else {
                 $error = "Error adding student. Please try again.";
+                $errorInfo = $stmt->errorInfo();
+                error_log("DEBUG add_student.php - SQL Error: " . print_r($errorInfo, true));
             }
         }
     } else {
@@ -115,6 +159,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
 
         .add-student-container input[type="text"],
+        .add-student-container input[type="email"],
         .add-student-container input[type="password"],
         .add-student-container input[type="number"] {
             width: 100%;
@@ -183,8 +228,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 <input type="text" id="last_name" name="last_name" placeholder="Enter Last name" required>
             </div>
             <div class="form-group">
+                <label for="email"><span class="icon">📧</span> Email</label>
+                <input type="email" id="email" name="email" placeholder="Enter email address" required>
+            </div>
+            <div class="form-group">
                 <label for="course"><span class="icon">🎓</span> Course</label>
                 <input type="text" id="course" name="course" placeholder="Enter Course (e.g. BSIT, BSEd)" required>
+            </div>
             <div class="form-group">
                 <label for="school"><span class="icon">🏫</span> School</label>
                 <input type="text" id="school" name="school" placeholder="Enter school name" required>
@@ -199,8 +249,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             </div>
             <div style="display: flex; gap: 10px; justify-content: center;">
                 <button type="submit" class="add-btn" style="flex: 1; padding: 12px; font-size: 14px;">Add Student</button>
-                <a href="supervisor_dashboard.php
-" class="add-btn" style="flex: 1; padding: 12px; font-size: 14px; text-decoration: none; display: inline-block; text-align: center;">Back</a>
+                <a href="supervisor_dashboard.php" class="add-btn" style="flex: 1; padding: 12px; font-size: 14px; text-decoration: none; display: inline-block; text-align: center;">Back</a>
             </div>
         </form>
     </div>

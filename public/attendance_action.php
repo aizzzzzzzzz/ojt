@@ -16,6 +16,16 @@ if (!$student_id || !$employer_id || !$action || !$token) {
     exit("Invalid request.");
 }
 
+// Verify that the student belongs to the employer (IDOR prevention)
+// This is critical since attendance_action is called via QR codes and could be manipulated
+$stmt = $pdo->prepare("SELECT 1 FROM students WHERE student_id = ? AND employer_id = ?");
+$stmt->execute([$student_id, $employer_id]);
+$student_check = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$student_check) {
+    exit("Access denied: Student does not belong to this employer.");
+}
+
 $stmt = $pdo->prepare("SELECT * FROM qr_tokens 
     WHERE student_id = ? AND employer_id = ? AND token = ? AND qr_date = ?");
 $stmt->execute([$student_id, $employer_id, $token, $today]);

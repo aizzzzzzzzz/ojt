@@ -7,3 +7,5 @@ storage/uploads/
 
 # PDFs
 *.pdf
+
+.env
