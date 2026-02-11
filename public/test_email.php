@@ -1,10 +1,8 @@
 <?php
-// test_email.php - Test script for email functionality
 session_start();
 include_once __DIR__ . '/private/config.php';
 include_once __DIR__ . '/includes/email.php';
 
-// Check if user is logged in (basic check)
 if (!isset($_SESSION['user_type'])) {
     header("Location: index.php");
     exit;

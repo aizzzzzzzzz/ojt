@@ -1,8 +1,4 @@
 <?php
-/**
- * Security Class - Centralized security utilities
- * Handles CSRF protection, input sanitization, and other security measures
- */
 class Security {
     private static $instance = null;
 
@@ -15,30 +11,18 @@ class Security {
         return self::$instance;
     }
 
-    /**
-     * Generate CSRF token
-     */
     public function generateCSRFToken() {
         return generate_csrf_token();
     }
 
-    /**
-     * Validate CSRF token
-     */
     public function validateCSRFToken($token) {
         return validate_csrf_token($token);
     }
 
-    /**
-     * Sanitize input data
-     */
     public function sanitizeInput($data) {
         return sanitize_input($data);
     }
 
-    /**
-     * Sanitize array of data
-     */
     public function sanitizeArray($data) {
         $sanitized = [];
         foreach ($data as $key => $value) {
@@ -51,51 +35,30 @@ class Security {
         return $sanitized;
     }
 
-    /**
-     * Validate password strength
-     */
     public function validatePassword($password) {
         return validate_password($password);
     }
 
-    /**
-     * Hash password
-     */
     public function hashPassword($password) {
         return password_hash($password, PASSWORD_DEFAULT);
     }
 
-    /**
-     * Verify password
-     */
     public function verifyPassword($password, $hash) {
         return password_verify($password, $hash);
     }
 
-    /**
-     * Generate secure random string
-     */
     public function generateRandomString($length = 32) {
         return bin2hex(random_bytes($length / 2));
     }
 
-    /**
-     * Check rate limiting for login attempts
-     */
     public function checkRateLimit($identifier) {
         return check_login_attempts($identifier);
     }
 
-    /**
-     * Record login attempt
-     */
     public function recordLoginAttempt($identifier) {
         record_login_attempt($identifier);
     }
 
-    /**
-     * Clean user input for XSS prevention
-     */
     public function cleanForDisplay($data) {
         if (is_array($data)) {
             return array_map([$this, 'cleanForDisplay'], $data);
@@ -103,9 +66,6 @@ class Security {
         return htmlspecialchars($data, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
 
-    /**
-     * Validate file upload
-     */
     public function validateFileUpload($file, $allowedTypes = [], $maxSize = 5242880) { // 5MB default
         $errors = [];
 
@@ -128,7 +88,6 @@ class Security {
             }
         }
 
-        // Additional security checks
         if (!is_uploaded_file($file['tmp_name'])) {
             $errors[] = 'Invalid file upload.';
         }
@@ -136,9 +95,6 @@ class Security {
         return $errors;
     }
 
-    /**
-     * Secure file move
-     */
     public function moveUploadedFile($file, $destination) {
         $destinationDir = dirname($destination);
 
@@ -149,17 +105,11 @@ class Security {
         return move_uploaded_file($file['tmp_name'], $destination);
     }
 
-    /**
-     * Generate secure filename
-     */
     public function generateSecureFilename($originalName) {
         $extension = pathinfo($originalName, PATHINFO_EXTENSION);
         return $this->generateRandomString(16) . '.' . $extension;
     }
 
-    /**
-     * Log security event
-     */
     public function logSecurityEvent($event, $details = []) {
         $logData = [
             'timestamp' => date('Y-m-d H:i:s'),
@@ -169,7 +119,6 @@ class Security {
             'details' => json_encode($details)
         ];
 
-        // Log to file
         $logFile = __DIR__ . '/../private/security.log';
         $logDir = dirname($logFile);
 
@@ -180,7 +129,6 @@ class Security {
         $logEntry = implode(' | ', $logData) . "\n";
         file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
 
-        // Also log to database if available
         try {
             $db = Database::getInstance();
             $db->execute(
@@ -188,17 +136,13 @@ class Security {
                 [$event, $logData['ip'], $logData['user_agent'], $logData['details']]
             );
         } catch (Exception $e) {
-            // Database logging failed, but file logging succeeded
+            
         }
     }
 
-    /**
-     * Check for suspicious activity
-     */
     public function detectSuspiciousActivity($data) {
         $suspicious = [];
 
-        // Check for SQL injection patterns
         $sqlPatterns = ['/union/i', '/select/i', '/insert/i', '/update/i', '/delete/i', '/drop/i', '/--/', '/#/'];
         foreach ($data as $key => $value) {
             if (is_string($value)) {
@@ -211,7 +155,6 @@ class Security {
             }
         }
 
-        // Check for XSS patterns
         $xssPatterns = ['/<script/i', '/javascript:/i', '/on\w+\s*=/i'];
         foreach ($data as $key => $value) {
             if (is_string($value)) {
@@ -234,14 +177,9 @@ class Security {
         return $suspicious;
     }
 
-    /**
-     * Validate and sanitize form data
-     */
     public function processFormData($data) {
-        // Detect suspicious activity
         $this->detectSuspiciousActivity($data);
 
-        // Sanitize all inputs
         return $this->sanitizeArray($data);
     }
 }

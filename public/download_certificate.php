@@ -12,7 +12,6 @@ if (!isset($_SESSION['student_id']) || $_SESSION['role'] !== "student") {
 
 $student_id = (int)$_SESSION['student_id'];
 
-// Fetch student info
 $stmt = $pdo->prepare("SELECT *,
     CONCAT(
         first_name,
@@ -30,7 +29,6 @@ if (!$student) {
     exit;
 }
 
-// Calculate total hours
 $attendance_stmt = $pdo->prepare("SELECT * FROM attendance WHERE student_id = ? ORDER BY log_date DESC");
 $attendance_stmt->execute([$student_id]);
 $attendance = $attendance_stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -53,14 +51,12 @@ foreach ($attendance as $row) {
 $hours = floor($total_minutes / 60);
 $minutes = $total_minutes % 60;
 
-// Check if student has completed required hours (temporarily set to 0 for demo/testing)
 if ($hours < 0) {
     $_SESSION['error'] = "You must complete at least 200 hours to download your certificate.";
     header("Location: student_dashboard.php");
     exit;
 }
 
-// Fetch employer name
 $employer_name = "(assigned organization)";
 $emp_stmt = $pdo->prepare("SELECT name FROM employers WHERE employer_id = ?");
 $emp_stmt->execute([$student['employer_id']]);
@@ -69,7 +65,6 @@ if ($emp) {
     $employer_name = $emp['name'];
 }
 
-// Fetch existing certificate from database
 $cert_stmt = $pdo->prepare("SELECT * FROM certificates WHERE student_id = ? ORDER BY generated_at DESC LIMIT 1");
 $cert_stmt->execute([$student_id]);
 $certificate = $cert_stmt->fetch(PDO::FETCH_ASSOC);
@@ -80,7 +75,6 @@ if (!$certificate) {
     exit;
 }
 
-// Serve the existing certificate from database
 $certificatePath = $certificate['file_path'];
 
 if (!file_exists($certificatePath)) {
@@ -89,7 +83,6 @@ if (!file_exists($certificatePath)) {
     exit;
 }
 
-// Output the existing certificate file
 ob_end_clean();
 header('Content-Type: application/pdf');
 header('Content-Disposition: attachment; filename="' . basename($certificatePath) . '"');
@@ -98,10 +91,8 @@ header('Pragma: public');
 readfile($certificatePath);
 exit;
 
-// Send evaluation notification email
 send_evaluation_notification($student['email'], $student['name'], $student_id);
 
-// Output PDF
 ob_end_clean();
 header('Content-Type: application/pdf');
 header('Content-Disposition: attachment; filename="OJT_Certificate_' . preg_replace('/[^A-Za-z0-9\-_]/', '_', $student['name']) . '.pdf"');

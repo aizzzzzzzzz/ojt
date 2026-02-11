@@ -1,4 +1,3 @@
-<!-- Projects Tab Content -->
 <div id="projects-tab" class="tab-content">
     <div class="projects-section" id="projects-section">
     <h3>📝 OJT Projects</h3>
@@ -39,7 +38,6 @@
     </div>
     </div>
 
-    <!-- File Submission Section -->
     <div class="code-editor-section" id="submissionSection" style="display:none;">
         <h4>📤 Submit for: <span id="selectedProjectName"></span></h4>
         <div style="margin-bottom: 15px;">
@@ -50,7 +48,6 @@
             <input type="hidden" name="project_id" id="projectId" value="">
             <input type="hidden" name="submission_type" id="submissionType" value="code">
 
-            <!-- Submission Type Toggle -->
             <div style="margin-bottom: 20px; display: flex; gap: 10px; border-bottom: 2px solid #e0e0e0; padding-bottom: 15px;">
                 <button type="button" class="btn btn-sm" id="codeTabBtn" style="border: none; border-bottom: 3px solid #28a745; padding: 8px 15px; background: none; color: #28a745; font-weight: 600;" onclick="switchSubmissionTab('code')">
                     ✏️ Write Code
@@ -60,7 +57,6 @@
                 </button>
             </div>
 
-            <!-- Code Editor Tab -->
             <small style="color: #666; display: block; margin-bottom: 10px;">💡 Supports: PHP, HTML, CSS, Java, JavaScript, and more</small>
             <div id="codeTab" style="display: none;">
                 <div class="editor-half">
@@ -82,7 +78,6 @@
                 </div>
             </div>
 
-            <!-- File Upload Tab -->
             <div id="fileTab" style="display: none;">
                 <div class="form-group" style="margin-bottom: 15px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">📎 Upload File:</label>
@@ -90,7 +85,6 @@
                 </div>
             </div>
 
-            <!-- Common Fields -->
             <div class="form-group" style="margin-bottom: 15px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600;">📝 Remarks (Optional):</label>
                 <textarea name="remarks" class="form-control" rows="3" placeholder="Add any notes or comments about your submission..."></textarea>
@@ -103,7 +97,6 @@
         </form>
     </div>
 
-    <!-- Submissions History -->
     <?php if (!empty($submissions)): ?>
         <div class="submissions-list" style="margin-top: 30px;">
             <h5>📋 Your Submissions</h5>

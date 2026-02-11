@@ -1,5 +1,4 @@
 <?php
-// Database operations module for admin dashboard
 
 function get_students_count($pdo) {
     $stmt = $pdo->query("SELECT COUNT(*) AS count FROM students");
@@ -17,7 +16,6 @@ function get_employers($pdo) {
 }
 
 function add_employer($pdo, $username, $name, $password) {
-    // Check if username already exists
     $stmt = $pdo->prepare("SELECT 1 FROM employers WHERE LOWER(username)=LOWER(?)");
     $stmt->execute([$username]);
     if ($stmt->fetch()) {

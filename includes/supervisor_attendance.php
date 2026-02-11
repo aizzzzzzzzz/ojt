@@ -1,5 +1,4 @@
 <?php
-// Attendance management module for supervisor dashboard
 
 function handle_mark_absent($pdo, $student_id, $date, $reason) {
     if (!$student_id || !$reason) {
@@ -12,7 +11,6 @@ function handle_mark_absent($pdo, $student_id, $date, $reason) {
         $pdo->commit();
         write_audit_log('Mark Absent', "Student ID: $student_id, Date: $date");
 
-        // Send email notification about attendance status
         $student_stmt = $pdo->prepare("SELECT first_name, last_name, email FROM students WHERE student_id = ?");
         $student_stmt->execute([$student_id]);
         $student = $student_stmt->fetch(PDO::FETCH_ASSOC);
@@ -32,10 +30,8 @@ function handle_mark_absent($pdo, $student_id, $date, $reason) {
     }
 }
 
-// Function to handle attendance verification and send notifications
 function handle_verify_attendance($pdo, $student_id, $date) {
     try {
-        // Update attendance verification status
         $updateStmt = $pdo->prepare("
             UPDATE attendance
             SET verified = 1, verified_at = NOW()
@@ -43,7 +39,6 @@ function handle_verify_attendance($pdo, $student_id, $date) {
         ");
         $updateStmt->execute([$student_id, $date]);
 
-        // Send email notification about attendance verification
         $student_stmt = $pdo->prepare("SELECT first_name, last_name, email FROM students WHERE student_id = ?");
         $student_stmt->execute([$student_id]);
         $student = $student_stmt->fetch(PDO::FETCH_ASSOC);

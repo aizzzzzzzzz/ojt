@@ -8,8 +8,6 @@ if (!isset($_SESSION['employer_id'])) {
 include __DIR__ . '/../private/config.php';
 
 $project_id = $_GET['project_id'] ?? 0;
-// Update the SQL query to properly calculate submission_status
-// Change ROW_NUMBER to count from oldest to newest:
 $stmt = $pdo->prepare("
     SELECT
         ps.*,
@@ -94,7 +92,6 @@ tr:hover { background:#e3f2fd; }
             <td><?= htmlspecialchars($s['submission_date']) ?></td>
             <td>
                 <?php 
-                // Use calculated_status instead of submission_status
                 $statusClass = ($s['calculated_status'] === 'On Time') ? 'success' : 'danger';
                 $statusText = $s['calculated_status'];
                 ?>

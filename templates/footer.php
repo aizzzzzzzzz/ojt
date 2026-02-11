@@ -46,7 +46,6 @@
 <script>
 // ========== GLOBAL FUNCTIONS ==========
 
-// Tab switching function
 function switchTab(tabName, button) {
     // Hide all tab contents
     const tabContents = document.querySelectorAll('.tab-content');

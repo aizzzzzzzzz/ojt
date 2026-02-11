@@ -9,14 +9,12 @@ if (!isset($_SESSION['employer_id']) || $_SESSION['role'] !== 'employer') {
 
 $employer_id = $_SESSION['employer_id'];
 
-// Fetch students
 $students = $pdo->query("SELECT student_id, CONCAT(first_name, ' ', IFNULL(middle_name, ''), ' ', last_name) AS name FROM students ORDER BY name")
                ->fetchAll(PDO::FETCH_ASSOC);
 
 $success = "";
 $error = "";
 
-// Student from dashboard button
 $selected_student_id = $_GET['student_id'] ?? '';
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
@@ -27,7 +25,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $error = "Please select a student.";
     } else {
 
-        // ✅ FIXED TABLE NAME HERE
         $check = $pdo->prepare("SELECT evaluation_id FROM evaluations WHERE student_id = ?");
         $check->execute([$student_id]);
 
@@ -35,7 +32,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $error = "This student already has a final evaluation.";
         } else {
 
-            // ✅ FIXED TABLE NAME HERE
             $sql = "INSERT INTO evaluations (
                         student_id, employer_id, evaluation_date,
                         attendance_rating, work_quality_rating, initiative_rating,

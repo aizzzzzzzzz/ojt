@@ -1,8 +1,4 @@
 <?php
-/**
- * @function sanitize_input(string $input): string
- * @function write_audit_log(string $action, string $details): void
- */
 require_once __DIR__ . '/../private/config.php';
 require_once __DIR__ . '/../includes/middleware.php';
 

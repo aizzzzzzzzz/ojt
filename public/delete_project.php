@@ -12,11 +12,9 @@ if (isset($_GET['id'])) {
     $project_id = (int) $_GET['id'];
 
     try {
-        // First delete related submissions
         $stmt = $pdo->prepare("DELETE FROM project_submissions WHERE project_id = ?");
         $stmt->execute([$project_id]);
 
-        // Then delete the project
         $stmt = $pdo->prepare("DELETE FROM projects WHERE project_id = ?");
         $stmt->execute([$project_id]);
 

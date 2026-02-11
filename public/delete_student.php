@@ -10,7 +10,6 @@ if (!isset($_SESSION['employer_id']) || $_SESSION['role'] !== "employer") {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['student_id'])) {
     $student_id = (int) $_POST['student_id'];
 
-    // Use PDO prepared statements to prevent SQL injection
     $stmt1 = $pdo->prepare("DELETE FROM evaluations WHERE student_id = ?");
     $stmt1->execute([$student_id]);
 

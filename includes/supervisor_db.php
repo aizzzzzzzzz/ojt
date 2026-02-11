@@ -2,16 +2,13 @@
 
 function get_students_list($pdo, $employer_id = null) {
     if ($employer_id === null) {
-        // Admin view: show all students
         $stmt = $pdo->query("SELECT student_id, username FROM students ORDER BY username");
     } else {
-        // Get the employer's company_id
         $companyStmt = $pdo->prepare("SELECT company_id FROM employers WHERE employer_id = ?");
         $companyStmt->execute([$employer_id]);
         $companyData = $companyStmt->fetch();
         
         if (!$companyData || !$companyData['company_id']) {
-            // If employer has no company_id, only show students they created
             $stmt = $pdo->prepare("
                 SELECT student_id, username 
                 FROM students 
@@ -20,7 +17,6 @@ function get_students_list($pdo, $employer_id = null) {
             ");
             $stmt->execute([$employer_id]);
         } else {
-            // Show students from the same company
             $stmt = $pdo->prepare("
                 SELECT s.student_id, s.username
                 FROM students s
@@ -35,7 +31,6 @@ function get_students_list($pdo, $employer_id = null) {
 
 function get_attendance_records($pdo, $employer_id = null) {
     if ($employer_id === null) {
-        // Admin view: show all attendance records
         $sql = "
             SELECT
                 s.student_id,
@@ -74,13 +69,11 @@ function get_attendance_records($pdo, $employer_id = null) {
         $stmt = $pdo->prepare($sql);
         $stmt->execute();
     } else {
-        // Supervisor view: only show students from the same company
         $companyStmt = $pdo->prepare("SELECT company_id FROM employers WHERE employer_id = ?");
         $companyStmt->execute([$employer_id]);
         $companyData = $companyStmt->fetch();
         
         if (!$companyData || !$companyData['company_id']) {
-            // If employer has no company_id, only show students they created
             $sql = "
                 SELECT
                     s.student_id,
@@ -120,7 +113,6 @@ function get_attendance_records($pdo, $employer_id = null) {
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$employer_id]);
         } else {
-            // Show students from the same company
             $sql = "
                 SELECT
                     s.student_id,
@@ -166,7 +158,6 @@ function get_attendance_records($pdo, $employer_id = null) {
 
 function get_total_minutes($pdo, $employer_id = null) {
     if ($employer_id === null) {
-        // Admin view: get all students' total minutes
         $sql = "
             SELECT a.student_id,
                 SUM(
@@ -183,13 +174,11 @@ function get_total_minutes($pdo, $employer_id = null) {
         $acc_stmt = $pdo->prepare($sql);
         $acc_stmt->execute();
     } else {
-        // Supervisor view: only get students from the same company
         $companyStmt = $pdo->prepare("SELECT company_id FROM employers WHERE employer_id = ?");
         $companyStmt->execute([$employer_id]);
         $companyData = $companyStmt->fetch();
         
         if (!$companyData || !$companyData['company_id']) {
-            // If employer has no company_id, only get students they created
             $sql = "
                 SELECT a.student_id,
                     SUM(
@@ -208,7 +197,6 @@ function get_total_minutes($pdo, $employer_id = null) {
             $acc_stmt = $pdo->prepare($sql);
             $acc_stmt->execute([$employer_id]);
         } else {
-            // Get students from the same company
             $sql = "
                 SELECT a.student_id,
                     SUM(
@@ -239,20 +227,17 @@ function get_total_minutes($pdo, $employer_id = null) {
 
 function get_evaluated_students($pdo, $employer_id = null) {
     if ($employer_id === null) {
-        // Admin view: get all evaluated students
         $eval_stmt = $pdo->prepare("
             SELECT DISTINCT e.student_id
             FROM evaluations e
         ");
         $eval_stmt->execute();
     } else {
-        // Supervisor view: only get evaluated students from the same company
         $companyStmt = $pdo->prepare("SELECT company_id FROM employers WHERE employer_id = ?");
         $companyStmt->execute([$employer_id]);
         $companyData = $companyStmt->fetch();
         
         if (!$companyData || !$companyData['company_id']) {
-            // If employer has no company_id, only get students they created
             $eval_stmt = $pdo->prepare("
                 SELECT DISTINCT e.student_id
                 FROM evaluations e
@@ -261,7 +246,6 @@ function get_evaluated_students($pdo, $employer_id = null) {
             ");
             $eval_stmt->execute([$employer_id]);
         } else {
-            // Get evaluated students from the same company
             $eval_stmt = $pdo->prepare("
                 SELECT DISTINCT e.student_id
                 FROM evaluations e
@@ -275,14 +259,12 @@ function get_evaluated_students($pdo, $employer_id = null) {
 }
 
 function mark_student_absent($pdo, $student_id, $date, $reason, $employer_id = null) {
-    // Check if the supervisor has permission to mark this student absent
     if ($employer_id !== null) {
         $companyStmt = $pdo->prepare("SELECT company_id FROM employers WHERE employer_id = ?");
         $companyStmt->execute([$employer_id]);
         $companyData = $companyStmt->fetch();
         
         if ($companyData && $companyData['company_id']) {
-            // Check if the student belongs to the same company
             $studentStmt = $pdo->prepare("SELECT company_id FROM students WHERE student_id = ?");
             $studentStmt->execute([$student_id]);
             $studentData = $studentStmt->fetch();
@@ -291,7 +273,6 @@ function mark_student_absent($pdo, $student_id, $date, $reason, $employer_id = n
                 return "You don't have permission to mark this student absent";
             }
         } else {
-            // Check if the student was created by this supervisor
             $studentStmt = $pdo->prepare("SELECT created_by FROM students WHERE student_id = ?");
             $studentStmt->execute([$student_id]);
             $studentData = $studentStmt->fetch();

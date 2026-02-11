@@ -1,5 +1,4 @@
 <?php
-// Attendance logic module for student dashboard
 
 function handle_attendance_action($pdo, $student_id, $today, $action) {
     $allowed = ['time_in','lunch_out','lunch_in','time_out'];

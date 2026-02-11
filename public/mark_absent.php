@@ -7,14 +7,12 @@ if (!isset($_SESSION['employer_id']) || $_SESSION['role'] !== "employer") {
     exit;
 }
 
-// Get all students
 $stmt = $pdo->prepare("SELECT student_id, username FROM students");
 $stmt->execute();
 $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $msg = "";
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    // CSRF check
     if (!isset($_POST['csrf_token']) || !validate_csrf_token($_POST['csrf_token'])) {
         $msg = "Invalid request.";
     } else {

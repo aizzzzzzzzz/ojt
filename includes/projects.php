@@ -1,5 +1,4 @@
 <?php
-// Projects logic module for student dashboard
 
 function handle_project_submission($pdo, $student_id, $project_id, $submission_type, $code_content, $uploaded_file, $remarks) {
     $uploadDir = __DIR__ . '/../storage/uploads/';
@@ -22,7 +21,6 @@ function handle_project_submission($pdo, $student_id, $project_id, $submission_t
 
             submit_project($pdo, $project_id, $student_id, $fileName, $remarks);
 
-            // Send email notification about project submission
             $student_stmt = $pdo->prepare("SELECT first_name, last_name, email FROM students WHERE student_id = ?");
             $student_stmt->execute([$student_id]);
             $student = $student_stmt->fetch(PDO::FETCH_ASSOC);
@@ -115,7 +113,6 @@ function handle_project_submission($pdo, $student_id, $project_id, $submission_t
 
             submit_project($pdo, $project_id, $student_id, $uniqueFileName, $remarks);
 
-            // Send email notification about project submission
             $student_stmt = $pdo->prepare("SELECT first_name, last_name, email FROM students WHERE student_id = ?");
             $student_stmt->execute([$student_id]);
             $student = $student_stmt->fetch(PDO::FETCH_ASSOC);

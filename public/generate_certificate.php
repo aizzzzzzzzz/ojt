@@ -19,7 +19,6 @@ if (!isset($_GET['student_id'])) {
 
 $student_id = (int)$_GET['student_id'];
 
-// Verify the student is associated with this employer and has been evaluated
 $eval_check = $pdo->prepare("SELECT * FROM evaluations WHERE student_id = ? AND employer_id = ?");
 $eval_check->execute([$student_id, $employer_id]);
 $evaluation = $eval_check->fetch(PDO::FETCH_ASSOC);
@@ -29,7 +28,6 @@ if (!$evaluation) {
     exit;
 }
 
-// Fetch student info
 $stmt = $pdo->prepare("SELECT *, 
     CONCAT(
         first_name,
@@ -47,7 +45,6 @@ if (!$student) {
     exit;
 }
 
-// Calculate total hours
 $attendance_stmt = $pdo->prepare("SELECT * FROM attendance WHERE student_id = ? ORDER BY log_date DESC");
 $attendance_stmt->execute([$student_id]);
 $attendance = $attendance_stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -70,31 +67,26 @@ foreach ($attendance as $row) {
 $hours = floor($total_minutes / 60);
 $minutes = $total_minutes % 60;
 
-// Fetch employer name and company
 $employer_name = "(assigned organization)";
 $supervisor_name = "(supervisor name)";
 $emp_stmt = $pdo->prepare("SELECT name, company FROM employers WHERE employer_id = ?");
 $emp_stmt->execute([$employer_id]);
 $emp = $emp_stmt->fetch(PDO::FETCH_ASSOC);
 if ($emp) {
-    $employer_name = $emp['company']; // Use company name for certificate
-    $supervisor_name = $emp['name']; // Use supervisor name for signature
+    $employer_name = $emp['company'];
+    $supervisor_name = $emp['name'];
 }
 
-// Check if signature exists
 $signaturePath = 'assets/signature_' . $employer_id . '_' . $student_id . '.png';
 $signatureExists = file_exists($signaturePath);
 
-// Handle certificate generation
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['generate'])) {
-        // Check if signature exists
         if (!$signatureExists) {
             header("Location: add_signature.php?student_id=$student_id");
             exit;
         }
 
-        // Generate certificate
         class CertificatePDF extends FPDF {
             public $certificate_no;
             public $signaturePath;
@@ -104,12 +96,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $innerMargin = 8;
                 $baseY = $this->GetPageHeight() - $innerMargin - 10;
 
-                // Certificate number
                 $this->SetXY($innerMargin + 2, $baseY);
                 $this->SetFont('Times','',9);
                 $this->Cell(100, 5, 'Certificate No: ' . $this->certificate_no, 0, 0, 'L');
 
-                // Signature
                 if (!empty($this->signaturePath) && file_exists($this->signaturePath)) {
                     $sigWidth = 35;
                     $sigHeight = 12;
@@ -135,17 +125,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdf = new CertificatePDF('L', 'mm', 'A4');
         $pdf->certificate_no = $certificate_no;
         $pdf->signaturePath = $signaturePath;
-        $pdf->supervisorName = $supervisor_name; // Use the supervisor name for signature
+        $pdf->supervisorName = $supervisor_name;
         $pdf->SetAutoPageBreak(false);
         $pdf->AddPage();
 
-        // Design elements
         $pdf->SetLineWidth(1);
         $pdf->Rect(5, 5, $pdf->GetPageWidth()-10, $pdf->GetPageHeight()-10);
         $pdf->SetLineWidth(0.2);
         $pdf->Rect(8, 8, $pdf->GetPageWidth()-16, $pdf->GetPageHeight()-16);
 
-        // Header
         $logoPath = 'assets/school_logo.png';
         if (file_exists($logoPath)) {
             $pdf->Image($logoPath, 15, 12, 22);
@@ -156,7 +144,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdf->Image($companyLogoPath, $pdf->GetPageWidth() - 37, 12, 22);
         }
 
-        // School info
         $pdf->SetY(15);
         $pdf->SetFont('Times','B',16);
         $pdf->Cell(0, 8, 'School of Engineering and Technology', 0, 1, 'C');
@@ -164,14 +151,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdf->Cell(0, 6, 'Excellence in Practical Education', 0, 1, 'C');
         $pdf->Ln(8);
 
-        // Title
         $pdf->SetFont('Times','B',24);
         $pdf->Cell(0, 12, 'CERTIFICATE OF COMPLETION', 0, 1, 'C');
         $pdf->SetLineWidth(0.8);
         $pdf->Line(40, $pdf->GetY(), $pdf->GetPageWidth()-40, $pdf->GetY());
         $pdf->Ln(8);
 
-        // Content
         $pdf->SetFont('Times','',12);
         $pdf->Cell(0, 10, 'This is to certify that', 0, 1, 'C');
         $pdf->Ln(3);
@@ -197,19 +182,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdf->SetFont('Times','',11);
         $pdf->Cell(0, 6, 'Given this ' . date('jS') . ' day of ' . date('F, Y'), 0, 1, 'C');
 
-        // Save certificate to database for student access
         $certificateFileName = 'certificate_' . $student_id . '_' . time() . '.pdf';
         $certificatePath = 'certificates/' . $certificateFileName;
         
-        // Create certificates directory if it doesn't exist
         if (!is_dir('certificates')) {
             mkdir('certificates', 0777, true);
         }
         
-        // Save PDF to server
         $pdf->Output('F', $certificatePath);
         
-        // Store certificate info in database
         $certStmt = $pdo->prepare("INSERT INTO certificates 
             (student_id, employer_id, certificate_no, file_path, hours_completed, generated_at) 
             VALUES (?, ?, ?, ?, ?, NOW())
@@ -222,7 +203,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $certificatePath, $total_hours
         ]);
 
-        // Send email notification to student about certificate availability
         if (!empty($student['email'])) {
             $capitalized_student_name = ucwords(strtolower($student['name']));
             $email_result = send_evaluation_notification($student['email'], $capitalized_student_name, $supervisor_name);
@@ -231,10 +211,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // Output for download
         $pdf->Output('D', 'certificate_' . $student_id . '.pdf');
 
-        // Cleanup signature file after successful generation
         if (file_exists($signaturePath)) {
             unlink($signaturePath);
         }
@@ -242,13 +220,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
     
-    // Handle "Generate Another" action
     if (isset($_POST['another'])) {
-        // Clean up signature file for new certificate
         if (file_exists($signaturePath)) {
             unlink($signaturePath);
         }
-        // Redirect back to add signature for new certificate
         header("Location: add_signature.php?student_id=$student_id");
         exit;
     }
@@ -471,13 +446,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         <div class="action-buttons">
             <?php if (!$signatureExists): ?>
-                <!-- No signature yet -->
                 <a href="add_signature.php?student_id=<?= $student_id ?>" class="btn btn-primary">
                     <span class="btn-icon">✍️</span>
                     Add Signature
                 </a>
             <?php else: ?>
-                <!-- Signature exists - ready to generate -->
                 <form method="post" style="grid-column: 1 / -1;">
                     <button type="submit" name="generate" class="btn btn-success" style="width: 100%;">
                         <span class="btn-icon">📄</span>

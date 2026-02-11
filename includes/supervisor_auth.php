@@ -1,5 +1,4 @@
 <?php
-// Authentication module for supervisor dashboard
 function authenticate_supervisor() {
     if (!isset($_SESSION['employer_id']) || $_SESSION['role'] !== "employer") {
         header("Location: employer_login.php");

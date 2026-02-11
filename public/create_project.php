@@ -34,7 +34,6 @@ if (isset($_POST['submit'])) {
 <title>Create Project</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <style>
-/* Keep your dashboard form style consistent */
 body { font-family: "Segoe UI", sans-serif; background: #e3f2fd; padding:20px; }
 .dashboard-container { background: rgba(255,255,255,0.95); padding:30px; border-radius:15px; max-width:600px; margin:auto; }
 .success-msg { background:#d4edda;color:#155724;padding:15px;border-radius:8px;margin-bottom:20px;border:1px solid #c3e6cb; }

@@ -2,7 +2,6 @@
 session_start();
 include_once __DIR__ . '/../private/config.php';
 
-// Check if an admin already exists
 $stmt = $pdo->prepare("SELECT COUNT(*) FROM admins");
 $stmt->execute();
 $admin_count = $stmt->fetchColumn();
@@ -26,7 +25,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = "Password must be at least 6 characters long.";
     } else {
         try {
-            // Check if username already exists
             $stmt = $pdo->prepare("SELECT COUNT(*) FROM admins WHERE username = ?");
             $stmt->execute([$username]);
             $username_count = $stmt->fetchColumn();
@@ -34,10 +32,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($username_count > 0) {
                 $error = "Username already exists. Please choose a different username.";
             } else {
-                // Hash the password
                 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
-                // Insert the admin
                 $stmt = $pdo->prepare("INSERT INTO admins (username, password, full_name) VALUES (?, ?, ?)");
                 $stmt->execute([$username, $hashed_password, $full_name]);
 

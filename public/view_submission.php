@@ -2,7 +2,6 @@
 session_start();
 include __DIR__ . '/../private/config.php';
 
-// Only students or employers can access
 if (!isset($_SESSION['student_id']) && !isset($_SESSION['employer_id'])) {
     header("Location: index.php");
     exit;
@@ -11,7 +10,6 @@ if (!isset($_SESSION['student_id']) && !isset($_SESSION['employer_id'])) {
 $submission_id = $_GET['submission_id'] ?? 0;
 if (!$submission_id) die("Invalid submission ID.");
 
-// Determine user type and ID
 $userType = '';
 $userId = 0;
 
@@ -26,13 +24,10 @@ if (isset($_SESSION['student_id'])) {
     exit;
 }
 
-// Fetch submission details with authorization check
 if ($userType === 'student') {
-    // Student can only view their own submissions
     $stmt = $pdo->prepare("SELECT file_path FROM project_submissions WHERE submission_id = ? AND student_id = ?");
     $stmt->execute([$submission_id, $userId]);
 } else {
-    // Employer can only view submissions for projects they created
     $stmt = $pdo->prepare("
         SELECT ps.file_path
         FROM project_submissions ps
@@ -45,11 +40,9 @@ if ($userType === 'student') {
 $submission = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$submission) die("Submission not found or access denied.");
 
-// Correct path to storage/uploads/
 $full_path = __DIR__ . '/../storage/uploads/' . $submission['file_path'];
 if (!file_exists($full_path)) die("File not found.");
 
-// Serve PDF directly
 header('Content-Type: application/pdf');
 header('Content-Disposition: inline; filename="' . basename($full_path) . '"');
 header('Content-Length: ' . filesize($full_path));

@@ -91,7 +91,6 @@
         transition: transform 0.3s ease;
     }
 
-    /* Removed hover effect from summary cards for professional look */
 
     .summary-card strong {
         display: block;

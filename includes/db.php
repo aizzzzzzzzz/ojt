@@ -1,5 +1,4 @@
 <?php
-// Database operations module for student dashboard
 
 function get_student_info($pdo, $student_id) {
     $stmt = $pdo->prepare("SELECT * FROM students WHERE student_id = ? LIMIT 1");

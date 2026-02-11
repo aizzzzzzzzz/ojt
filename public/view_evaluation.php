@@ -14,7 +14,6 @@ if (!isset($_GET['student_id']) || !is_numeric($_GET['student_id'])) {
 
 $student_id = intval($_GET['student_id']);
 
-// Check if student belongs to current employer (IDOR prevention)
 $stmt = $pdo->prepare("SELECT * FROM students WHERE student_id = ? AND employer_id = ?");
 $stmt->execute([$student_id, $_SESSION['employer_id']]);
 $student = $stmt->fetch(PDO::FETCH_ASSOC);

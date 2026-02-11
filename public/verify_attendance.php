@@ -13,7 +13,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($student_id && $log_date) {
 
-        // Fetch student name
         $student_stmt = $pdo->prepare("SELECT CONCAT(first_name, ' ', IFNULL(middle_name, ''), ' ', last_name) AS name FROM students WHERE student_id = ?");
         $student_stmt->execute([$student_id]);
         $student = $student_stmt->fetchColumn();

@@ -1,4 +1,3 @@
-<!-- Attendance Tab Content -->
 <div id="attendance-tab" class="tab-content active">
     <div style="margin-bottom:20px; text-align:left; padding:16px; border:1px solid #e0e0e0; background:#fff; border-radius:10px;">
         <h3 style="margin-top:0;">Daily Task / Activity</h3>
@@ -58,7 +57,6 @@
 
     <h3>Attendance History</h3>
 
-    <!-- Desktop Table View -->
     <div class="table-section desktop-view">
     <table>
     <thead>
@@ -125,7 +123,6 @@
     </table>
     </div>
 
-    <!-- Mobile Card View -->
     <div class="mobile-view">
     <?php foreach($attendance as $row): ?>
     <div class="attendance-card">

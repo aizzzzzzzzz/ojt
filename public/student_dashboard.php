@@ -1,5 +1,4 @@
 <?php
-// Import PhpSpreadsheet classes at the very top
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -10,28 +9,22 @@ session_start();
 include_once __DIR__ . '/../private/config.php';
 date_default_timezone_set('Asia/Manila');
 
-// Include modules
 include_once __DIR__ . '/../includes/auth.php';
 include_once __DIR__ . '/../includes/db.php';
 include_once __DIR__ . '/../includes/attendance.php';
 include_once __DIR__ . '/../includes/projects.php';
 include_once __DIR__ . '/../includes/export.php';
 
-// Authenticate student
 $student_id = authenticate_student();
 $today = date('Y-m-d');
 $messages = [];
 
-// Handle Excel Export
 if (isset($_GET['export']) && $_GET['export'] == 'excel') {
-    // Clear any existing output
     if (ob_get_length()) ob_end_clean();
 
-    // Validate date ranges and row limits
     $start_date = $_GET['start_date'] ?? null;
     $end_date = $_GET['end_date'] ?? null;
 
-    // Date validation
     if ($start_date && $end_date) {
         $start = strtotime($start_date);
         $end = strtotime($end_date);
@@ -49,7 +42,6 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
             exit;
         }
 
-        // Limit date range to maximum 1 year
         if (($end - $start) > (365 * 24 * 60 * 60)) {
             $_SESSION['error'] = "Date range cannot exceed 1 year.";
             header("Location: " . $_SERVER['PHP_SELF']);
@@ -57,18 +49,15 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
         }
     }
 
-    // Check if PhpSpreadsheet is available
     $phpspreadsheetPath = __DIR__ . '/../vendor/autoload.php';
     if (file_exists($phpspreadsheetPath)) {
         require_once $phpspreadsheetPath;
 
         try {
-            // Fetch student info
             $stmt = $pdo->prepare("SELECT * FROM students WHERE student_id = ? LIMIT 1");
             $stmt->execute([$student_id]);
             $student = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            // Fetch attendance history with optional date filter and row limit
             $sql = "SELECT * FROM attendance WHERE student_id = ?";
             $params = [$student_id];
 
@@ -78,30 +67,26 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
                 $params[] = $end_date;
             }
 
-            $sql .= " ORDER BY log_date DESC LIMIT 1000"; // Row limit
+            $sql .= " ORDER BY log_date DESC LIMIT 1000";
 
             $attendance_stmt = $pdo->prepare($sql);
             $attendance_stmt->execute($params);
             $attendance = $attendance_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Create new Spreadsheet object
             $spreadsheet = new Spreadsheet();
             $sheet = $spreadsheet->getActiveSheet();
             
-            // Set document properties
             $spreadsheet->getProperties()
                 ->setCreator("OJT System")
                 ->setLastModifiedBy("OJT System")
                 ->setTitle("Attendance History - " . ($student['first_name'] ?? 'Student'))
                 ->setSubject("Attendance Records");
             
-            // Set main title
             $sheet->setCellValue('A1', 'ATTENDANCE HISTORY REPORT');
             $sheet->mergeCells('A1:I1');
             $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
             $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             
-            // Student info
             $sheet->setCellValue('A2', 'Student Name:');
             $sheet->setCellValue('B2', ($student['first_name'] ?? '') . ' ' . ($student['last_name'] ?? ''));
             $sheet->setCellValue('A3', 'Student ID:');
@@ -117,11 +102,9 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
             $sheet->setCellValue('A5', 'Generated On:');
             $sheet->setCellValue('B5', date('F d, Y h:i A'));
             
-            // Set headers
             $headers = ['Date', 'Time In', 'Lunch Out', 'Lunch In', 'Time Out', 'Status', 'Verified', 'Hours Worked', 'Daily Task / Activity'];
             $sheet->fromArray($headers, NULL, 'A7');
             
-            // Style headers
             $headerStyle = [
                 'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
                 'fill' => [
@@ -138,13 +121,11 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
             ];
             $sheet->getStyle('A7:I7')->applyFromArray($headerStyle);
             
-            // Add data
             $row = 8;
             $totalMinutes = 0;
             $verifiedCount = 0;
             
             foreach ($attendance as $record) {
-                // Calculate hours
                 $hours = '-';
                 $minutesWorked = 0;
                 
@@ -178,7 +159,6 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
                 $sheet->setCellValue('H' . $row, $hours);
                 $sheet->setCellValue('I' . $row, $record['daily_task'] ?? '-');
                 
-                // Add conditional formatting for verified status
                 $verifiedStyle = $sheet->getStyle('G' . $row);
                 if ($record['verified'] == 1) {
                     $verifiedStyle->getFont()->getColor()->setRGB('008000');
@@ -186,7 +166,6 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
                     $verifiedStyle->getFont()->getColor()->setRGB('FF6B6B');
                 }
                 
-                // Add border to data rows
                 $dataStyle = [
                     'borders' => [
                         'outline' => [
@@ -200,7 +179,6 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
                 $row++;
             }
             
-            // Add summary section
             $summaryRow = $row + 2;
             $sheet->setCellValue('A' . $summaryRow, 'SUMMARY');
             $sheet->mergeCells('A' . $summaryRow . ':B' . $summaryRow);
@@ -225,7 +203,6 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
             $totalMinutesRemainder = $totalMinutes % 60;
             $sheet->setCellValue('B' . $summaryRow, $totalHours . 'h ' . $totalMinutesRemainder . 'm');
             
-            // Style summary
             $summaryStyle = [
                 'font' => ['bold' => true],
                 'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E8F5E9']],
@@ -238,42 +215,34 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
             ];
             $sheet->getStyle('A' . ($row + 2) . ':B' . $summaryRow)->applyFromArray($summaryStyle);
             
-            // Auto-size columns
             foreach (range('A', 'I') as $column) {
                 $sheet->getColumnDimension($column)->setAutoSize(true);
             }
             
-            // Set column widths for specific columns
-            $sheet->getColumnDimension('I')->setWidth(40); // Wider for tasks
+            $sheet->getColumnDimension('I')->setWidth(40);
             
-            // Wrap text for task column
             $sheet->getStyle('I8:I' . ($row - 1))->getAlignment()->setWrapText(true);
             
-            // Set filename
             $filename = 'Attendance_History_' . ($student['first_name'] ?? 'student') . '_' . date('Y-m-d') . '.xlsx';
             
-            // Clear all output buffers
             while (ob_get_level()) {
                 ob_end_clean();
             }
             
-            // Set headers
             header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
             header('Content-Disposition: attachment;filename="' . $filename . '"');
             header('Cache-Control: max-age=0');
-            header('Cache-Control: max-age=1'); // For IE9
+            header('Cache-Control: max-age=1');
             header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
             header('Last-Modified: ' . gmdate('D, d M Y H:i:s') . ' GMT');
             header('Cache-Control: cache, must-revalidate');
             header('Pragma: public');
             
-            // Create and save file
             $writer = new Xlsx($spreadsheet);
             $writer->save('php://output');
             exit;
             
         } catch (Exception $e) {
-            // Log detailed error
             error_log("Excel Export Error: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
             $_SESSION['error'] = "Error generating Excel file. Please contact administrator.";
             header("Location: " . $_SERVER['PHP_SELF']);
@@ -287,7 +256,6 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_task'])) {
-    // Validate CSRF token
     if (!isset($_POST['csrf_token']) || !validate_csrf_token($_POST['csrf_token'])) {
         $messages[] = "Invalid request. Please try again.";
     } else {
@@ -380,25 +348,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attendance_action']))
     }
 }
 
-// Fetch student info
 $stmt = $pdo->prepare("SELECT * FROM students WHERE student_id = ? LIMIT 1");
 $stmt->execute([$student_id]);
 $student = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// Fetch attendance history
 $attendance_stmt = $pdo->prepare("SELECT * FROM attendance WHERE student_id = ? ORDER BY log_date DESC");
 $attendance_stmt->execute([$student_id]);
 $attendance = $attendance_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Today's row
 $today_stmt = $pdo->prepare("SELECT * FROM attendance WHERE student_id = ? AND log_date = ? LIMIT 1");
 $today_stmt->execute([$student_id, $today]);
 $today_row = $today_stmt->fetch(PDO::FETCH_ASSOC);
 
-// Calculate total accumulated minutes safely
 $total_minutes = 0;
 foreach ($attendance as $row) {
-    // Only count verified attendance
     if ($row['verified'] == 1 && !empty($row['time_in']) && !empty($row['time_out'])) {
 
         $time_in = strtotime($row['time_in']);
@@ -420,12 +383,10 @@ $minutes = $total_minutes % 60;
 $statusClass = ($hours >= 200) ? 'completed' : 'in-progress';
 $statusText = ($hours >= 200) ? 'Completed' : 'In Progress';
 
-// Fetch projects for student
 $projects_stmt = $pdo->prepare("SELECT * FROM projects ORDER BY created_at DESC");
 $projects_stmt->execute();
 $projects = $projects_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Handle file submission
 $submitError = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_file'])) {
     $project_id = (int)$_POST['project_id'];
@@ -437,34 +398,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_file'])) {
     
     try {
         if ($submission_type === 'code') {
-            // Handle code submission
             $code = trim($_POST['code_content'] ?? '');
 
             if (empty($code)) {
                 $submitError = "Code cannot be empty.";
             } else {
-                // Save code to .txt file
                 $fileName = $student_id . '_project_' . $project_id . '_' . time() . '.txt';
                 $filePath = $uploadDir . $fileName;
 
-                // Ensure directory exists and is writable
                 if (!is_writable($uploadDir)) {
                     $submitError = "Upload directory is not writable.";
                 } elseif (file_put_contents($filePath, $code) === false) {
                     $submitError = "Error saving code file. Please try again.";
                 } else {
-                    // Check if there's a rejected submission to update
                     $checkStmt = $pdo->prepare("SELECT submission_id FROM project_submissions WHERE project_id = ? AND student_id = ? AND status = 'Rejected' ORDER BY submission_date DESC LIMIT 1");
                     $checkStmt->execute([$project_id, $student_id]);
                     $existingRejected = $checkStmt->fetch(PDO::FETCH_ASSOC);
 
                     if ($existingRejected) {
-                        // Update the existing rejected submission
                         $updateStmt = $pdo->prepare("UPDATE project_submissions SET file_path = ?, status = 'Pending', submission_date = NOW(), submission_status = 'On Time', remarks = '', graded_at = NULL WHERE submission_id = ?");
                         $updateStmt->execute([$fileName, $existingRejected['submission_id']]);
                         $message = 'Project resubmitted successfully!';
                     } else {
-                        // Insert new submission
                         $insertStmt = $pdo->prepare("INSERT INTO project_submissions (project_id, student_id, file_path, submission_status, status, remarks) VALUES (?, ?, ?, 'On Time', 'Pending', ?)");
                         $insertStmt->execute([$project_id, $student_id, $fileName, $remarks]);
                         $message = 'Project submitted successfully!';
@@ -476,7 +431,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_file'])) {
                 }
             }
         } else {
-            // Handle file upload
             $uploadedFile = $_FILES['submission_file'];
 
             if (empty($uploadedFile['tmp_name']) || $uploadedFile['error'] !== UPLOAD_ERR_OK) {
@@ -491,11 +445,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_file'])) {
                 } elseif ($uploadedFile['size'] > 10 * 1024 * 1024) {
                     $submitError = "File too large (maximum 10MB).";
                 } else {
-                    // Generate unique filename
                     $uniqueFileName = $student_id . '_project_' . $project_id . '_' . time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $originalName);
                     $filePath = $uploadDir . $uniqueFileName;
 
-                    // Additional security check
                     $finfo = finfo_open(FILEINFO_MIME_TYPE);
                     $mimeType = finfo_file($finfo, $uploadedFile['tmp_name']);
                     finfo_close($finfo);
@@ -514,18 +466,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_file'])) {
                     } elseif (!move_uploaded_file($uploadedFile['tmp_name'], $filePath)) {
                         $submitError = "Error uploading file. Please try again.";
                     } else {
-                        // Check if there's a rejected submission to update
                         $checkStmt = $pdo->prepare("SELECT submission_id FROM project_submissions WHERE project_id = ? AND student_id = ? AND status = 'Rejected' ORDER BY submission_date DESC LIMIT 1");
                         $checkStmt->execute([$project_id, $student_id]);
                         $existingRejected = $checkStmt->fetch(PDO::FETCH_ASSOC);
 
                         if ($existingRejected) {
-                            // Update the existing rejected submission
                             $updateStmt = $pdo->prepare("UPDATE project_submissions SET file_path = ?, status = 'Pending', submission_date = NOW(), submission_status = 'On Time', remarks = '', graded_at = NULL WHERE submission_id = ?");
                             $updateStmt->execute([$uniqueFileName, $existingRejected['submission_id']]);
                             $message = 'Project resubmitted successfully!';
                         } else {
-                            // Insert new submission
                             $insertStmt = $pdo->prepare("INSERT INTO project_submissions (project_id, student_id, file_path, submission_status, status) VALUES (?, ?, ?, 'On Time', 'Pending')");
                             $insertStmt->execute([$project_id, $student_id, $uniqueFileName]);
                             $message = 'Project submitted successfully! (Attempt #' . $attempt_number . ')';
@@ -539,7 +488,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_file'])) {
             }
         }
     } catch (PDOException $e) {
-        // Log detailed error for debugging
         error_log("Database Error: " . $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine());
         
         if ($e->getCode() == 'HY093') {
@@ -548,18 +496,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_file'])) {
             $submitError = "Database error occurred. Please try again.";
         }
     } catch (Exception $e) {
-        // Catch any other exceptions
         error_log("General Error: " . $e->getMessage());
         $submitError = "An error occurred. Please try again.";
     }
 }
 
-// Fetch student's submissions
 $submissions_stmt = $pdo->prepare("SELECT ps.*, p.project_name FROM project_submissions ps JOIN projects p ON ps.project_id = p.project_id WHERE ps.student_id = ? ORDER BY ps.submission_date DESC");
 $submissions_stmt->execute([$student_id]);
 $submissions = $submissions_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Default code for editor
 $defaultCode = "<?php\necho 'Hello PHP!';\n?>\n<h1>Hello HTML + CSS + JS!</h1>\n<style>h1{color:#0b3d91;}</style>\n<script>console.log('Hello JS');</script>";
 $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
 ?>
@@ -616,7 +561,6 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
         color: #2c3e50;
     }
 
-    /* Tab Switcher Styles */
     .tab-switcher {
         display: flex;
         justify-content: center;
@@ -660,7 +604,6 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
         display: block;
     }
 
-    /* Export Panel Styles */
     .export-panel {
         background: #f8fff8;
         border: 1px solid #c3e6cb;
@@ -937,7 +880,6 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
         font-weight: bold;
     }
 
-    /* Mobile Card View Styles */
     .mobile-view {
         display: none;
     }
@@ -1031,7 +973,6 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
         line-height: 1.4;
     }
 
-    /* Code Editor Styles */
     .projects-section {
         margin-bottom: 20px;
         padding: 20px;
@@ -1123,7 +1064,6 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
         font-size: 14px;
     }
 
-    /* Code Editor Split Screen Styles */
     #codeTab {
         display: flex;
         gap: 15px;
@@ -1175,7 +1115,6 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
         height: 100% !important;
     }
 
-    /* Full Screen IDE Styles */
     .fullscreen-ide {
         position: fixed;
         top: 0;
@@ -1392,7 +1331,6 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
             width: 100%;
         }
 
-        /* Hide desktop table and show mobile cards */
         .desktop-view {
             display: none;
         }
@@ -1437,7 +1375,6 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
     <p><strong>Today:</strong> <?= $today ?></p>
 </div>
 
-<!-- Tab Switcher -->
 <div class="tab-switcher">
     <button class="tab-button active" onclick="switchTab('attendance', this)">Attendance</button>
     <button class="tab-button" onclick="switchTab('export', this)">Export History</button>
@@ -1450,7 +1387,6 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
 
 <?php include_once __DIR__ . '/../templates/projects_tab.php'; ?>
 
-<!-- Verified Attendance Modal -->
 <div class="modal fade" id="verifiedModal" tabindex="-1" aria-labelledby="verifiedModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -1470,7 +1406,6 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
 
 </div>
 
-<!-- Full Screen IDE Modal -->
 <div id="fullscreenIDE" class="fullscreen-ide" style="display: none;">
     <div class="ide-header">
         <h4 id="ideProjectName">Project IDE</h4>
@@ -1498,25 +1433,18 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-// ========== GLOBAL FUNCTIONS ==========
 
-// Tab switching function
 function switchTab(tabName, button) {
-    // Hide all tab contents
     const tabContents = document.querySelectorAll('.tab-content');
     tabContents.forEach(content => content.classList.remove('active'));
 
-    // Remove active class from all tab buttons
     const tabButtons = document.querySelectorAll('.tab-button');
     tabButtons.forEach(btn => btn.classList.remove('active'));
 
-    // Show selected tab content
     document.getElementById(tabName + '-tab').classList.add('active');
 
-    // Add active class to clicked button
     button.classList.add('active');
 
-    // Hide/show welcome header and summary based on tab
     const welcomeHeader = document.getElementById('welcomeHeader');
     const summarySection = document.getElementById('summarySection');
 
@@ -1527,9 +1455,7 @@ function switchTab(tabName, button) {
         document.getElementById('submissionSection').style.display = 'none';
         document.getElementById('projects-section').style.display = 'block';
 
-        // Initialize CodeMirror if not already done
         if (!window.codeEditor) {
-            // Wait a bit for the tab to be visible
             setTimeout(initCodeEditor, 100);
         }
     } else {
@@ -1538,38 +1464,28 @@ function switchTab(tabName, button) {
     }
 }
 
-// Project selection for submission
 function selectProjectForSubmission(projectId, projectName) {
-    // Show submission section
     document.getElementById('projects-section').style.display = 'none';
     document.getElementById('submissionSection').style.display = 'block';
 
-    // Set project info
     document.getElementById('selectedProjectName').textContent = projectName;
     document.getElementById('projectId').value = projectId;
 
-    // Reset form and preview
     document.getElementById('submissionForm').reset();
     document.getElementById('editorPreview').srcdoc = '';
     document.getElementById('submissionFile').value = '';
 
-    // Switch to code tab by default
     switchSubmissionTab('code');
 
-    // Initialize CodeMirror and attach events after display is set
     setTimeout(() => {
-        // Reset editor content to default
         if (window.codeEditor && typeof window.codeEditor.setValue === 'function') {
             window.codeEditor.setValue(`<?php echo htmlspecialchars($defaultCode); ?>`);
         } else {
-            // Reinitialize editor if not properly set up
             initCodeEditor();
         }
 
-        // Attach run button event
         const runBtn = document.getElementById('runCodeBtn');
         if (runBtn) {
-            // Remove existing event listeners
             const newRunBtn = runBtn.cloneNode(true);
             runBtn.parentNode.replaceChild(newRunBtn, runBtn);
             newRunBtn.addEventListener('click', runCodePreview);
@@ -1578,7 +1494,6 @@ function selectProjectForSubmission(projectId, projectName) {
 }
 
 function cancelSubmission() {
-    // Hide submission section, show project list
     document.getElementById('submissionSection').style.display = 'none';
     document.getElementById('projects-section').style.display = 'block';
 }
@@ -1595,7 +1510,6 @@ function switchSubmissionTab(tabType) {
         document.getElementById('fileTabBtn').style.borderBottom = 'none';
         document.getElementById('fileTabBtn').style.color = '#999';
 
-        // Initialize CodeMirror if not already done
         if (!window.codeEditor) {
             setTimeout(initCodeEditor, 50);
         }
@@ -1610,20 +1524,17 @@ function switchSubmissionTab(tabType) {
     }
 }
 
-// Run code for preview (safe iframe display)
 function runCodePreview(event) {
     event.preventDefault();
     if (window.codeEditor && typeof window.codeEditor.getValue === 'function') {
         const code = window.codeEditor.getValue();
         const iframe = document.getElementById('editorPreview');
-        // Display code safely in iframe without execution
         iframe.srcdoc = code;
     } else {
         console.error('Code editor not initialized yet.');
     }
 }
 
-// Initialize CodeMirror editor
 function initCodeEditor() {
     const textarea = document.getElementById('codeEditor');
     if (!textarea) {
@@ -1631,7 +1542,6 @@ function initCodeEditor() {
         return;
     }
     
-    // Clean up any existing editor
     if (window.codeEditor && window.codeEditor.toTextArea) {
         try {
             window.codeEditor.toTextArea();
@@ -1640,7 +1550,6 @@ function initCodeEditor() {
         }
     }
     
-    // Create new editor instance
     window.codeEditor = CodeMirror.fromTextArea(textarea, {
         lineNumbers: true,
         theme: "monokai",
@@ -1657,7 +1566,6 @@ function initCodeEditor() {
         }
     });
     
-    // Refresh the editor to ensure proper rendering
     setTimeout(() => {
         if (window.codeEditor) {
             window.codeEditor.refresh();
@@ -1668,7 +1576,6 @@ function initCodeEditor() {
     return window.codeEditor;
 }
 
-// Full Screen IDE Functions (optional)
 function openFullScreenIDE(projectId, projectName) {
     currentProjectId = projectId;
     document.getElementById('ideProjectName').textContent = 'Project: ' + projectName;
@@ -1700,16 +1607,13 @@ function runCode() {
     }
 }
 
-// ========== DOM CONTENT LOADED ==========
 document.addEventListener('DOMContentLoaded', function() {
-    // Handle form submission validation
     const form = document.getElementById('submissionForm');
     if (form) {
         form.addEventListener('submit', function(e) {
             const submissionType = document.getElementById('submissionType').value;
             
             if (submissionType === 'code') {
-                // Save editor content to textarea
                 if (window.codeEditor) {
                     window.codeEditor.save();
                 }
@@ -1732,7 +1636,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Initialize export form date ranges to current month
     const today = new Date().toISOString().split('T')[0];
     const firstDay = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
     
@@ -1747,14 +1650,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     <?php if (!empty($today_row) && $today_row['verified'] == 1): ?>
-    // Check if modal has already been shown today using localStorage
     const todayDate = '<?= date('Y-m-d') ?>';
     const modalShownKey = 'attendance_modal_shown_' + todayDate;
 
     if (!localStorage.getItem(modalShownKey)) {
         var myModal = new bootstrap.Modal(document.getElementById('verifiedModal'), {});
         myModal.show();
-        // Mark modal as shown for today
         localStorage.setItem(modalShownKey, 'true');
     }
     <?php endif; ?>

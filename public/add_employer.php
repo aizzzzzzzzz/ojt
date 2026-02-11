@@ -2,7 +2,6 @@
 session_start();
 require "../private/config.php";
 
-// Debug: Start output buffering to see all messages
 ob_start();
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -15,7 +14,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $password = trim($_POST["password"]);
 
     if (!empty($name) && !empty($company_input) && !empty($username) && !empty($password)) {
-        // Check for duplicate username (case-insensitive)
         $stmt = $pdo->prepare("SELECT 1 FROM employers WHERE LOWER(username) = LOWER(?)");
         $stmt->execute([$username]);
         
@@ -26,7 +24,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         } else {
             error_log("DEBUG: Checking company: '{$company_input}'");
             
-            // Check if company exists first (case-insensitive)
             $companyStmt = $pdo->prepare("SELECT company_id FROM companies WHERE LOWER(company_name) = LOWER(?)");
             $companyStmt->execute([$company_input]);
             $existingCompany = $companyStmt->fetch();
@@ -39,7 +36,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             } else {
                 error_log("DEBUG: Creating new company: '{$company_input}'");
                 
-                // Create new company
                 try {
                     $insertCompanyStmt = $pdo->prepare("INSERT INTO companies (company_name) VALUES (?)");
                     
@@ -47,7 +43,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         $company_id = $pdo->lastInsertId();
                         error_log("DEBUG: Company created successfully! ID: {$company_id}");
                         
-                        // Verify the company was actually inserted
                         $verifyStmt = $pdo->prepare("SELECT * FROM companies WHERE company_id = ?");
                         $verifyStmt->execute([$company_id]);
                         $verified = $verifyStmt->fetch();
@@ -67,11 +62,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 }
             }
 
-            // Hash the password
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
             error_log("DEBUG: Hashed password created");
             
-            // Insert employer
             try {
                 $stmt = $pdo->prepare("INSERT INTO employers (name, company_id, username, password) VALUES (?, ?, ?, ?)");
                 error_log("DEBUG: Inserting employer with values: name={$name}, company_id={$company_id}, username={$username}");
@@ -80,7 +73,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     $employer_id = $pdo->lastInsertId();
                     error_log("DEBUG: Employer created successfully! ID: {$employer_id}");
                     
-                    // Verify employer was created
                     $verifyEmpStmt = $pdo->prepare("SELECT * FROM employers WHERE employer_id = ?");
                     $verifyEmpStmt->execute([$employer_id]);
                     $empData = $verifyEmpStmt->fetch();
@@ -106,7 +98,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     exit;
 }
 
-// Get all companies for debugging display
 $companies = [];
 try {
     $companiesStmt = $pdo->query("SELECT * FROM companies ORDER BY company_name");
@@ -163,7 +154,6 @@ try {
     <div class="container">
         <h2>Add Employer/Supervisor</h2>
         
-        <!-- Debug Info -->
         <div class="debug-info">
             <h5>Current Companies in Database:</h5>
             <?php if (empty($companies)): ?>
@@ -215,7 +205,6 @@ try {
         <hr>
         <a href="index.php" class="btn btn-secondary">Back to Home</a>
         
-        <!-- Test Links -->
         <div class="mt-4">
             <h5>Test Links:</h5>
             <a href="test_companies.php" class="btn btn-sm btn-info">Test Companies System</a>
@@ -223,7 +212,6 @@ try {
         </div>
     </div>
 
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

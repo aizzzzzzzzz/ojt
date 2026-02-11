@@ -12,7 +12,6 @@ if (!$submission_id) {
     exit;
 }
 
-// Check if submission belongs to a project created by this employer (IDOR prevention)
 $stmt = $pdo->prepare("
     SELECT ps.submission_id
     FROM project_submissions ps
@@ -34,17 +33,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt = $pdo->prepare("UPDATE project_submissions SET status = 'Approved', remarks = ?, graded_at = NOW() WHERE submission_id = ?");
     $stmt->execute([$remarks, $submission_id]);
 
-    // Disable the project by setting status to 'Completed'
     $project_id = $_GET['project_id'] ?? 0;
     if ($project_id) {
         $updateProjectStmt = $pdo->prepare("UPDATE projects SET status = 'Completed' WHERE project_id = ?");
         $updateProjectStmt->execute([$project_id]);
     }
 
-    // Log activity
     log_activity($pdo, $_SESSION['employer_id'], 'employer', "Approved submission $submission_id and disabled project $project_id");
 
-    // Send email notification to student
     error_log("DEBUG: Attempting to send approval email for submission_id: $submission_id");
     $student_stmt = $pdo->prepare("SELECT first_name, last_name, email FROM students WHERE student_id = (SELECT student_id FROM project_submissions WHERE submission_id = ?)");
     $student_stmt->execute([$submission_id]);
@@ -69,7 +65,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-// If GET request, show form
 $stmt = $pdo->prepare("SELECT ps.*, s.username FROM project_submissions ps JOIN students s ON ps.student_id = s.student_id WHERE ps.submission_id = ?");
 $stmt->execute([$submission_id]);
 $submission = $stmt->fetch(PDO::FETCH_ASSOC);

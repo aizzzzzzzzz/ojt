@@ -14,7 +14,6 @@ if (!$submission_id) {
     exit;
 }
 
-// Check if submission belongs to a project created by this employer (IDOR prevention)
 $stmt = $pdo->prepare("
     SELECT ps.submission_id
     FROM project_submissions ps
@@ -33,7 +32,6 @@ if (!$authorized_submission) {
 $stmt = $pdo->prepare("UPDATE project_submissions SET status = 'rejected' WHERE submission_id = ?");
 $stmt->execute([$submission_id]);
 
-// Send email notification to student
 $student_stmt = $pdo->prepare("SELECT first_name, last_name, email FROM students WHERE student_id = (SELECT student_id FROM project_submissions WHERE submission_id = ?)");
 $student_stmt->execute([$submission_id]);
 $student = $student_stmt->fetch(PDO::FETCH_ASSOC);

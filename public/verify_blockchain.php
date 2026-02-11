@@ -4,7 +4,6 @@ include __DIR__ . '/../private/config.php';
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['hash'])) {
     $hash = sanitize_input($_GET['hash']);
 
-    // Check if hash exists in database (assuming we store hashes)
     $stmt = $pdo->prepare("SELECT * FROM certificate_hashes WHERE hash = ? LIMIT 1");
     $stmt->execute([$hash]);
     $record = $stmt->fetch(PDO::FETCH_ASSOC);

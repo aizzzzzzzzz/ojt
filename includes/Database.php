@@ -1,8 +1,4 @@
 <?php
-/**
- * Database Class - Centralized database operations
- * Provides a clean interface for all database interactions
- */
 class Database {
     private static $instance = null;
     private $pdo;
@@ -19,9 +15,6 @@ class Database {
         return self::$instance;
     }
 
-    /**
-     * Execute a SELECT query and return results
-     */
     public function select($query, $params = []) {
         try {
             $stmt = $this->pdo->prepare($query);
@@ -33,9 +26,6 @@ class Database {
         }
     }
 
-    /**
-     * Execute a SELECT query and return single row
-     */
     public function selectOne($query, $params = []) {
         try {
             $stmt = $this->pdo->prepare($query);
@@ -47,9 +37,6 @@ class Database {
         }
     }
 
-    /**
-     * Execute an INSERT, UPDATE, or DELETE query
-     */
     public function execute($query, $params = []) {
         try {
             $stmt = $this->pdo->prepare($query);
@@ -60,37 +47,22 @@ class Database {
         }
     }
 
-    /**
-     * Get last inserted ID
-     */
     public function lastInsertId() {
         return $this->pdo->lastInsertId();
     }
 
-    /**
-     * Begin transaction
-     */
     public function beginTransaction() {
         return $this->pdo->beginTransaction();
     }
 
-    /**
-     * Commit transaction
-     */
     public function commit() {
         return $this->pdo->commit();
     }
 
-    /**
-     * Rollback transaction
-     */
     public function rollback() {
         return $this->pdo->rollBack();
     }
 
-    /**
-     * Get user by credentials (for authentication)
-     */
     public function getUserByCredentials($table, $usernameField, $username, $password) {
         $query = "SELECT * FROM $table WHERE $usernameField = ?";
         $user = $this->selectOne($query, [$username]);
@@ -101,9 +73,6 @@ class Database {
         return false;
     }
 
-    /**
-     * Check if record exists
-     */
     public function exists($table, $conditions, $params = []) {
         $whereClause = '';
         $i = 0;
@@ -117,9 +86,6 @@ class Database {
         return $result !== false;
     }
 
-    /**
-     * Insert record and return ID
-     */
     public function insert($table, $data) {
         $fields = array_keys($data);
         $placeholders = str_repeat('?,', count($fields) - 1) . '?';
@@ -131,9 +97,6 @@ class Database {
         return false;
     }
 
-    /**
-     * Update records
-     */
     public function update($table, $data, $conditions, $conditionParams = []) {
         $setClause = '';
         $i = 0;
@@ -155,9 +118,6 @@ class Database {
         return $this->execute($query, $params);
     }
 
-    /**
-     * Delete records
-     */
     public function delete($table, $conditions, $params = []) {
         $whereClause = '';
         $i = 0;

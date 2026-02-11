@@ -1,15 +1,8 @@
 <?php
-/**
- * FormHandler Class - Centralized form validation and processing
- * Provides methods for validating and sanitizing form inputs
- */
 class FormHandler {
     private $errors = [];
     private $data = [];
 
-    /**
-     * Validate required fields
-     */
     public function validateRequired($field, $value, $message = null) {
         if (empty(trim($value))) {
             $this->errors[$field] = $message ?: ucfirst($field) . ' is required.';
@@ -18,9 +11,6 @@ class FormHandler {
         return true;
     }
 
-    /**
-     * Validate email format
-     */
     public function validateEmail($field, $value, $message = null) {
         if (!filter_var($value, FILTER_VALIDATE_EMAIL)) {
             $this->errors[$field] = $message ?: 'Invalid email format.';
@@ -29,9 +19,6 @@ class FormHandler {
         return true;
     }
 
-    /**
-     * Validate minimum length
-     */
     public function validateMinLength($field, $value, $minLength, $message = null) {
         if (strlen($value) < $minLength) {
             $this->errors[$field] = $message ?: ucfirst($field) . " must be at least $minLength characters.";
@@ -40,9 +27,6 @@ class FormHandler {
         return true;
     }
 
-    /**
-     * Validate maximum length
-     */
     public function validateMaxLength($field, $value, $maxLength, $message = null) {
         if (strlen($value) > $maxLength) {
             $this->errors[$field] = $message ?: ucfirst($field) . " must not exceed $maxLength characters.";
@@ -51,9 +35,6 @@ class FormHandler {
         return true;
     }
 
-    /**
-     * Validate numeric value
-     */
     public function validateNumeric($field, $value, $message = null) {
         if (!is_numeric($value)) {
             $this->errors[$field] = $message ?: ucfirst($field) . ' must be a number.';
@@ -62,9 +43,6 @@ class FormHandler {
         return true;
     }
 
-    /**
-     * Validate password strength
-     */
     public function validatePassword($field, $value, $message = null) {
         if (!validate_password($value)) {
             $this->errors[$field] = $message ?: 'Password must be at least 8 characters with uppercase, lowercase, number, and special character.';
@@ -72,10 +50,6 @@ class FormHandler {
         }
         return true;
     }
-
-    /**
-     * Validate matching fields (e.g., password confirmation)
-     */
     public function validateMatch($field1, $value1, $field2, $value2, $message = null) {
         if ($value1 !== $value2) {
             $this->errors[$field2] = $message ?: ucfirst($field1) . ' and ' . ucfirst($field2) . ' do not match.';
@@ -84,9 +58,6 @@ class FormHandler {
         return true;
     }
 
-    /**
-     * Validate unique value in database
-     */
     public function validateUnique($field, $value, $table, $column, $excludeId = null, $message = null) {
         $db = Database::getInstance();
         $query = "SELECT 1 FROM $table WHERE $column = ?";
@@ -104,53 +75,31 @@ class FormHandler {
         return true;
     }
 
-    /**
-     * Sanitize and store input data
-     */
     public function sanitizeInput($field, $value) {
         $this->data[$field] = sanitize_input($value);
         return $this->data[$field];
     }
 
-    /**
-     * Get sanitized data
-     */
     public function getData($field = null) {
         return $field ? ($this->data[$field] ?? null) : $this->data;
     }
 
-    /**
-     * Get validation errors
-     */
     public function getErrors() {
         return $this->errors;
     }
 
-    /**
-     * Check if validation passed
-     */
     public function isValid() {
         return empty($this->errors);
     }
-
-    /**
-     * Get first error message
-     */
     public function getFirstError() {
         return !empty($this->errors) ? reset($this->errors) : null;
     }
 
-    /**
-     * Reset form handler
-     */
     public function reset() {
         $this->errors = [];
         $this->data = [];
     }
 
-    /**
-     * Process login form
-     */
     public function processLogin($username, $password) {
         $this->reset();
 
@@ -165,9 +114,6 @@ class FormHandler {
         return $this->isValid();
     }
 
-    /**
-     * Process student registration form
-     */
     public function processStudentRegistration($data) {
         $this->reset();
 
@@ -195,9 +141,6 @@ class FormHandler {
         return $this->isValid();
     }
 
-    /**
-     * Process employer registration form
-     */
     public function processEmployerRegistration($data) {
         $this->reset();
 

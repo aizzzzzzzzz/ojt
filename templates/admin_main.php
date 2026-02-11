@@ -65,7 +65,6 @@
 
     <script>
         <?php if (isset($_SESSION['employer_added_success']) && $_SESSION['employer_added_success']): ?>
-            // Show success modal when page loads
             document.addEventListener('DOMContentLoaded', function() {
                 var successModal = new bootstrap.Modal(document.getElementById('employerSuccessModal'));
                 successModal.show();
@@ -74,7 +73,6 @@
         <?php endif; ?>
     </script>
 
-    <!-- Success Modal for Adding Supervisor -->
     <div class="modal fade" id="employerSuccessModal" tabindex="-1" aria-labelledby="employerSuccessModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">

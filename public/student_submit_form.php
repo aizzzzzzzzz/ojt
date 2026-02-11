@@ -1,11 +1,9 @@
 <?php
-// Get ALL submissions for this student+project
 $historyStmt = $pdo->prepare("SELECT status, submission_date, submission_status, remarks, graded_at FROM project_submissions WHERE project_id = ? AND student_id = ? ORDER BY submission_date ASC");
 $historyStmt->execute([$project_id, $student_id]);
 $allSubmissions = $historyStmt->fetchAll(PDO::FETCH_ASSOC);
 $hasSubmissions = !empty($allSubmissions);
 
-// Check if already approved
 $isApproved = false;
 foreach ($allSubmissions as $sub) {
     if ($sub['status'] === 'Approved') {
@@ -15,7 +13,6 @@ foreach ($allSubmissions as $sub) {
 }
 ?>
 
-<!-- Current Submission Status -->
 <?php if($hasSubmissions): ?>
     <div class="submission-status mb-4">
         <h5>Submission History</h5>
@@ -50,7 +47,6 @@ foreach ($allSubmissions as $sub) {
         <p>You have already passed this project. You cannot submit further attempts.</p>
     </div>
 <?php else: ?>
-    <!-- Show submission form only if not approved -->
     <form method="post" action="submit_project.php" enctype="multipart/form-data">
         <input type="hidden" name="project_id" value="<?= $project_id ?>">
 

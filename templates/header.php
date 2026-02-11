@@ -1,9 +1,7 @@
 <?php
-// Safe code preview - store code for iframe display instead of executing
 $editorPreview = '';
 if (isset($_POST['code_editor'])) {
     $code = $_POST['code_editor'];
-    // Sanitize and store for safe iframe preview
     $editorPreview = htmlspecialchars($code, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 }
 ?>
@@ -60,7 +58,6 @@ if (isset($_POST['code_editor'])) {
         color: #2c3e50;
     }
 
-    /* Tab Switcher Styles */
     .tab-switcher {
         display: flex;
         justify-content: center;
@@ -104,7 +101,6 @@ if (isset($_POST['code_editor'])) {
         display: block;
     }
 
-    /* Export Panel Styles */
     .export-panel {
         background: #f8fff8;
         border: 1px solid #c3e6cb;
@@ -371,7 +367,6 @@ if (isset($_POST['code_editor'])) {
         font-weight: bold;
     }
 
-    /* Mobile Card View Styles */
     .mobile-view {
         display: none;
     }
@@ -465,7 +460,6 @@ if (isset($_POST['code_editor'])) {
         line-height: 1.4;
     }
 
-    /* Code Editor Styles */
     .projects-section {
         margin-bottom: 20px;
         padding: 20px;
@@ -545,7 +539,6 @@ if (isset($_POST['code_editor'])) {
         font-size: 14px;
     }
 
-    /* Code Editor Split Screen Styles */
     #codeTab {
         display: flex;
         gap: 15px;
@@ -597,7 +590,6 @@ if (isset($_POST['code_editor'])) {
         height: 100% !important;
     }
 
-    /* Full Screen IDE Styles */
     .fullscreen-ide {
         position: fixed;
         top: 0;
@@ -814,7 +806,6 @@ if (isset($_POST['code_editor'])) {
             width: 100%;
         }
 
-        /* Hide desktop table and show mobile cards */
         .desktop-view {
             display: none;
         }
@@ -859,7 +850,6 @@ if (isset($_POST['code_editor'])) {
     <p><strong>Today:</strong> <?= $today ?></p>
 </div>
 
-<!-- Tab Switcher -->
 <div class="tab-switcher">
     <button class="tab-button active" onclick="switchTab('attendance', this)">Attendance</button>
     <button class="tab-button" onclick="switchTab('export', this)">Export History</button>

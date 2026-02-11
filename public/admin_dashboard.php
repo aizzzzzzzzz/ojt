@@ -1,35 +1,25 @@
 <?php
-/**
- * @function check_csrf(string $token): void
- * @function write_audit_log(string $action, string $details): void
- * @function generate_csrf_token(): string
- * @function require_admin(): void
- * @function sanitize_input(string $input): string
- */
 require_once __DIR__ . '/../private/config.php';
 require_once __DIR__ . '/../includes/middleware.php';
 
-require_admin(); // enforce login
+require_admin();
 $csrf_token = generate_csrf_token();
 
-// Fetch admin info
 $stmt = $pdo->prepare("SELECT username, full_name FROM admins WHERE admin_id=?");
 $stmt->execute([$_SESSION['admin_id']]);
 $admin = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// Redirect if somehow admin not found
 if (!$admin) {
     session_destroy();
     header("Location: admin_login.php");
     exit;
 }
 
-// -------- Upload File --------
 $uploadError = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_file'])) {
     check_csrf($_POST['csrf_token'] ?? '');
     if (!empty($_FILES['uploaded_file']['tmp_name'])) {
-        $uploadDir = __DIR__ . '/../uploads/'; // move outside web root in production
+        $uploadDir = __DIR__ . '/../uploads/';
         if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
 
         $fileName = basename($_FILES['uploaded_file']['name']);
@@ -53,7 +43,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_file'])) {
     }
 }
 
-// -------- Employers CRUD --------
 $addEmployerError = $_SESSION['addEmployerError'] ?? '';
 unset($_SESSION['addEmployerError']);
 

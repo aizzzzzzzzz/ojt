@@ -6,23 +6,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username']);
     $password = $_POST['password'];
 
-    // 1️⃣ Check admins first
     $stmt = $pdo->prepare("SELECT * FROM admins WHERE username = ? LIMIT 1");
     $stmt->execute([$username]);
     $admin = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($admin && password_verify($password, $admin['password'])) {
-        // Admin logging in as employer
         $_SESSION['uploader_type'] = 'admin';
         $_SESSION['uploader_id'] = $admin['admin_id'];
         $_SESSION['employer_name'] = $admin['full_name'];
-        $_SESSION['role'] = 'employer'; // treated as employer
+        $_SESSION['role'] = 'employer';
         $_SESSION['is_admin'] = true;
         header("Location: supervisor_dashboard.php");
         exit;
     }
 
-    // 2️⃣ Check regular employers
     $stmt = $pdo->prepare("SELECT * FROM employers WHERE username = ? LIMIT 1");
     $stmt->execute([$username]);
     $employer = $stmt->fetch(PDO::FETCH_ASSOC);

@@ -9,7 +9,6 @@ if ((!isset($_SESSION['employer_id']) && !isset($_SESSION['uploader_type'])) || 
 include __DIR__ . '/../private/config.php';
 require_once __DIR__ . '/../includes/middleware.php';
 
-// Determine uploader type and id
 if (isset($_SESSION['employer_id'])) {
     $uploader_type = 'employer';
     $uploader_id = $_SESSION['employer_id'];
@@ -34,7 +33,6 @@ if (!$employer) {
 
 $csrf_token = generate_csrf_token();
 
-// -------- Upload File --------
 $uploadError = '';
 $uploadSuccess = false;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_file'])) {
@@ -48,17 +46,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_file'])) {
         $allowedTypes = ['pdf','docx','jpg','png','jpeg','txt','xlsx','pptx'];
         $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
 
-        // Check if file type is allowed
         if (!in_array($ext, $allowedTypes)) {
             $uploadError = "Invalid file type. Allowed types: " . implode(', ', $allowedTypes);
         } elseif ($_FILES['uploaded_file']['size'] > 10*1024*1024) {
             $uploadError = "File too large (max 10MB).";
         }
 
-        // Check for duplicate file (same filename for same employer)
         if (!$uploadError) {
             try {
-                // Check if table exists first
                 $tableExists = $pdo->query("SHOW TABLES LIKE 'uploaded_files'")->fetch();
                 if ($tableExists) {
                     $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM uploaded_files WHERE uploader_type = ? AND uploader_id = ? AND filename = ?");
@@ -70,14 +65,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_file'])) {
                     }
                 }
             } catch (PDOException $e) {
-                // If table doesn't exist yet, no duplicates to check
             }
         }
 
-        // Proceed with upload if no errors
         if (!$uploadError && move_uploaded_file($_FILES['uploaded_file']['tmp_name'], $destPath)) {
             try {
-                // Create table if it doesn't exist
                 $createTableSQL = "
                     CREATE TABLE IF NOT EXISTS uploaded_files (
                         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -92,21 +84,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_file'])) {
                 ";
                 $pdo->exec($createTableSQL);
                 
-                // Insert file record with uploader_type and uploader_id
                 $stmt = $pdo->prepare("INSERT INTO uploaded_files (uploader_type, uploader_id, filename, filepath, description) VALUES (?, ?, ?, ?, ?)");
                 $description = $_POST['description'] ?? '';
                 $stmt->execute([$uploader_type, $uploader_id, $fileName, $destPath, $description]);
                 
-                // FIXED: Use manual audit log with correct user info
                 write_audit_log_manual($uploader_type, $uploader_id, 'File Upload', $fileName);
                 $uploadSuccess = true;
                 $_SESSION['success_message'] = "File '$fileName' uploaded successfully!";
             } catch (PDOException $e) {
-                // Check if error is due to duplicate entry
-                if ($e->getCode() == 23000) { // SQLSTATE for duplicate entry
+                if ($e->getCode() == 23000) {
                     $uploadError = "A file with the name '$fileName' already exists. Please rename your file or upload a different one.";
                     
-                    // Delete the uploaded file since it's a duplicate
                     if (file_exists($destPath)) {
                         unlink($destPath);
                     }
@@ -120,9 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_file'])) {
     }
 }
 
-// Get uploaded files for this user
 try {
-    // Check if table exists, create if not
     $tableExists = $pdo->query("SHOW TABLES LIKE 'uploaded_files'")->fetch();
     if (!$tableExists) {
         $createTableSQL = "
@@ -140,7 +126,6 @@ try {
         $pdo->exec($createTableSQL);
         $uploaded_files = [];
     } else {
-        // Check if table has new structure, migrate if needed
         $columns = $pdo->query("DESCRIBE uploaded_files")->fetchAll(PDO::FETCH_ASSOC);
         $hasUploaderType = false;
         $hasEmployerId = false;
@@ -150,7 +135,6 @@ try {
         }
 
         if (!$hasUploaderType && $hasEmployerId) {
-            // Migrate old table structure
             $pdo->exec("ALTER TABLE uploaded_files ADD COLUMN uploader_type ENUM('admin', 'employer') NOT NULL DEFAULT 'employer' AFTER id");
             $pdo->exec("ALTER TABLE uploaded_files ADD COLUMN uploader_id INT NOT NULL DEFAULT 0 AFTER uploader_type");
             $pdo->exec("UPDATE uploaded_files SET uploader_id = employer_id WHERE uploader_id = 0");
@@ -158,7 +142,6 @@ try {
             $pdo->exec("ALTER TABLE uploaded_files ADD UNIQUE KEY unique_uploader_filename (uploader_type, uploader_id, filename)");
         }
 
-        // Get files for this user
         $files_stmt = $pdo->prepare("
             SELECT id, filename, uploaded_at, description
             FROM uploaded_files
@@ -447,8 +430,7 @@ if (isset($_SESSION['success_message'])) {
 </head>
 <body>
     <div class="dashboard-container">
-        <a href="supervisor_dashboard.php
-" class="back-link">← Back</a>
+        <a href="supervisor_dashboard.php" class="back-link">← Back</a>
         
         <div class="welcome-section">
             <h2>Upload Documents</h2>
@@ -486,8 +468,7 @@ if (isset($_SESSION['success_message'])) {
                     <button type="submit" name="upload_file" class="btn btn-primary">
                         📁 Upload Document
                     </button>
-                    <a href="supervisor_dashboard.php
-" class="btn btn-secondary">Cancel</a>
+                    <a href="supervisor_dashboard.php" class="btn btn-secondary">Cancel</a>
                 </div>
             </form>
         </div>
@@ -513,7 +494,7 @@ if (isset($_SESSION['success_message'])) {
                     <tbody>
                         <?php foreach ($uploaded_files as $file): 
                             $ext = strtolower(pathinfo($file['filename'], PATHINFO_EXTENSION));
-                            $icon = '📄'; // default
+                            $icon = '📄';
                             if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif'])) $icon = '🖼️';
                             elseif ($ext === 'pdf') $icon = '📕';
                             elseif (in_array($ext, ['docx', 'doc'])) $icon = '📝';
@@ -549,7 +530,6 @@ if (isset($_SESSION['success_message'])) {
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // File input preview
         document.getElementById('uploaded_file').addEventListener('change', function(e) {
             const fileName = e.target.files[0]?.name;
             if (fileName) {

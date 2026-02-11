@@ -13,7 +13,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $status = $_POST['status'] ?? '';
     $remarks = $_POST['remarks'] ?? '';
 
-    // Debug logging
     error_log("Grade submission attempt: submission_id=$submission_id, status=$status, remarks=$remarks");
 
     if (!$submission_id || !in_array($status, ['Pending', 'Approved', 'Rejected'])) {
@@ -22,7 +21,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // Check if submission belongs to a project created by this employer (IDOR prevention)
     $stmt = $pdo->prepare("
         SELECT ps.status
         FROM project_submissions ps
@@ -44,7 +42,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // Workaround: Use direct SQL query instead of prepared statement
     $remarks_escaped = $pdo->quote($remarks);
     $status_escaped = $pdo->quote($status);
 
@@ -56,7 +53,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($result > 0) {
             $_SESSION['success'] = 'Submission graded successfully.';
 
-            // Send email notification to student
             error_log("DEBUG: Attempting to send " . strtolower($status) . " email for submission_id: $submission_id");
             $student_stmt = $pdo->prepare("SELECT first_name, last_name, email FROM students WHERE student_id = (SELECT student_id FROM project_submissions WHERE submission_id = ?)");
             $student_stmt->execute([$submission_id]);
@@ -71,7 +67,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $supervisor_name = $supervisor ? $supervisor['name'] : 'Supervisor';
 
                 if ($status === 'Approved') {
-                    // Disable the project by setting status to 'Completed'
                     $project_stmt = $pdo->prepare("SELECT project_id FROM project_submissions WHERE submission_id = ?");
                     $project_stmt->execute([$submission_id]);
                     $project = $project_stmt->fetch(PDO::FETCH_ASSOC);

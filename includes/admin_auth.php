@@ -1,5 +1,4 @@
 <?php
-// Authentication module for admin dashboard
 function authenticate_admin() {
     if (!isset($_SESSION['admin_id']) || $_SESSION['role'] !== "admin") {
         header("Location: admin_login.php");

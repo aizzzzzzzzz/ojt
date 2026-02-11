@@ -1,4 +1,4 @@
-<!-- Sidebar as buttons above summary -->
+
 <div class="student-sidebar-buttons">
     <button onclick="showSection('attendance')" class="sidebar-btn active">📅 Attendance</button>
     <button onclick="showSection('projects')" class="sidebar-btn">📁 Projects</button>
@@ -70,7 +70,6 @@ foreach($actions as $key=>$label):
 
 <h3>Attendance History</h3>
 
-<!-- Desktop Table View -->
 <div class="table-section desktop-view">
 <table>
 <thead>
@@ -137,7 +136,6 @@ if (!empty($row['time_in']) && !empty($row['time_out'])) {
 </table>
 </div>
 
-<!-- Mobile Card View -->
 <div class="mobile-view">
 <?php foreach($attendance as $row): ?>
 <div class="attendance-card">

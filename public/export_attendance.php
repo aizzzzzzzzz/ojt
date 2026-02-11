@@ -13,28 +13,23 @@ if (!isset($_SESSION['student_id']) || $_SESSION['role'] !== "student") {
 
 $student_id = (int)$_SESSION['student_id'];
 
-// Fetch student info
 $stmt = $pdo->prepare("SELECT * FROM students WHERE student_id = ? LIMIT 1");
 $stmt->execute([$student_id]);
 $student = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// Fetch attendance history
 $attendance_stmt = $pdo->prepare("SELECT * FROM attendance WHERE student_id = ? ORDER BY log_date DESC");
 $attendance_stmt->execute([$student_id]);
 $attendance = $attendance_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Create new Spreadsheet object
 $spreadsheet = new Spreadsheet();
 $sheet = $spreadsheet->getActiveSheet();
 
-// Set document properties
 $spreadsheet->getProperties()
     ->setCreator("OJT System")
     ->setLastModifiedBy("OJT System")
     ->setTitle("Attendance History - " . ($student['first_name'] ?? 'Student'))
     ->setSubject("Attendance Records");
 
-// Set headers
 $sheet->setCellValue('A1', 'Attendance History for ' . ($student['first_name'] . ' ' . $student['last_name']));
 $sheet->mergeCells('A1:I1');
 $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
@@ -42,7 +37,6 @@ $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
 $headers = ['Date', 'Time In', 'Lunch Out', 'Lunch In', 'Time Out', 'Status', 'Verified', 'Hours Worked', 'Daily Task'];
 $sheet->fromArray($headers, NULL, 'A3');
 
-// Style headers
 $headerStyle = [
     'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
     'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '4CAF50']],
@@ -50,10 +44,8 @@ $headerStyle = [
 ];
 $sheet->getStyle('A3:I3')->applyFromArray($headerStyle);
 
-// Add data
 $row = 4;
 foreach ($attendance as $record) {
-    // Calculate hours
     $hours = '-';
     if (!empty($record['time_in']) && !empty($record['time_out']) && 
         strpos($record['time_in'], '0000') === false && 
@@ -80,7 +72,6 @@ foreach ($attendance as $record) {
     $sheet->setCellValue('H' . $row, $hours);
     $sheet->setCellValue('I' . $row, $record['daily_task'] ?? '-');
     
-    // Add conditional formatting for verified status
     if ($record['verified'] == 1) {
         $sheet->getStyle('G' . $row)->getFont()->getColor()->setRGB('008000');
     } else {
@@ -90,12 +81,10 @@ foreach ($attendance as $record) {
     $row++;
 }
 
-// Auto-size columns
 foreach (range('A', 'I') as $column) {
     $sheet->getColumnDimension($column)->setAutoSize(true);
 }
 
-// Add summary at the bottom
 $sheet->setCellValue('A' . ($row + 2), 'Summary');
 $sheet->mergeCells('A' . ($row + 2) . ':B' . ($row + 2));
 $sheet->getStyle('A' . ($row + 2))->getFont()->setBold(true);
@@ -106,7 +95,6 @@ $sheet->setCellValue('B' . ($row + 3), count($attendance));
 $sheet->setCellValue('A' . ($row + 4), 'Verified Days:');
 $sheet->setCellValue('B' . ($row + 4), count(array_filter($attendance, function($a) { return $a['verified'] == 1; })));
 
-// Set filename and output
 $filename = 'attendance_' . ($student['first_name'] ?? 'student') . '_' . date('Y-m-d') . '.xlsx';
 
 header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');

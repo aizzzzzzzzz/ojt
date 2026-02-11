@@ -1,4 +1,3 @@
-<!-- Export Tab Content -->
 <div id="export-tab" class="tab-content">
     <div class="export-panel">
         <h5> Export Attendance History</h5>

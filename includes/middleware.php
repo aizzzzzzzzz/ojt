@@ -1,10 +1,8 @@
 <?php
-// includes/middleware.php
 
 if (session_status() === PHP_SESSION_NONE) session_start();
 require_once __DIR__ . '/../private/config.php';
 
-// ----------------- Auth -----------------
 function require_admin() {
     if (empty($_SESSION['admin_id'])) {
         header("Location: ../admin_login.php");
@@ -19,7 +17,6 @@ function require_employer() {
     }
 }
 
-// ----------------- CSRF -----------------
 function check_csrf($token) {
     if (!isset($token) || !validate_csrf_token($token)) {
         write_audit_log('CSRF Validation Failed', null);
@@ -27,15 +24,12 @@ function check_csrf($token) {
     }
 }
 
-// ----------------- Audit Logging -----------------
 function write_audit_log($action, $target = null) {
     global $pdo;
 
-    // FIXED: Determine user type correctly
     $user_id = 0;
     $user_type = 'guest';
     
-    // Check employer first, then admin
     if (isset($_SESSION['employer_id']) && !empty($_SESSION['employer_id'])) {
         $user_type = 'employer';
         $user_id = $_SESSION['employer_id'];
@@ -44,9 +38,7 @@ function write_audit_log($action, $target = null) {
         $user_id = $_SESSION['admin_id'];
     }
     
-    // Also check for student if needed
     if ($user_type === 'guest' && isset($_SESSION['student_id']) && !empty($_SESSION['student_id'])) {
-        // If you track student actions in audit_logs
         $user_type = 'student';
         $user_id = $_SESSION['student_id'];
     }
@@ -69,7 +61,6 @@ function write_audit_log($action, $target = null) {
     return false;
 }
 
-// Add a manual audit log function for more control
 function write_audit_log_manual($user_type, $user_id, $action, $target = null) {
     global $pdo;
     

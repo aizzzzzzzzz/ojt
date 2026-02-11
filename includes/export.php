@@ -1,11 +1,8 @@
 <?php
-// Export logic module for student dashboard
 
 function handle_excel_export($pdo, $student_id, $start_date, $end_date) {
-    // Clear any existing output
     if (ob_get_length()) ob_end_clean();
 
-    // Validate date ranges and row limits
     if ($start_date && $end_date) {
         $start = strtotime($start_date);
         $end = strtotime($end_date);
@@ -19,13 +16,11 @@ function handle_excel_export($pdo, $student_id, $start_date, $end_date) {
             return "Cannot export future dates.";
         }
 
-        // Limit date range to maximum 1 year
         if (($end - $start) > (365 * 24 * 60 * 60)) {
             return "Date range cannot exceed 1 year.";
         }
     }
 
-    // Check if PhpSpreadsheet is available
     $phpspreadsheetPath = __DIR__ . '/../vendor/autoload.php';
     if (!file_exists($phpspreadsheetPath)) {
         return "Excel export feature requires PhpSpreadsheet library. Please contact administrator.";
@@ -34,12 +29,10 @@ function handle_excel_export($pdo, $student_id, $start_date, $end_date) {
     require_once $phpspreadsheetPath;
 
     try {
-        // Fetch student info
         $stmt = $pdo->prepare("SELECT * FROM students WHERE student_id = ? LIMIT 1");
         $stmt->execute([$student_id]);
         $student = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // Fetch attendance history with optional date filter and row limit
         $sql = "SELECT * FROM attendance WHERE student_id = ?";
         $params = [$student_id];
 
@@ -49,30 +42,26 @@ function handle_excel_export($pdo, $student_id, $start_date, $end_date) {
             $params[] = $end_date;
         }
 
-        $sql .= " ORDER BY log_date DESC LIMIT 1000"; // Row limit
+        $sql .= " ORDER BY log_date DESC LIMIT 1000";
 
         $attendance_stmt = $pdo->prepare($sql);
         $attendance_stmt->execute($params);
         $attendance = $attendance_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Create new Spreadsheet object
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
-        // Set document properties
         $spreadsheet->getProperties()
             ->setCreator("OJT System")
             ->setLastModifiedBy("OJT System")
             ->setTitle("Attendance History - " . ($student['first_name'] ?? 'Student'))
             ->setSubject("Attendance Records");
 
-        // Set main title
         $sheet->setCellValue('A1', 'ATTENDANCE HISTORY REPORT');
         $sheet->mergeCells('A1:I1');
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
         $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-        // Student info
         $sheet->setCellValue('A2', 'Student Name:');
         $sheet->setCellValue('B2', ($student['first_name'] ?? '') . ' ' . ($student['last_name'] ?? ''));
         $sheet->setCellValue('A3', 'Student ID:');
@@ -88,11 +77,9 @@ function handle_excel_export($pdo, $student_id, $start_date, $end_date) {
         $sheet->setCellValue('A5', 'Generated On:');
         $sheet->setCellValue('B5', date('F d, Y h:i A'));
 
-        // Set headers
         $headers = ['Date', 'Time In', 'Lunch Out', 'Lunch In', 'Time Out', 'Status', 'Verified', 'Hours Worked', 'Daily Task / Activity'];
         $sheet->fromArray($headers, NULL, 'A7');
 
-        // Style headers
         $headerStyle = [
             'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
             'fill' => [
@@ -109,13 +96,11 @@ function handle_excel_export($pdo, $student_id, $start_date, $end_date) {
         ];
         $sheet->getStyle('A7:I7')->applyFromArray($headerStyle);
 
-        // Add data
         $row = 8;
         $totalMinutes = 0;
         $verifiedCount = 0;
 
         foreach ($attendance as $record) {
-            // Calculate hours
             $hours = '-';
             $minutesWorked = 0;
 
@@ -149,7 +134,6 @@ function handle_excel_export($pdo, $student_id, $start_date, $end_date) {
             $sheet->setCellValue('H' . $row, $hours);
             $sheet->setCellValue('I' . $row, $record['daily_task'] ?? '-');
 
-            // Add conditional formatting for verified status
             $verifiedStyle = $sheet->getStyle('G' . $row);
             if ($record['verified'] == 1) {
                 $verifiedStyle->getFont()->getColor()->setRGB('008000');
@@ -157,7 +141,6 @@ function handle_excel_export($pdo, $student_id, $start_date, $end_date) {
                 $verifiedStyle->getFont()->getColor()->setRGB('FF6B6B');
             }
 
-            // Add border to data rows
             $dataStyle = [
                 'borders' => [
                     'outline' => [
@@ -171,7 +154,6 @@ function handle_excel_export($pdo, $student_id, $start_date, $end_date) {
             $row++;
         }
 
-        // Add summary section
         $summaryRow = $row + 2;
         $sheet->setCellValue('A' . $summaryRow, 'SUMMARY');
         $sheet->mergeCells('A' . $summaryRow . ':B' . $summaryRow);
@@ -196,7 +178,6 @@ function handle_excel_export($pdo, $student_id, $start_date, $end_date) {
         $totalMinutesRemainder = $totalMinutes % 60;
         $sheet->setCellValue('B' . $summaryRow, $totalHours . 'h ' . $totalMinutesRemainder . 'm');
 
-        // Style summary
         $summaryStyle = [
             'font' => ['bold' => true],
             'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E8F5E9']],
@@ -209,42 +190,34 @@ function handle_excel_export($pdo, $student_id, $start_date, $end_date) {
         ];
         $sheet->getStyle('A' . ($row + 2) . ':B' . $summaryRow)->applyFromArray($summaryStyle);
 
-        // Auto-size columns
         foreach (range('A', 'I') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
 
-        // Set column widths for specific columns
         $sheet->getColumnDimension('I')->setWidth(40); // Wider for tasks
 
-        // Wrap text for task column
         $sheet->getStyle('I8:I' . ($row - 1))->getAlignment()->setWrapText(true);
 
-        // Set filename
         $filename = 'Attendance_History_' . ($student['first_name'] ?? 'student') . '_' . date('Y-m-d') . '.xlsx';
 
-        // Clear all output buffers
         while (ob_get_level()) {
             ob_end_clean();
         }
 
-        // Set headers
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment;filename="' . $filename . '"');
         header('Cache-Control: max-age=0');
-        header('Cache-Control: max-age=1'); // For IE9
+        header('Cache-Control: max-age=1');
         header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
         header('Last-Modified: ' . gmdate('D, d M Y H:i:s') . ' GMT');
         header('Cache-Control: cache, must-revalidate');
         header('Pragma: public');
 
-        // Create and save file
         $writer = new Xlsx($spreadsheet);
         $writer->save('php://output');
         exit;
 
     } catch (Exception $e) {
-        // Log detailed error
         error_log("Excel Export Error: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
         return "Error generating Excel file. Please contact administrator.";
     }

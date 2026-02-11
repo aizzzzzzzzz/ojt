@@ -1,5 +1,4 @@
 <?php
-// includes/email.php - Email utility functions using PHPMailer
 
 require_once __DIR__ . '/../lib/phpmailer/PHPMailer-master/src/PHPMailer.php';
 require_once __DIR__ . '/../lib/phpmailer/PHPMailer-master/src/SMTP.php';
@@ -9,20 +8,9 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
-/**
- * Send an email using PHPMailer
- *
- * @param string $to Recipient email address
- * @param string $subject Email subject
- * @param string $body Email body (HTML)
- * @param string $altBody Plain text alternative (optional)
- * @param array $attachments Array of file paths to attach (optional)
- * @return bool|string True on success, error message on failure
- */
 function send_email($to, $subject, $body, $altBody = '', $attachments = []) {
     global $email_config;
 
-    // Check if email config is available
     if (!isset($email_config) || empty($email_config['smtp_host'])) {
         return "Email configuration not found. Please configure email settings in config.php";
     }
@@ -30,8 +18,7 @@ function send_email($to, $subject, $body, $altBody = '', $attachments = []) {
     $mail = new PHPMailer(true);
 
     try {
-        // Server settings
-        $mail->SMTPDebug = 0; // Disable debug output in production
+        $mail->SMTPDebug = 0;
         $mail->isSMTP();
         $mail->Host       = $email_config['smtp_host'];
         $mail->SMTPAuth   = true;
@@ -40,12 +27,10 @@ function send_email($to, $subject, $body, $altBody = '', $attachments = []) {
         $mail->SMTPSecure = $email_config['smtp_encryption'];
         $mail->Port       = $email_config['smtp_port'];
 
-        // Recipients
         $mail->setFrom($email_config['from_email'], $email_config['from_name']);
         $mail->addReplyTo($email_config['reply_to_email'], $email_config['reply_to_name']);
         $mail->addAddress($to);
 
-        // Attachments
         if (!empty($attachments) && is_array($attachments)) {
             foreach ($attachments as $attachment) {
                 if (file_exists($attachment)) {
@@ -54,7 +39,6 @@ function send_email($to, $subject, $body, $altBody = '', $attachments = []) {
             }
         }
 
-        // Content
         $mail->isHTML(true);
         $mail->Subject = $subject;
         $mail->Body    = $body;
@@ -67,18 +51,11 @@ function send_email($to, $subject, $body, $altBody = '', $attachments = []) {
         return true;
 
     } catch (Exception $e) {
-        // Log the error
         error_log("Email sending failed: " . $mail->ErrorInfo);
         return "Email could not be sent. Error: " . $mail->ErrorInfo;
     }
 }
 
-/**
- * Send a test email to verify configuration
- *
- * @param string $test_email Email address to send test to
- * @return bool|string True on success, error message on failure
- */
 function send_test_email($test_email) {
     $subject = "OJT System - Email Test";
     $body = "
@@ -115,14 +92,6 @@ function send_test_email($test_email) {
     return send_email($test_email, $subject, $body, $altBody);
 }
 
-/**
- * Send notification email for student evaluation completion
- *
- * @param string $student_email Student's email address
- * @param string $student_name Student's full name
- * @param string $supervisor_name Supervisor's name
- * @return bool|string True on success, error message on failure
- */
 function send_evaluation_notification($student_email, $student_name, $supervisor_name) {
     $subject = "OJT Evaluation Completed - " . $student_name;
 
@@ -162,15 +131,6 @@ function send_evaluation_notification($student_email, $student_name, $supervisor
     return send_email($student_email, $subject, $body, $altBody);
 }
 
-/**
- * Send notification email for project approval
- *
- * @param string $student_email Student's email address
- * @param string $student_name Student's full name
- * @param string $supervisor_name Supervisor's name
- * @param string $remarks Optional remarks from supervisor
- * @return bool|string True on success, error message on failure
- */
 function send_project_approval_notification($student_email, $student_name, $supervisor_name, $remarks = '') {
     $subject = "OJT Project Submission Approved - " . $student_name;
 
@@ -209,14 +169,6 @@ function send_project_approval_notification($student_email, $student_name, $supe
     return send_email($student_email, $subject, $body, $altBody);
 }
 
-/**
- * Send notification email for project rejection
- *
- * @param string $student_email Student's email address
- * @param string $student_name Student's full name
- * @param string $supervisor_name Supervisor's name
- * @return bool|string True on success, error message on failure
- */
 function send_project_rejection_notification($student_email, $student_name, $supervisor_name) {
     $subject = "OJT Project Submission Rejected - " . $student_name;
 
@@ -254,15 +206,6 @@ function send_project_rejection_notification($student_email, $student_name, $sup
     return send_email($student_email, $subject, $body, $altBody);
 }
 
-/**
- * Send notification email for attendance verification
- *
- * @param string $student_email Student's email address
- * @param string $student_name Student's full name
- * @param string $date Date of attendance
- * @param string $status Attendance status
- * @return bool|string True on success, error message on failure
- */
 function send_attendance_notification($student_email, $student_name, $date, $status) {
     $subject = "OJT Attendance Update - " . date('M d, Y', strtotime($date));
 

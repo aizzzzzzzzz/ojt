@@ -2,7 +2,6 @@
 session_start();
 require '../private/config.php';
 
-// Check if user is logged in as admin, supervisor, or employer
 if (!isset($_SESSION['role']) || ($_SESSION['role'] !== 'admin' && $_SESSION['role'] !== 'employer')) {
     header('Location: ../index.php');
     exit;
@@ -34,14 +33,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $created_by = null;
             $company_id = null;
             
-            // Debug: Log session data
             error_log("DEBUG add_student.php - Session role: " . $_SESSION['role']);
             error_log("DEBUG add_student.php - Session employer_id: " . ($_SESSION['employer_id'] ?? 'NOT SET'));
             
             if ($_SESSION['role'] === 'employer') {
                 $created_by = $_SESSION['employer_id'];
                 
-                // Get company_id from the supervisor who is creating the student
                 if ($created_by) {
                     error_log("DEBUG add_student.php - Looking for employer_id: " . $created_by);
                     $companyStmt = $pdo->prepare("SELECT company_id FROM employers WHERE employer_id = ?");
@@ -57,7 +54,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 }
             }
             
-            // If admin is adding, company_id should be NULL
             if ($_SESSION['role'] === 'admin') {
                 error_log("DEBUG add_student.php - Admin adding student, company_id will be NULL");
             }
@@ -254,7 +250,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         </form>
     </div>
 
-    <!-- Success Modal -->
     <div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -272,12 +267,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         </div>
     </div>
 
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
         <?php if (!empty($success)): ?>
-            // Show success modal when page loads
             document.addEventListener('DOMContentLoaded', function() {
                 var successModal = new bootstrap.Modal(document.getElementById('successModal'));
                 successModal.show();
