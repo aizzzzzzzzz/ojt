@@ -10,12 +10,25 @@
         <?php if (!empty($projects)): ?>
             <div class="projects-grid">
                 <?php foreach ($projects as $project): ?>
-                    <div class="project-card" onclick="selectProjectForSubmission(<?= $project['project_id'] ?>, '<?= htmlspecialchars($project['project_name']) ?>')">
+                    <?php
+                    $is_approved = false;
+                    foreach ($submissions as $sub) {
+                        if ($sub['project_id'] == $project['project_id'] && $sub['status'] == 'Approved') {
+                            $is_approved = true;
+                            break;
+                        }
+                    }
+                    $is_disabled = $is_approved || strtolower($project['status']) == 'completed';
+                    ?>
+                    <div class="project-card <?php if ($is_disabled) echo 'disabled'; ?>" <?php if (!$is_disabled) echo 'onclick="selectProjectForSubmission(' . $project['project_id'] . ', \'' . htmlspecialchars($project['project_name']) . '\')"'; ?>>
                         <h5><?= htmlspecialchars($project['project_name']) ?></h5>
                         <p><?= htmlspecialchars(substr($project['description'], 0, 100)) ?>...</p>
                         <div style="font-size: 12px; color: #999; margin-top: 10px;">
                             <div>📅 Due: <?= date('M d, Y', strtotime($project['due_date'])) ?></div>
                             <div>Status: <span style="color: #28a745; font-weight: bold;"><?= ucfirst($project['status']) ?></span></div>
+                            <?php if ($is_approved): ?>
+                                <div style="color: #28a745; font-weight: bold;">✅ Approved</div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 <?php endforeach; ?>

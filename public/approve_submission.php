@@ -4,6 +4,7 @@ include __DIR__ . '/../includes/auth_check.php';
 require_role('employer');
 
 include __DIR__ . '/../private/config.php';
+require_once __DIR__ . '/../includes/email.php';
 
 $submission_id = (int)($_GET['id'] ?? 0);
 if (!$submission_id) {
@@ -33,8 +34,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt = $pdo->prepare("UPDATE project_submissions SET status = 'Approved', remarks = ?, graded_at = NOW() WHERE submission_id = ?");
     $stmt->execute([$remarks, $submission_id]);
 
+    // Disable the project by setting status to 'Completed'
+    $project_id = $_GET['project_id'] ?? 0;
+    if ($project_id) {
+        $updateProjectStmt = $pdo->prepare("UPDATE projects SET status = 'Completed' WHERE project_id = ?");
+        $updateProjectStmt->execute([$project_id]);
+    }
+
     // Log activity
-    log_activity($pdo, $_SESSION['employer_id'], 'employer', "Approved submission $submission_id");
+    log_activity($pdo, $_SESSION['employer_id'], 'employer', "Approved submission $submission_id and disabled project $project_id");
+
+    // Send email notification to student
+    error_log("DEBUG: Attempting to send approval email for submission_id: $submission_id");
+    $student_stmt = $pdo->prepare("SELECT first_name, last_name, email FROM students WHERE student_id = (SELECT student_id FROM project_submissions WHERE submission_id = ?)");
+    $student_stmt->execute([$submission_id]);
+    $student = $student_stmt->fetch(PDO::FETCH_ASSOC);
+    error_log("DEBUG: Student data: " . print_r($student, true));
+
+    if ($student && !empty($student['email'])) {
+        $student_name = ucwords(strtolower($student['first_name'] . ' ' . $student['last_name']));
+        $supervisor_stmt = $pdo->prepare("SELECT name FROM employers WHERE employer_id = ?");
+        $supervisor_stmt->execute([$_SESSION['employer_id']]);
+        $supervisor = $supervisor_stmt->fetch(PDO::FETCH_ASSOC);
+        $supervisor_name = $supervisor ? $supervisor['name'] : 'Supervisor';
+
+        $email_result = send_project_approval_notification($student['email'], $student_name, $supervisor_name, $remarks);
+        if ($email_result !== true) {
+            error_log("Failed to send approval notification: " . $email_result);
+        }
+    }
 
     $_SESSION['success_message'] = "Submission approved successfully.";
     header("Location: project_submissions.php?project_id=" . ($_GET['project_id'] ?? 0));

@@ -55,7 +55,6 @@ tr:hover { background:#e3f2fd; }
             <td><?= htmlspecialchars($p['due_date']) ?></td>
             <td><?= htmlspecialchars($p['status']) ?></td>
             <td>
-                <a href="edit_project.php?id=<?= $p['project_id'] ?>" class="btn btn-warning btn-sm">✏️ Edit</a>
                 <a href="delete_project.php?id=<?= $p['project_id'] ?>" class="btn btn-outline-secondary btn-sm" onclick="return confirm('Delete this project?')">🗑 Delete</a>
                 <a href="project_submissions.php?project_id=<?= $p['project_id'] ?>" class="btn btn-success btn-sm">📂 Submissions</a>
             </td>

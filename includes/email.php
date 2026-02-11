@@ -163,6 +163,98 @@ function send_evaluation_notification($student_email, $student_name, $supervisor
 }
 
 /**
+ * Send notification email for project approval
+ *
+ * @param string $student_email Student's email address
+ * @param string $student_name Student's full name
+ * @param string $supervisor_name Supervisor's name
+ * @param string $remarks Optional remarks from supervisor
+ * @return bool|string True on success, error message on failure
+ */
+function send_project_approval_notification($student_email, $student_name, $supervisor_name, $remarks = '') {
+    $subject = "OJT Project Submission Approved - " . $student_name;
+
+    $body = "
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: #28a745; color: white; padding: 20px; text-align: center; }
+                .content { padding: 20px; background: #f8f9fa; }
+                .footer { text-align: center; padding: 10px; color: #666; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <h2>Submission Approved</h2>
+                </div>
+                <div class='content'>
+                    <p>Dear <strong>$student_name</strong>,</p>
+                    <p>Your project submission has been approved by your supervisor, <strong>$supervisor_name</strong>.</p>
+                    " . (!empty($remarks) ? "<p><strong>Remarks:</strong> $remarks</p>" : "") . "
+                    <p>You can now proceed with the next steps or check your dashboard for updates.</p>
+                </div>
+                <div class='footer'>
+                    <p>This is an automated message from the OJT System.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+    ";
+
+    $altBody = "Dear $student_name,\n\nYour project submission has been approved by your supervisor, $supervisor_name.\n\n" . (!empty($remarks) ? "Remarks: $remarks\n\n" : "") . "You can now proceed with the next steps or check your dashboard for updates.\n\nThis is an automated message from the OJT System.";
+
+    return send_email($student_email, $subject, $body, $altBody);
+}
+
+/**
+ * Send notification email for project rejection
+ *
+ * @param string $student_email Student's email address
+ * @param string $student_name Student's full name
+ * @param string $supervisor_name Supervisor's name
+ * @return bool|string True on success, error message on failure
+ */
+function send_project_rejection_notification($student_email, $student_name, $supervisor_name) {
+    $subject = "OJT Project Submission Rejected - " . $student_name;
+
+    $body = "
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: #dc3545; color: white; padding: 20px; text-align: center; }
+                .content { padding: 20px; background: #f8f9fa; }
+                .footer { text-align: center; padding: 10px; color: #666; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <h2>Submission Rejected</h2>
+                </div>
+                <div class='content'>
+                    <p>Dear <strong>$student_name</strong>,</p>
+                    <p>Your project submission has been rejected by your supervisor, <strong>$supervisor_name</strong>.</p>
+                    <p>Please review the submission requirements and resubmit if necessary.</p>
+                </div>
+                <div class='footer'>
+                    <p>This is an automated message from the OJT System.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+    ";
+
+    $altBody = "Dear $student_name,\n\nYour project submission has been rejected by your supervisor, $supervisor_name.\n\nPlease review the submission requirements and resubmit if necessary.\n\nThis is an automated message from the OJT System.";
+
+    return send_email($student_email, $subject, $body, $altBody);
+}
+
+/**
  * Send notification email for attendance verification
  *
  * @param string $student_email Student's email address

@@ -6,6 +6,7 @@ if (!isset($_SESSION['employer_id'])) {
 }
 
 include __DIR__ . '/../private/config.php';
+require_once __DIR__ . '/../includes/email.php';
 
 $submission_id = (int)($_GET['id'] ?? 0);
 if (!$submission_id) {
@@ -31,6 +32,24 @@ if (!$authorized_submission) {
 
 $stmt = $pdo->prepare("UPDATE project_submissions SET status = 'rejected' WHERE submission_id = ?");
 $stmt->execute([$submission_id]);
+
+// Send email notification to student
+$student_stmt = $pdo->prepare("SELECT first_name, last_name, email FROM students WHERE student_id = (SELECT student_id FROM project_submissions WHERE submission_id = ?)");
+$student_stmt->execute([$submission_id]);
+$student = $student_stmt->fetch(PDO::FETCH_ASSOC);
+
+if ($student && !empty($student['email'])) {
+    $student_name = ucwords(strtolower($student['first_name'] . ' ' . $student['last_name']));
+    $supervisor_stmt = $pdo->prepare("SELECT name FROM employers WHERE employer_id = ?");
+    $supervisor_stmt->execute([$_SESSION['employer_id']]);
+    $supervisor = $supervisor_stmt->fetch(PDO::FETCH_ASSOC);
+    $supervisor_name = $supervisor ? $supervisor['name'] : 'Supervisor';
+
+    $email_result = send_project_rejection_notification($student['email'], $student_name, $supervisor_name);
+    if ($email_result !== true) {
+        error_log("Failed to send rejection notification: " . $email_result);
+    }
+}
 
 $_SESSION['success_message'] = "Submission rejected.";
 header("Location: manage_projects.php");

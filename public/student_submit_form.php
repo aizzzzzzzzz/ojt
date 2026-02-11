@@ -4,6 +4,15 @@ $historyStmt = $pdo->prepare("SELECT status, submission_date, submission_status,
 $historyStmt->execute([$project_id, $student_id]);
 $allSubmissions = $historyStmt->fetchAll(PDO::FETCH_ASSOC);
 $hasSubmissions = !empty($allSubmissions);
+
+// Check if already approved
+$isApproved = false;
+foreach ($allSubmissions as $sub) {
+    if ($sub['status'] === 'Approved') {
+        $isApproved = true;
+        break;
+    }
+}
 ?>
 
 <!-- Current Submission Status -->
@@ -35,23 +44,30 @@ $hasSubmissions = !empty($allSubmissions);
     </div>
 <?php endif; ?>
 
-<!-- ALWAYS show submission form -->
-<form method="post" action="submit_project.php" enctype="multipart/form-data">
-    <input type="hidden" name="project_id" value="<?= $project_id ?>">
-    
-    <div class="mb-3">
-        <label for="project_file" class="form-label">Upload Project File</label>
-        <input type="file" class="form-control" id="project_file" name="project_file" required>
-        <div class="form-text">
-            Allowed file types: PDF, DOC, DOCX, HTML, TXT, ZIP<br>
-            Maximum file size: 10MB
+<?php if ($isApproved): ?>
+    <div class="alert alert-success">
+        <h5>Project Completed Successfully! 🎉</h5>
+        <p>You have already passed this project. You cannot submit further attempts.</p>
+    </div>
+<?php else: ?>
+    <!-- Show submission form only if not approved -->
+    <form method="post" action="submit_project.php" enctype="multipart/form-data">
+        <input type="hidden" name="project_id" value="<?= $project_id ?>">
+
+        <div class="mb-3">
+            <label for="project_file" class="form-label">Upload Project File</label>
+            <input type="file" class="form-control" id="project_file" name="project_file" required>
+            <div class="form-text">
+                Allowed file types: PDF, DOC, DOCX, HTML, TXT, ZIP<br>
+                Maximum file size: 10MB
+            </div>
         </div>
-    </div>
-    
-    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-        <a href="student_dashboard.php" class="btn btn-secondary me-md-2">Back to Dashboard</a>
-        <button type="submit" class="btn btn-primary">
-            <?= $hasSubmissions ? 'Submit New Attempt' : 'Submit Project' ?>
-        </button>
-    </div>
-</form>
+
+        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+            <a href="student_dashboard.php" class="btn btn-secondary me-md-2">Back to Dashboard</a>
+            <button type="submit" class="btn btn-primary">
+                <?= $hasSubmissions ? 'Submit New Attempt' : 'Submit Project' ?>
+            </button>
+        </div>
+    </form>
+<?php endif; ?>

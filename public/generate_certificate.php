@@ -224,7 +224,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Send email notification to student about certificate availability
         if (!empty($student['email'])) {
-            $email_result = send_evaluation_notification($student['email'], $student['name'], $employer_name);
+            $capitalized_student_name = ucwords(strtolower($student['name']));
+            $email_result = send_evaluation_notification($student['email'], $capitalized_student_name, $supervisor_name);
             if ($email_result !== true) {
                 error_log("Failed to send certificate notification: " . $email_result);
             }
@@ -446,7 +447,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="info-grid">
                 <div class="info-item">
                     <span class="info-label">Full Name</span>
-                    <span class="info-value"><?= htmlspecialchars($student['name']) ?></span>
+                    <span class="info-value"><?= htmlspecialchars(ucwords(strtolower($student['name']))) ?></span>
                 </div>
                 <div class="info-item">
                     <span class="info-label">Hours Completed</span>
@@ -454,7 +455,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 <div class="info-item">
                     <span class="info-label">Supervisor</span>
-                    <span class="info-value"><?= htmlspecialchars($employer_name) ?></span>
+                    <span class="info-value"><?= htmlspecialchars($supervisor_name) ?></span>
                 </div>
                 <div class="info-item">
                     <span class="info-label">Status</span>

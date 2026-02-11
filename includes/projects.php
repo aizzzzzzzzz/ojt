@@ -28,7 +28,7 @@ function handle_project_submission($pdo, $student_id, $project_id, $submission_t
             $student = $student_stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($student && !empty($student['email'])) {
-                $student_name = $student['first_name'] . ' ' . $student['last_name'];
+                $student_name = ucwords(strtolower($student['first_name'] . ' ' . $student['last_name']));
                 $subject = "OJT Project Submission Confirmation";
                 $body = "
                     <html>

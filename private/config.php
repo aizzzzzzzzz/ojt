@@ -40,11 +40,22 @@ if (!isset($_SESSION['last_regeneration'])) {
     $_SESSION['last_regeneration'] = time();
 }
 
-// Database Configuration - Using environment variables for portability
-$host = getenv('DB_HOST') ?: "localhost";
-$db   = getenv('DB_NAME') ?: "student_db";
-$user = getenv('DB_USER') ?: "root";
-$pass = getenv('DB_PASS') ?: "";
+// Database Configuration - Auto-detect local vs production
+$is_local = in_array($_SERVER['HTTP_HOST'] ?? '', ['localhost', '127.0.0.1', 'localhost:8080', '127.0.0.1:8080']);
+
+if ($is_local) {
+    // Local development settings
+    $host = "localhost";
+    $db   = "student_db";
+    $user = "root";
+    $pass = "";
+} else {
+    // Production settings using environment variables
+    $host = "localhost"; // Force localhost for testing
+    $db   = "student_db";
+    $user = "root";
+    $pass = "";
+}
 
 // Database connection with enhanced security
 try {

@@ -439,31 +439,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_file'])) {
         if ($submission_type === 'code') {
             // Handle code submission
             $code = trim($_POST['code_content'] ?? '');
-            
+
             if (empty($code)) {
                 $submitError = "Code cannot be empty.";
             } else {
                 // Save code to .txt file
                 $fileName = $student_id . '_project_' . $project_id . '_' . time() . '.txt';
                 $filePath = $uploadDir . $fileName;
-                
+
                 // Ensure directory exists and is writable
                 if (!is_writable($uploadDir)) {
                     $submitError = "Upload directory is not writable.";
                 } elseif (file_put_contents($filePath, $code) === false) {
                     $submitError = "Error saving code file. Please try again.";
                 } else {
-                    // Prepare and execute SQL with proper parameter count
-                    $stmt = $pdo->prepare("
-                        INSERT INTO project_submissions 
-                        (project_id, student_id, file_path, status, submission_date, remarks, submission_status) 
-                        VALUES (?, ?, ?, 'submitted', NOW(), ?, 'pending')
-                    ");
-                    
-                    // All 4 parameters: project_id, student_id, file_path, remarks
-                    $stmt->execute([$project_id, $student_id, $fileName, $remarks]);
-                    
-                    $_SESSION['success'] = "Code submitted successfully!";
+                    // Check if there's a rejected submission to update
+                    $checkStmt = $pdo->prepare("SELECT submission_id FROM project_submissions WHERE project_id = ? AND student_id = ? AND status = 'Rejected' ORDER BY submission_date DESC LIMIT 1");
+                    $checkStmt->execute([$project_id, $student_id]);
+                    $existingRejected = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+                    if ($existingRejected) {
+                        // Update the existing rejected submission
+                        $updateStmt = $pdo->prepare("UPDATE project_submissions SET file_path = ?, status = 'Pending', submission_date = NOW(), submission_status = 'On Time', remarks = '', graded_at = NULL WHERE submission_id = ?");
+                        $updateStmt->execute([$fileName, $existingRejected['submission_id']]);
+                        $message = 'Project resubmitted successfully!';
+                    } else {
+                        // Insert new submission
+                        $insertStmt = $pdo->prepare("INSERT INTO project_submissions (project_id, student_id, file_path, submission_status, status, remarks) VALUES (?, ?, ?, 'On Time', 'Pending', ?)");
+                        $insertStmt->execute([$project_id, $student_id, $fileName, $remarks]);
+                        $message = 'Project submitted successfully!';
+                    }
+
+                    $_SESSION['success'] = $message;
                     header("Location: " . $_SERVER['PHP_SELF']);
                     exit;
                 }
@@ -471,14 +478,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_file'])) {
         } else {
             // Handle file upload
             $uploadedFile = $_FILES['submission_file'];
-            
+
             if (empty($uploadedFile['tmp_name']) || $uploadedFile['error'] !== UPLOAD_ERR_OK) {
                 $submitError = "Please select a valid file to upload.";
             } else {
                 $originalName = basename($uploadedFile['name']);
                 $fileExt = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
                 $allowedExts = ['pdf', 'doc', 'docx', 'txt', 'zip', 'rar', 'php', 'html', 'css', 'java', 'js', 'py', 'cpp', 'c', 'sql'];
-                
+
                 if (!in_array($fileExt, $allowedExts)) {
                     $submitError = "File type not allowed. Allowed: " . implode(', ', $allowedExts);
                 } elseif ($uploadedFile['size'] > 10 * 1024 * 1024) {
@@ -487,12 +494,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_file'])) {
                     // Generate unique filename
                     $uniqueFileName = $student_id . '_project_' . $project_id . '_' . time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $originalName);
                     $filePath = $uploadDir . $uniqueFileName;
-                    
+
                     // Additional security check
                     $finfo = finfo_open(FILEINFO_MIME_TYPE);
                     $mimeType = finfo_file($finfo, $uploadedFile['tmp_name']);
                     finfo_close($finfo);
-                    
+
                     $allowedMimes = [
                         'text/plain', 'application/pdf', 'application/msword',
                         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -501,30 +508,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_file'])) {
                         'text/x-php', 'text/x-java-source', 'text/x-python',
                         'text/x-c', 'text/x-c++'
                     ];
-                    
+
                     if (!in_array($mimeType, $allowedMimes)) {
                         $submitError = "File type verification failed. Please upload a valid file.";
                     } elseif (!move_uploaded_file($uploadedFile['tmp_name'], $filePath)) {
                         $submitError = "Error uploading file. Please try again.";
                     } else {
-                        // Prepare and execute SQL with proper parameter count
-                        $stmt = $pdo->prepare("
-                            INSERT INTO project_submissions
-                            (project_id, student_id, file_path, status, submission_date, remarks, submission_status)
-                            VALUES (?, ?, ?, 'submitted', NOW(), ?, 'pending')
-                            ON DUPLICATE KEY UPDATE
-                            file_path = VALUES(file_path),
-                            status = 'submitted',
-                            submission_date = NOW(),
-                            remarks = VALUES(remarks),
-                            submission_status = 'pending',
-                            graded_at = NULL
-                        ");
+                        // Check if there's a rejected submission to update
+                        $checkStmt = $pdo->prepare("SELECT submission_id FROM project_submissions WHERE project_id = ? AND student_id = ? AND status = 'Rejected' ORDER BY submission_date DESC LIMIT 1");
+                        $checkStmt->execute([$project_id, $student_id]);
+                        $existingRejected = $checkStmt->fetch(PDO::FETCH_ASSOC);
 
-                        // All 4 parameters: project_id, student_id, file_path, remarks
-                        $stmt->execute([$project_id, $student_id, $uniqueFileName, $remarks]);
-                        
-                        $_SESSION['success'] = "File submitted successfully!";
+                        if ($existingRejected) {
+                            // Update the existing rejected submission
+                            $updateStmt = $pdo->prepare("UPDATE project_submissions SET file_path = ?, status = 'Pending', submission_date = NOW(), submission_status = 'On Time', remarks = '', graded_at = NULL WHERE submission_id = ?");
+                            $updateStmt->execute([$uniqueFileName, $existingRejected['submission_id']]);
+                            $message = 'Project resubmitted successfully!';
+                        } else {
+                            // Insert new submission
+                            $insertStmt = $pdo->prepare("INSERT INTO project_submissions (project_id, student_id, file_path, submission_status, status) VALUES (?, ?, ?, 'On Time', 'Pending')");
+                            $insertStmt->execute([$project_id, $student_id, $uniqueFileName]);
+                            $message = 'Project submitted successfully! (Attempt #' . $attempt_number . ')';
+                        }
+
+                        $_SESSION['success'] = $message;
                         header("Location: " . $_SERVER['PHP_SELF']);
                         exit;
                     }
@@ -1063,6 +1070,18 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
         border-color: #28a745;
     }
 
+    .project-card.disabled {
+        background: #f5f5f5;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .project-card.disabled:hover {
+        transform: none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        border-color: #ddd;
+    }
+
     .project-card h5 {
         margin: 0 0 10px 0;
         color: #2c3e50;
@@ -1425,360 +1444,11 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
     <button class="tab-button" onclick="switchTab('projects', this)">Projects</button>
 </div>
 
-<!-- Attendance Tab Content -->
-<div id="attendance-tab" class="tab-content active">
-    <div style="margin-bottom:20px; text-align:left; padding:16px; border:1px solid #e0e0e0; background:#fff; border-radius:10px;">
-        <h3 style="margin-top:0;">Daily Task / Activity</h3>
+<?php include_once __DIR__ . '/../templates/attendance_tab.php'; ?>
 
-        <form method="POST">
-            <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-            <textarea
-                name="daily_task"
-                rows="4"
-                style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc; font-size:14px;"
-                placeholder="Write what you did today..."
-            ><?= htmlspecialchars($today_row['daily_task'] ?? '') ?></textarea>
+<?php include_once __DIR__ . '/../templates/export_tab.php'; ?>
 
-            <button type="submit" name="save_task"
-                class="action-btn btn-primary"
-                style="margin-top:10px;">
-                💾 Save Task
-            </button>
-        </form>
-
-        <p style="color:#777; margin-top:8px; font-size:13px;">
-            You can only write/edit your task for <strong><?= $today ?></strong>.
-        </p>
-    </div>
-
-    <div style="text-align:left; margin-bottom:20px; border-radius:10px; padding:16px; border:1px solid #e0e0e0; background:#f8f9fa;">
-    <h3 style="margin-top:0;">Attendance Actions</h3>
-    <div class="attendance-actions">
-    <?php
-    $time_in_done    = !empty($today_row['time_in']);
-    $lunch_out_done  = !empty($today_row['lunch_out']);
-    $lunch_in_done   = !empty($today_row['lunch_in']);
-    $time_out_done   = !empty($today_row['time_out']);
-    $actions = [
-        'time_in' => '🟢 Time In',
-        'lunch_out' => '🍽️ Lunch Out',
-        'lunch_in' => '🍽️ Lunch In',
-        'time_out' => '🔴 Time Out'
-    ];
-    foreach($actions as $key=>$label):
-        $done = ${$key.'_done'};
-        $disabled = '';
-        if ($key=='lunch_out' && (!$time_in_done || $done)) $disabled=true;
-        if ($key=='lunch_in' && (!$lunch_out_done || $done)) $disabled=true;
-        if ($key=='time_out' && (!$time_in_done || $done)) $disabled=true;
-    ?>
-    <form method="post" style="margin:0;">
-        <input type="hidden" name="attendance_action" value="<?= $key ?>">
-        <button type="submit" class="action-btn <?= $done||$disabled?'btn-disabled':'btn-primary' ?>" <?= $done||$disabled?'disabled':'' ?>>
-            <?= $label ?>
-        </button>
-    </form>
-    <?php endforeach; ?>
-    </div>
-    <p style="margin-top:10px; color:#666; font-size:14px;">Note: Buttons disable after recording.</p>
-    </div>
-
-    <h3>Attendance History</h3>
-
-    <!-- Desktop Table View -->
-    <div class="table-section desktop-view">
-    <table>
-    <thead>
-    <tr>
-    <th>Date</th>
-    <th>Time In</th>
-    <th>Lunch Out</th>
-    <th>Lunch In</th>
-    <th>Time Out</th>
-    <th>Status</th>
-    <th>Verified</th>
-    <th>Hours (Daily)</th>
-    <th>Task</th>
-    </tr>
-    </thead>
-    <tbody>
-    <?php foreach($attendance as $row): ?>
-    <tr>
-    <td data-label="Date"><?= htmlspecialchars($row['log_date']) ?></td>
-    <td data-label="Time In"><?= (strpos($row['time_in'], '0000') === false && !empty($row['time_in'])) ? date('H:i:s', strtotime($row['time_in'])) : '-' ?></td>
-    <td data-label="Lunch Out"><?= (strpos($row['lunch_out'], '0000') === false && !empty($row['lunch_out'])) ? date('H:i:s', strtotime($row['lunch_out'])) : '-' ?></td>
-    <td data-label="Lunch In"><?= (strpos($row['lunch_in'], '0000') === false && !empty($row['lunch_in'])) ? date('H:i:s', strtotime($row['lunch_in'])) : '-' ?></td>
-    <td data-label="Time Out"><?= (strpos($row['time_out'], '0000') === false && !empty($row['time_out'])) ? date('H:i:s', strtotime($row['time_out'])) : '-' ?></td>
-    <td data-label="Status">
-        <?php
-        $status = $row['status'] ?: '---';
-        $status_class = '';
-        if (strtolower($status) === 'present') $status_class = "style='color: green; font-weight: bold;'";
-        if (strtolower($status) === 'absent')  $status_class = "style='color: red; font-weight: bold;'";
-        if (strtolower($status) === 'excused') $status_class = "style='color: orange; font-weight: bold;'";
-        ?>
-        <span <?= $status_class ?>><?= htmlspecialchars($status) ?></span>
-    <td data-label="Verified">
-        <?php if ($row['verified'] == 1): ?>
-            <span style="color:green; font-weight:bold;">✓ Verified</span>
-        <?php else: ?>
-            <span style="color:orange; font-weight:bold;">⏳ Pending</span>
-        <?php endif; ?>
-    </td>
-    <td data-label="Hours (Daily)">
-    <?php
-    $minutesWorked = 0;
-
-    if (!empty($row['time_in']) && !empty($row['time_out']) && strpos($row['time_in'], '0000') === false && strpos($row['time_out'], '0000') === false) {
-        $minutesWorked = max(0, (strtotime($row['time_out']) - strtotime($row['time_in'])) / 60);
-
-        if (!empty($row['lunch_in']) && !empty($row['lunch_out']) && strpos($row['lunch_in'], '0000') === false && strpos($row['lunch_out'], '0000') === false) {
-            $minutesWorked -= max(0, (strtotime($row['lunch_in']) - strtotime($row['lunch_out'])) / 60);
-        }
-
-        echo floor($minutesWorked / 60) . " hr " . ($minutesWorked % 60) . " min";
-    } else {
-        echo "-";
-    }
-    ?>
-    </td>
-
-    <td data-label="Task">
-        <?= !empty($row['daily_task']) ? htmlspecialchars($row['daily_task']) : '-' ?>
-    </td>
-    </tr>
-    <?php endforeach; ?>
-    </tbody>
-    </table>
-    </div>
-
-    <!-- Mobile Card View -->
-    <div class="mobile-view">
-    <?php foreach($attendance as $row): ?>
-    <div class="attendance-card">
-        <div class="card-header">
-            <strong>Date: <?= htmlspecialchars($row['log_date']) ?></strong>
-            <span class="status-badge">
-                <?php
-                $status = $row['status'] ?: '---';
-                $status_class = '';
-                if (strtolower($status) === 'present') $status_class = "style='background: #d4edda; color: #155724;'";
-                if (strtolower($status) === 'absent')  $status_class = "style='background: #f8d7da; color: #721c24;'";
-                if (strtolower($status) === 'excused') $status_class = "style='background: #fff3cd; color: #856404;'";
-                ?>
-                <span class="status-text" <?= $status_class ?>><?= htmlspecialchars($status) ?></span>
-                <?php if ($row['verified'] == 1): ?>
-                    <span class="verified-badge">✓ Verified</span>
-                <?php else: ?>
-                    <span class="unverified-badge">✗ Not Verified</span>
-                <?php endif; ?>
-                </span>
-        </div>
-        <div class="card-body">
-            <div class="time-info">
-                <div class="time-row">
-                    <span class="label">Time In:</span>
-                    <span class="value"><?= (strpos($row['time_in'], '0000') === false && !empty($row['time_in'])) ? date('H:i:s', strtotime($row['time_in'])) : '-' ?></span>
-                </div>
-                <div class="time-row">
-                    <span class="label">Lunch Out:</span>
-                    <span class="value"><?= (strpos($row['lunch_out'], '0000') === false && !empty($row['lunch_out'])) ? date('H:i:s', strtotime($row['lunch_out'])) : '-' ?></span>
-                </div>
-                <div class="time-row">
-                    <span class="label">Lunch In:</span>
-                    <span class="value"><?= (strpos($row['lunch_in'], '0000') === false && !empty($row['lunch_in'])) ? date('H:i:s', strtotime($row['lunch_in'])) : '-' ?></span>
-                </div>
-                <div class="time-row">
-                    <span class="label">Time Out:</span>
-                    <span class="value"><?= (strpos($row['time_out'], '0000') === false && !empty($row['time_out'])) ? date('H:i:s', strtotime($row['time_out'])) : '-' ?></span>
-                </div>
-                <div class="time-row">
-                    <span class="label">Hours Worked:</span>
-                    <span class="value">
-                    <?php
-                    $minutesWorked = 0;
-                    if (!empty($row['time_in']) && !empty($row['time_out']) && strpos($row['time_in'], '0000') === false && strpos($row['time_out'], '0000') === false) {
-                        $minutesWorked = max(0, (strtotime($row['time_out']) - strtotime($row['time_in'])) / 60);
-                        if (!empty($row['lunch_in']) && !empty($row['lunch_out']) && strpos($row['lunch_in'], '0000') === false && strpos($row['lunch_out'], '0000') === false) {
-                            $minutesWorked -= max(0, (strtotime($row['lunch_in']) - strtotime($row['lunch_out'])) / 60);
-                        }
-                        echo floor($minutesWorked / 60) . " hr " . ($minutesWorked % 60) . " min";
-                    } else {
-                        echo "-";
-                    }
-                    ?>
-                    </span>
-                </div>
-            </div>
-            <div class="task-info">
-                <strong>Task:</strong>
-                <p><?= !empty($row['daily_task']) ? htmlspecialchars($row['daily_task']) : 'No task recorded' ?></p>
-            </div>
-        </div>
-    </div>
-    <?php endforeach; ?>
-    </div>
-</div>
-
-<!-- Export Tab Content -->
-<div id="export-tab" class="tab-content">
-    <div class="export-panel">
-        <h5> Export Attendance History</h5>
-        <form method="GET" class="export-form">
-            <div class="export-controls">
-                <div class="date-input-group">
-                    <label>From:</label>
-                    <input type="date" name="start_date" class="form-control" value="<?= date('Y-m-01') ?>">
-                </div>
-
-                <div class="date-input-group">
-                    <label>To:</label>
-                    <input type="date" name="end_date" class="form-control" value="<?= date('Y-m-d') ?>">
-                </div>
-            </div>
-
-            <div class="export-buttons">
-                <button type="submit" name="export" value="excel" class="btn-export btn-export-excel">
-                    📅 Export Filtered
-                </button>
-                <a href="?export=excel" class="btn-export btn-export-all">
-                    📋 Export All Records
-                </a>
-            </div>
-            <small style="color: #666; display: block; margin-top: 10px;">
-                💡 Export your attendance history to Excel with professional formatting, including time calculations and verification status.
-            </small>
-        </form>
-    </div>
-    
-    <div style="margin-top: 30px; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background: #f8f9fa; max-width: 800px; margin: 30px auto;">
-        <h5 style="margin-top: 0; color: #2c3e50; text-align: center;"> How to Use Export</h5>
-        <ul style="text-align: left; margin-bottom: 0;">
-            <li><strong>Filtered Export:</strong> Select a date range and click "Export Filtered" to get records for specific dates</li>
-            <li><strong>All Records:</strong> Click "Export All Records" to download your complete attendance history</li>
-            <li><strong>File Format:</strong> Exports as Excel (.xlsx) with formatting, calculations, and summaries</li>
-            <li><strong>Includes:</strong> Date, time stamps, status, verification, hours worked, and daily tasks</li>
-        </ul>
-    </div>
-</div>
-
-<!-- Projects Tab Content -->
-<div id="projects-tab" class="tab-content">
-    <div class="projects-section" id="projects-section">
-    <h3>📝 OJT Projects</h3>
-    <?php if (!empty($submitError)): ?>
-        <div class="error-msg"><?= htmlspecialchars($submitError) ?></div>
-    <?php endif; ?>
-
-    <div id="projectsGrid" style="display:block;">
-        <?php if (!empty($projects)): ?>
-            <div class="projects-grid">
-                <?php foreach ($projects as $project): ?>
-                    <div class="project-card" onclick="selectProjectForSubmission(<?= $project['project_id'] ?>, '<?= htmlspecialchars($project['project_name']) ?>')">
-                        <h5><?= htmlspecialchars($project['project_name']) ?></h5>
-                        <p><?= htmlspecialchars(substr($project['description'], 0, 100)) ?>...</p>
-                        <div style="font-size: 12px; color: #999; margin-top: 10px;">
-                            <div>📅 Due: <?= date('M d, Y', strtotime($project['due_date'])) ?></div>
-                            <div>Status: <span style="color: #28a745; font-weight: bold;"><?= ucfirst($project['status']) ?></span></div>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        <?php else: ?>
-            <p style="color: #999;">No projects available yet.</p>
-        <?php endif; ?>
-    </div>
-    </div>
-
-    <!-- File Submission Section -->
-    <div class="code-editor-section" id="submissionSection" style="display:none;">
-        <h4>📤 Submit for: <span id="selectedProjectName"></span></h4>
-        <div style="margin-bottom: 15px;">
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="cancelSubmission()">← Back to Projects</button>
-        </div>
-
-        <form method="POST" enctype="multipart/form-data" id="submissionForm">
-            <input type="hidden" name="project_id" id="projectId" value="">
-            <input type="hidden" name="submission_type" id="submissionType" value="code">
-
-            <!-- Submission Type Toggle -->
-            <div style="margin-bottom: 20px; display: flex; gap: 10px; border-bottom: 2px solid #e0e0e0; padding-bottom: 15px;">
-                <button type="button" class="btn btn-sm" id="codeTabBtn" style="border: none; border-bottom: 3px solid #28a745; padding: 8px 15px; background: none; color: #28a745; font-weight: 600;" onclick="switchSubmissionTab('code')">
-                    ✏️ Write Code
-                </button>
-                <button type="button" class="btn btn-sm" id="fileTabBtn" style="border: none; padding: 8px 15px; background: none; color: #999; font-weight: 600;" onclick="switchSubmissionTab('file')">
-                    📎 Upload File
-                </button>
-            </div>
-
-            <!-- Code Editor Tab -->
-            <small style="color: #666; display: block; margin-bottom: 10px;">💡 Supports: PHP, HTML, CSS, Java, JavaScript, and more</small>
-            <div id="codeTab" style="display: none;">
-                <div class="editor-half">
-                    <h6>Code Editor:</h6>
-                    <div id="codeEditorContainer">
-                        <textarea id="codeEditor" name="code_content"><?php echo htmlspecialchars($defaultCode); ?></textarea>
-                    </div>
-                </div>
-
-                <div class="preview-half">
-                    <div class="preview-controls">
-                        <h6>Preview Output:</h6>
-                        <button type="button" id="runCodeBtn" class="btn btn-primary btn-sm">▶️ Run Code</button>
-                    </div>
-                    <iframe
-                        id="editorPreview"
-                        style="width:100%; height:100%; border:1px solid #ddd; border-radius:6px;"
-                    ></iframe>
-                </div>
-            </div>
-
-            <!-- File Upload Tab -->
-            <div id="fileTab" style="display: none;">
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">📎 Upload File:</label>
-                    <input type="file" name="submission_file" id="submissionFile" class="form-control" accept=".pdf,.doc,.docx,.txt,.zip,.rar,.php,.html,.css,.java,.js">
-                </div>
-            </div>
-
-            <!-- Common Fields -->
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600;">📝 Remarks (Optional):</label>
-                <textarea name="remarks" class="form-control" rows="3" placeholder="Add any notes or comments about your submission..."></textarea>
-            </div>
-
-            <div style="display: flex; gap: 10px; margin-top: 20px;">
-                <button type="submit" name="submit_file" class="btn btn-success">📤 Submit Project</button>
-                <button type="button" class="btn btn-secondary" onclick="cancelSubmission()">Cancel</button>
-            </div>
-        </form>
-    </div>
-
-    <!-- Submissions History -->
-    <?php if (!empty($submissions)): ?>
-        <div class="submissions-list" style="margin-top: 30px;">
-            <h5>📋 Your Submissions</h5>
-            <?php foreach ($submissions as $sub): ?>
-                <div class="submission-card">
-                    <h6><?= htmlspecialchars($sub['project_name']) ?></h6>
-                    <div class="submission-meta">
-                        <div>📅 Submitted: <strong><?= date('M d, Y H:i', strtotime($sub['submission_date'])) ?></strong></div>
-                        <div>Status: <strong style="color: <?= $sub['status'] == 'Approved' ? '#28a745' : ($sub['status'] == 'Rejected' ? '#dc3545' : '#ffc107') ?>;"><?= ucfirst($sub['status']) ?></strong></div>
-                        <?php if (!empty($sub['remarks'])): ?>
-                            <div>Grade: <?= htmlspecialchars($sub['remarks']) ?></div>
-                        <?php endif; ?>
-                        <?php if (!empty($sub['graded_at'])): ?>
-                            <div>✅ Graded on: <?= date('M d, Y', strtotime($sub['graded_at'])) ?></div>
-                        <?php endif; ?>
-                        <div style="margin-top: 10px;">
-                            <a href="view_output.php?file=<?= urlencode($sub['file_path']) ?>" class="btn btn-sm btn-outline-primary" target="_blank">👁️ View Output</a>
-                        </div>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-        </div>
-    <?php endif; ?>
-</div>
+<?php include_once __DIR__ . '/../templates/projects_tab.php'; ?>
 
 <!-- Verified Attendance Modal -->
 <div class="modal fade" id="verifiedModal" tabindex="-1" aria-labelledby="verifiedModalLabel" aria-hidden="true">

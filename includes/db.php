@@ -69,13 +69,13 @@ function submit_project($pdo, $project_id, $student_id, $file_path, $remarks) {
     $stmt = $pdo->prepare("
         INSERT INTO project_submissions
         (project_id, student_id, file_path, status, submission_date, remarks, submission_status)
-        VALUES (?, ?, ?, 'submitted', NOW(), ?, 'pending')
+        VALUES (?, ?, ?, 'Pending', NOW(), ?, 'On Time')
         ON DUPLICATE KEY UPDATE
         file_path = VALUES(file_path),
-        status = 'submitted',
+        status = 'Pending',
         submission_date = NOW(),
         remarks = VALUES(remarks),
-        submission_status = 'pending',
+        submission_status = 'On Time',
         graded_at = NULL
     ");
     $stmt->execute([$project_id, $student_id, $file_path, $remarks]);

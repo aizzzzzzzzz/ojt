@@ -12,6 +12,15 @@ include __DIR__ . '/../private/config.php';
 $project_id = (int)($_GET['project_id'] ?? $_POST['project_id'] ?? 0);
 $student_id = $_SESSION['student_id'];
 
+// Check if already approved for this project
+$approvedCheckStmt = $pdo->prepare("SELECT 1 FROM project_submissions WHERE project_id = ? AND student_id = ? AND status = 'Approved' LIMIT 1");
+$approvedCheckStmt->execute([$project_id, $student_id]);
+if ($approvedCheckStmt->fetch()) {
+    $_SESSION['error'] = 'You have already passed this project. No further submissions are allowed.';
+    header("Location: student_submit_form.php?project_id=" . $project_id);
+    exit;
+}
+
 // If form is submitted
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['project_file'])) {
     
@@ -117,37 +126,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['project_file'])) {
     $publicPath = 'storage/uploads/' . $filename;
 
     try {
-        // TEST INSERT FIRST with simpler values
-        echo "<h3>Testing INSERT with these values:</h3>";
-        echo "<ul>";
-        echo "<li>project_id: $project_id</li>";
-        echo "<li>student_id: $student_id</li>";
-        echo "<li>file_path: " . htmlspecialchars($publicPath) . "</li>";
-        echo "<li>submission_status: " . htmlspecialchars($submission_status) . "</li>";
-        echo "</ul>";
-        
-        // Test with a simple INSERT first
-        $testStmt = $pdo->prepare("
-            INSERT INTO project_submissions (project_id, student_id, file_path, submission_status, status)
-            VALUES (?, ?, ?, ?, 'Pending')
-        ");
-        
-        echo "<p>Executing INSERT...</p>";
-        $testStmt->execute([$project_id, $student_id, $publicPath, $submission_status]);
-        
-        echo "<p style='color:green;'>✓ INSERT SUCCESSFUL!</p>";
-        echo "<p>Last Insert ID: " . $pdo->lastInsertId() . "</p>";
-        
-        // Log activity
-        if (function_exists('log_activity')) {
-            log_activity($pdo, $student_id, 'student', "Submitted project: {$project['project_name']} (Attempt #{$attempt_number}, $submission_status)");
+        // Check if there's a rejected submission to update
+        $checkStmt = $pdo->prepare("SELECT submission_id FROM project_submissions WHERE project_id = ? AND student_id = ? AND status = 'Rejected' ORDER BY submission_date DESC LIMIT 1");
+        $checkStmt->execute([$project_id, $student_id]);
+        $existingRejected = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($existingRejected) {
+            // Update the existing rejected submission
+            $updateStmt = $pdo->prepare("UPDATE project_submissions SET file_path = ?, status = 'Pending', submission_date = NOW(), submission_status = ?, remarks = '', graded_at = NULL WHERE submission_id = ?");
+            $updateStmt->execute([$publicPath, $submission_status, $existingRejected['submission_id']]);
+            $submission_id = $existingRejected['submission_id'];
+            $message = 'Project resubmitted successfully!';
+        } else {
+            // Insert new submission
+            $insertStmt = $pdo->prepare("INSERT INTO project_submissions (project_id, student_id, file_path, submission_status, status) VALUES (?, ?, ?, ?, 'Pending')");
+            $insertStmt->execute([$project_id, $student_id, $publicPath, $submission_status]);
+            $submission_id = $pdo->lastInsertId();
+            $message = 'Project submitted successfully! (Attempt #' . $attempt_number . ')';
         }
 
-        $_SESSION['success'] = 'Project submitted successfully! (Attempt #' . $attempt_number . ')';
-        
-        // Comment out redirect for testing
-        // header("Location: student_dashboard.php");
-        echo "<p><a href='student_dashboard.php'>Go to Dashboard</a></p>";
+        // Log activity
+        if (function_exists('log_activity')) {
+            log_activity($pdo, $student_id, 'student', "Submitted project: {$project['project_name']} ($submission_status)");
+        }
+
+        $_SESSION['success'] = $message;
+        header("Location: student_dashboard.php");
         exit;
 
     } catch (PDOException $e) {
@@ -155,29 +159,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['project_file'])) {
         if (file_exists($filePath)) {
             unlink($filePath);
         }
-        
-        // Show detailed error
-        echo "<h3 style='color:red;'>Database Error:</h3>";
-        echo "<p><strong>Message:</strong> " . htmlspecialchars($e->getMessage()) . "</p>";
-        echo "<p><strong>Error Code:</strong> " . $e->getCode() . "</p>";
-        echo "<p><strong>Error Info:</strong> " . print_r($testStmt->errorInfo(), true) . "</p>";
-        echo "<p><strong>Attempted Values:</strong></p>";
-        echo "<ul>";
-        echo "<li>project_id: $project_id</li>";
-        echo "<li>student_id: $student_id</li>";
-        echo "<li>file_path: " . htmlspecialchars($publicPath) . "</li>";
-        echo "<li>submission_status: " . htmlspecialchars($submission_status) . "</li>";
-        echo "</ul>";
-        
-        // Also test with a simpler INSERT to isolate the issue
-        echo "<h4>Testing with hardcoded values:</h4>";
-        try {
-            $test2 = $pdo->prepare("INSERT INTO project_submissions (project_id, student_id, file_path, submission_status, status) VALUES (1, 1, 'test.pdf', 'On Time', 'Pending')");
-            $test2->execute();
-            echo "<p style='color:green;'>✓ Simple test INSERT worked</p>";
-        } catch (PDOException $e2) {
-            echo "<p style='color:red;'>✗ Simple test also failed: " . $e2->getMessage() . "</p>";
-        }
+
+        $_SESSION['error'] = 'Database error occurred. Please try again. Error: ' . $e->getMessage();
+        header("Location: student_submit_form.php?project_id=" . $project_id);
         exit;
     }
 } else {

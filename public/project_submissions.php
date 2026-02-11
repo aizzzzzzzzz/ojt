@@ -115,17 +115,23 @@ tr:hover { background:#e3f2fd; }
                 <?php elseif ($s['graded_at']): ?>
                     <span class="text-muted">Graded</span>
                 <?php else: ?>
-                    <form method="POST" action="grade_submission.php">
-                        <input type="hidden" name="submission_id" value="<?= $s['submission_id'] ?>">
-                        <input type="text" name="remarks" placeholder="Enter remarks" 
-                               value="<?= htmlspecialchars($s['remarks'] ?? '') ?>" class="form-control mb-2">
-                        <select name="status" class="form-select mb-2" required>
-                            <option value="Pending" <?= ($s['status']=='Pending')?'selected':'' ?>>Pending</option>
-                            <option value="Approved" <?= ($s['status']=='Approved')?'selected':'' ?>>Approve</option>
-                            <option value="Rejected" <?= ($s['status']=='Rejected')?'selected':'' ?>>Reject</option>
-                        </select>
-                        <button type="submit" class="btn btn-sm btn-success">Submit Grade</button>
-                    </form>
+                    <div id="actions-<?= $s['submission_id'] ?>">
+                        <button type="button" class="btn btn-sm btn-success" onclick="showGradeForm(<?= $s['submission_id'] ?>)">Approve</button>
+                        <form method="POST" action="grade_submission.php" style="display: inline;">
+                            <input type="hidden" name="submission_id" value="<?= $s['submission_id'] ?>">
+                            <input type="hidden" name="status" value="Rejected">
+                            <button type="submit" class="btn btn-sm btn-danger">Reject</button>
+                        </form>
+                    </div>
+                    <div id="grade-form-<?= $s['submission_id'] ?>" style="display: none;">
+                        <form method="POST" action="grade_submission.php">
+                            <input type="hidden" name="submission_id" value="<?= $s['submission_id'] ?>">
+                            <input type="hidden" name="status" value="Approved">
+                            <input type="text" name="remarks" placeholder="Enter grade" class="form-control mb-2" required>
+                            <button type="submit" class="btn btn-sm btn-success">Submit Grade</button>
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="hideGradeForm(<?= $s['submission_id'] ?>)">Cancel</button>
+                        </form>
+                    </div>
                 <?php endif; ?>
             </td>
         </tr>
@@ -134,5 +140,16 @@ tr:hover { background:#e3f2fd; }
 </table>
 </div>
 </div>
+<script>
+function showGradeForm(submissionId) {
+    document.getElementById('actions-' + submissionId).style.display = 'none';
+    document.getElementById('grade-form-' + submissionId).style.display = 'block';
+}
+
+function hideGradeForm(submissionId) {
+    document.getElementById('actions-' + submissionId).style.display = 'block';
+    document.getElementById('grade-form-' + submissionId).style.display = 'none';
+}
+</script>
 </body>
 </html>
