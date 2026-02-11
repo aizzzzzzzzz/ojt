@@ -471,7 +471,7 @@ $evaluated_students = get_evaluated_students($pdo);
 
                         $acc_minutes = $acc_map[$student_id] ?? 0;
                         $required_hours = $latest['required_hours'] ?? 0;
-                        $required_minutes = 0;
+                        $required_minutes = $required_hours * 60;
                         $eligible_for_eval = $acc_minutes >= $required_minutes;
                         $completed_hours = $acc_minutes >= $required_minutes;
                         $already_evaluated = isset($evaluated_students[$student_id]);
