@@ -300,6 +300,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attendance_action']))
                     $insert = $pdo->prepare("INSERT INTO attendance (student_id, employer_id, log_date, time_in, status) VALUES (?, NULL, ?, ?, 'present')");
                     $insert->execute([$student_id, $today, $now]);
                     $pdo->commit();
+                    
+                    
+                    if (function_exists('notify_attendance_update')) {
+                        notify_attendance_update($student_id, $action, $now);
+                    }
+                    
                     $_SESSION['success'] = "Time In recorded at " . date('H:i:s', strtotime($now)) . ".";
                     header("Location: " . $_SERVER['PHP_SELF']);
                     exit;
@@ -391,7 +397,7 @@ $submitError = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_file'])) {
     $project_id = (int)$_POST['project_id'];
     $remarks = trim($_POST['remarks'] ?? '');
-    $submission_type = $_POST['submission_type'] ?? 'code'; // 'code' or 'file'
+    $submission_type = $_POST['submission_type'] ?? 'code'; 
     
     $uploadDir = __DIR__ . '/../storage/uploads/';
     if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
@@ -1432,6 +1438,90 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
     </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Polling mechanism for real-time updates (replaces WebSocket)
+    let lastAttendanceCheck = null;
+    let lastUpdatesCheck = null;
+    const POLL_INTERVAL = 15000; // Poll every 15 seconds
+    
+    // Check for attendance verification updates
+    async function checkAttendanceUpdates() {
+        try {
+            const url = 'api/check_attendance.php?since=' + encodeURIComponent(lastAttendanceCheck || '') + '&student_id=<?= htmlspecialchars($student_id) ?>';
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (data.success && data.latest_timestamp) {
+                if (lastAttendanceCheck && data.latest_timestamp > lastAttendanceCheck) {
+                    // Attendance was verified
+                    showNotification('Your attendance has been verified! Refreshing...', 'success');
+                    setTimeout(() => location.reload(), 1500);
+                }
+                lastAttendanceCheck = data.latest_timestamp;
+            }
+        } catch (err) {
+            console.error('Error checking attendance updates:', err);
+        }
+    }
+    
+    // Check for project submission status updates
+    async function checkProjectUpdates() {
+        try {
+            const url = 'api/check_updates.php?since=' + encodeURIComponent(lastUpdatesCheck || '') + '&type=project&student_id=<?= htmlspecialchars($student_id) ?>';
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (data.success && data.projects && data.projects.has_updates) {
+                // New project updates
+                showNotification('Your project submission has been graded! Refreshing...', 'info');
+                setTimeout(() => location.reload(), 1500);
+            }
+            
+            // Update last check timestamp
+            if (data.projects?.latest_timestamp) {
+                lastUpdatesCheck = data.projects.latest_timestamp;
+            }
+        } catch (err) {
+            console.error('Error checking project updates:', err);
+        }
+    }
+    
+    // Show notification
+    function showNotification(message, type) {
+        // Remove any existing notifications first
+        const existing = document.querySelector('.polling-notification');
+        if (existing) existing.remove();
+        
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = 'alert alert-' + type + ' alert-dismissible fade show polling-notification';
+        notification.style.position = 'fixed';
+        notification.style.top = '20px';
+        notification.style.right = '20px';
+        notification.style.zIndex = '9999';
+        notification.style.minWidth = '300px';
+        notification.innerHTML = message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+        
+        // Add to page
+        document.body.appendChild(notification);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(function() {
+            notification.remove();
+        }, 5000);
+    }
+    
+    // Initialize polling when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initial check
+        checkAttendanceUpdates();
+        checkProjectUpdates();
+        
+        // Set up polling intervals
+        setInterval(checkAttendanceUpdates, POLL_INTERVAL);
+        setInterval(checkProjectUpdates, POLL_INTERVAL);
+    });
+</script>
 <script>
 
 function switchTab(tabName, button) {

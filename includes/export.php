@@ -194,7 +194,7 @@ function handle_excel_export($pdo, $student_id, $start_date, $end_date) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
 
-        $sheet->getColumnDimension('I')->setWidth(40); // Wider for tasks
+        $sheet->getColumnDimension('I')->setWidth(40); 
 
         $sheet->getStyle('I8:I' . ($row - 1))->getAlignment()->setWrapText(true);
 

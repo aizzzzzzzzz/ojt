@@ -151,7 +151,190 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_signature'])) {
     }
 
     if ($signature_saved) {
-        header("Location: generate_certificate.php?student_id=$student_id");
+        
+        
+        require_once __DIR__ . '/../lib/fpdf.php';
+        require_once __DIR__ . '/../includes/email.php';
+        
+        
+        $stmt = $pdo->prepare("SELECT *, 
+            CONCAT(
+                first_name,
+                IF(middle_name IS NOT NULL AND middle_name != '', CONCAT(' ', middle_name), ''),
+                ' ',
+                last_name
+            ) AS name,
+            email
+        FROM students WHERE student_id = ? LIMIT 1");
+        $stmt->execute([$student_id]);
+        $student = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        
+        $emp_stmt = $pdo->prepare("SELECT name, company FROM employers WHERE employer_id = ?");
+        $emp_stmt->execute([$employer_id]);
+        $emp = $emp_stmt->fetch(PDO::FETCH_ASSOC);
+        
+        $employer_name = $emp['company'] ?? '(assigned organization)';
+        $supervisor_name = $emp['name'] ?? '(supervisor name)';
+        
+        
+        $attendance_stmt = $pdo->prepare("SELECT * FROM attendance WHERE student_id = ? ORDER BY log_date DESC");
+        $attendance_stmt->execute([$student_id]);
+        $attendance = $attendance_stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $total_minutes = 0;
+        foreach ($attendance as $row) {
+            if ($row['verified'] == 1 && !empty($row['time_in']) && !empty($row['time_out'])) {
+                $time_in = strtotime($row['time_in']);
+                $time_out = strtotime($row['time_out']);
+                $minutesWorked = max(0, ($time_out - $time_in) / 60);
+                if (!empty($row['lunch_out']) && !empty($row['lunch_in'])) {
+                    $lunch_out = strtotime($row['lunch_out']);
+                    $lunch_in = strtotime($row['lunch_in']);
+                    $minutesWorked -= max(0, ($lunch_in - $lunch_out) / 60);
+                }
+                $total_minutes += max(0, $minutesWorked);
+            }
+        }
+        
+        $hours = floor($total_minutes / 60);
+        $minutes = $total_minutes % 60;
+        
+        
+        class CertificatePDF extends FPDF {
+            public $certificate_no;
+            public $signaturePath;
+            public $supervisorName;
+
+            function Footer() {
+                $innerMargin = 8;
+                $baseY = $this->GetPageHeight() - $innerMargin - 10;
+
+                $this->SetXY($innerMargin + 2, $baseY);
+                $this->SetFont('Times','',9);
+                $this->Cell(100, 5, 'Certificate No: ' . $this->certificate_no, 0, 0, 'L');
+
+                if (!empty($this->signaturePath) && file_exists($this->signaturePath)) {
+                    $sigWidth = 35;
+                    $sigHeight = 12;
+                    $sigX = $this->GetPageWidth() - $innerMargin - $sigWidth - 2;
+                    $sigY = $baseY - $sigHeight - 2;
+
+                    $this->Image($this->signaturePath, $sigX, $sigY, $sigWidth, $sigHeight);
+
+                    $lineY = $sigY + $sigHeight;
+                    $this->SetLineWidth(0.3);
+                    $this->Line($sigX, $lineY, $sigX + $sigWidth, $lineY);
+
+                    $this->SetXY($sigX, $lineY + 1);
+                    $this->SetFont('Times','',8);
+                    $this->Cell($sigWidth, 4, 'Authorized Signature', 0, 2, 'C');
+                    $this->Cell($sigWidth, 4, $this->supervisorName, 0, 0, 'C');
+                }
+            }
+        }
+
+        $certificate_no = 'CERT-' . date('Y') . '-' . $student_id . '-' . str_pad($employer_id, 3, '0', STR_PAD_LEFT);
+
+        $pdf = new CertificatePDF('L', 'mm', 'A4');
+        $pdf->certificate_no = $certificate_no;
+        $pdf->signaturePath = $signaturePath;
+        $pdf->supervisorName = $supervisor_name;
+        $pdf->SetAutoPageBreak(false);
+        $pdf->AddPage();
+
+        $pdf->SetLineWidth(1);
+        $pdf->Rect(5, 5, $pdf->GetPageWidth()-10, $pdf->GetPageHeight()-10);
+        $pdf->SetLineWidth(0.2);
+        $pdf->Rect(8, 8, $pdf->GetPageWidth()-16, $pdf->GetPageHeight()-16);
+
+        $logoPath = 'assets/school_logo.png';
+        if (file_exists($logoPath)) {
+            $pdf->Image($logoPath, 15, 12, 22);
+        }
+
+        $companyLogoPath = 'assets/company_logo.png';
+        if (file_exists($companyLogoPath)) {
+            $pdf->Image($companyLogoPath, $pdf->GetPageWidth() - 37, 12, 22);
+        }
+
+        $pdf->SetY(15);
+        $pdf->SetFont('Times','B',16);
+        $pdf->Cell(0, 8, 'School of Engineering and Technology', 0, 1, 'C');
+        $pdf->SetFont('Times','I',12);
+        $pdf->Cell(0, 6, 'Excellence in Practical Education', 0, 1, 'C');
+        $pdf->Ln(8);
+
+        $pdf->SetFont('Times','B',24);
+        $pdf->Cell(0, 12, 'CERTIFICATE OF COMPLETION', 0, 1, 'C');
+        $pdf->SetLineWidth(0.8);
+        $pdf->Line(40, $pdf->GetY(), $pdf->GetPageWidth()-40, $pdf->GetY());
+        $pdf->Ln(8);
+
+        $pdf->SetFont('Times','',12);
+        $pdf->Cell(0, 10, 'This is to certify that', 0, 1, 'C');
+        $pdf->Ln(3);
+
+        $pdf->SetFont('Times','B',20);
+        $pdf->Cell(0, 10, $student['name'], 0, 1, 'C');
+        $pdf->Ln(6);
+
+        $pdf->SetFont('Times','',12);
+        $pdf->MultiCell(0, 6, "has successfully completed the required On-the-Job Training (OJT) / Internship Program\nwith outstanding dedication and professional competence,", 0, 'C');
+        $pdf->Ln(3);
+
+        $pdf->SetFont('Times','B',14);
+        $pdf->Cell(0, 4, "200 hours of supervised practical training", 0, 1, 'C');
+        $pdf->Ln(3);
+
+        $pdf->SetFont('Times','',12);
+        $pdf->Cell(0, 8, 'at', 0, 1, 'C');
+        $pdf->SetFont('Times','B',14);
+        $pdf->Cell(0, 8, $employer_name, 0, 1, 'C');
+        $pdf->Ln(6);
+
+        $pdf->SetFont('Times','',11);
+        $pdf->Cell(0, 6, 'Given this ' . date('jS') . ' day of ' . date('F, Y'), 0, 1, 'C');
+
+        $certificateFileName = 'certificate_' . $student_id . '_' . time() . '.pdf';
+        $certificatePath = 'certificates/' . $certificateFileName;
+        
+        if (!is_dir('certificates')) {
+            mkdir('certificates', 0777, true);
+        }
+        
+        $pdf->Output('F', $certificatePath);
+        
+        
+        $certStmt = $pdo->prepare("INSERT INTO certificates 
+            (student_id, employer_id, certificate_no, file_path, hours_completed, generated_at) 
+            VALUES (?, ?, ?, ?, ?, NOW())
+            ON DUPLICATE KEY UPDATE 
+            file_path = ?, hours_completed = ?, generated_at = NOW()");
+        
+        $total_hours = $hours + ($minutes / 60);
+        $certStmt->execute([
+            $student_id, $employer_id, $certificate_no, $certificatePath, $total_hours,
+            $certificatePath, $total_hours
+        ]);
+
+        
+        if (!empty($student['email'])) {
+            $capitalized_student_name = ucwords(strtolower($student['name']));
+            $email_result = send_evaluation_notification($student['email'], $capitalized_student_name, $supervisor_name);
+            if ($email_result !== true) {
+                error_log("Failed to send certificate notification: " . $email_result);
+            }
+        }
+
+        
+        if (file_exists($signaturePath)) {
+            unlink($signaturePath);
+        }
+
+        
+        $_SESSION['success_message'] = "Certificate generated successfully and notification email sent to student!";
+        header("Location: supervisor_dashboard.php");
         exit;
     } else {
         $error = "Please draw a signature on the canvas or upload a signature file.";

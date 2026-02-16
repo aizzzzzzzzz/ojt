@@ -1,4 +1,4 @@
-<!-- Verified Attendance Modal -->
+
 <div class="modal fade" id="verifiedModal" tabindex="-1" aria-labelledby="verifiedModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -16,7 +16,7 @@
     </div>
 </div>
 
-<!-- Full Screen IDE Modal -->
+
 <div id="fullscreenIDE" class="fullscreen-ide" style="display: none;">
     <div class="ide-header">
         <h4 id="ideProjectName">Project IDE</h4>

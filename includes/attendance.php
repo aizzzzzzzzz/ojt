@@ -21,6 +21,8 @@ function handle_attendance_action($pdo, $student_id, $today, $action) {
                 $insert = $pdo->prepare("INSERT INTO attendance (student_id, employer_id, log_date, time_in, status) VALUES (?, NULL, ?, ?, 'present')");
                 $insert->execute([$student_id, $today, $now]);
                 $pdo->commit();
+                
+                
                 return "Time In recorded at " . date('H:i:s', strtotime($now)) . ".";
             }
         } else {
@@ -80,6 +82,8 @@ function handle_attendance_action($pdo, $student_id, $today, $action) {
                 $upd = $pdo->prepare($sql);
                 $upd->execute($params);
                 $pdo->commit();
+                
+                
                 return ucfirst(str_replace('_',' ', $action)) . " recorded at " . date('H:i:s', strtotime($now)) . ".";
             }
         }

@@ -471,7 +471,7 @@ $evaluated_students = get_evaluated_students($pdo);
 
                         $acc_minutes = $acc_map[$student_id] ?? 0;
                         $required_hours = $latest['required_hours'] ?? 0;
-                        $required_minutes = $required_hours * 60;
+                        $required_minutes = 0;
                         $eligible_for_eval = $acc_minutes >= $required_minutes;
                         $completed_hours = $acc_minutes >= $required_minutes;
                         $already_evaluated = isset($evaluated_students[$student_id]);
@@ -586,14 +586,24 @@ $evaluated_students = get_evaluated_students($pdo);
                                     <strong>Total Hours (Accumulated):</strong> <?= $acc_display ?>
                                 </p>
 
-                                <?php if ($already_evaluated): ?>
+                        <?php if ($already_evaluated): ?>
                                     <p style="margin-top:15px;">
                                         <?php
-                                        $signaturePath = 'assets/signature_' . $employer_id . '_' . $student_id . '.png';
-                                        if (file_exists($signaturePath)): ?>
-                                            <a href="generate_certificate.php?student_id=<?= $student_id ?>" class="btn btn-success btn-sm">📄 Generate Certificate</a>
-                                        <?php else: ?>
-                                            <a href="add_signature.php?student_id=<?= $student_id ?>" class="btn btn-warning btn-sm">✍️ Add Signature</a>
+                                        
+                                        $cert_check = $pdo->prepare("SELECT certificate_id, certificate_no, generated_at FROM certificates WHERE student_id = ? ORDER BY generated_at DESC LIMIT 1");
+                                        $cert_check->execute([$student_id]);
+                                        $existing_cert = $cert_check->fetch(PDO::FETCH_ASSOC);
+                                        
+                                        if ($existing_cert): ?>
+                                            <span style="color: green; font-weight: bold;">✓ Certificate Generated</span>
+                                            <br><small style="color: #666;">Certificate No: <?= htmlspecialchars($existing_cert['certificate_no']) ?></small>
+                                        <?php else:
+                                            $signaturePath = 'assets/signature_' . $employer_id . '_' . $student_id . '.png';
+                                            if (file_exists($signaturePath)): ?>
+                                                <a href="generate_certificate.php?student_id=<?= $student_id ?>" class="btn btn-success btn-sm">📄 Generate Certificate</a>
+                                            <?php else: ?>
+                                                <a href="add_signature.php?student_id=<?= $student_id ?>" class="btn btn-warning btn-sm">✍️ Add Signature</a>
+                                            <?php endif; ?>
                                         <?php endif; ?>
                                     </p>
                                 <?php endif; ?>
@@ -608,5 +618,111 @@ $evaluated_students = get_evaluated_students($pdo);
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Polling mechanism for real-time updates (replaces WebSocket)
+        let lastAttendanceCheck = null;
+        let lastUpdatesCheck = null;
+        const POLL_INTERVAL = 10000; // Poll every 10 seconds
+        
+        // Check for attendance updates
+        async function checkAttendanceUpdates() {
+            try {
+                const url = 'api/check_attendance.php?since=' + encodeURIComponent(lastAttendanceCheck || '');
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.success && data.latest_timestamp) {
+                    if (lastAttendanceCheck && data.latest_timestamp > lastAttendanceCheck) {
+                        // New attendance data detected
+                        showNotification('New attendance data detected! Refreshing...', 'info');
+                        setTimeout(() => location.reload(), 1500);
+                    }
+                    lastAttendanceCheck = data.latest_timestamp;
+                }
+            } catch (err) {
+                console.error('Error checking attendance updates:', err);
+            }
+        }
+        
+        // Check for certificate and project updates
+        async function checkDataUpdates() {
+            try {
+                const url = 'api/check_updates.php?since=' + encodeURIComponent(lastUpdatesCheck || '');
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.success) {
+                    let hasUpdates = false;
+                    let updateMessage = '';
+                    
+                    // Check certificate updates
+                    if (data.certificates && data.certificates.has_updates) {
+                        hasUpdates = true;
+                        updateMessage = 'New certificate generated!';
+                    }
+                    
+                    // Check project submission updates
+                    if (data.projects && data.projects.has_updates) {
+                        hasUpdates = true;
+                        updateMessage = 'New project submission!';
+                    }
+                    
+                    if (hasUpdates) {
+                        showNotification(updateMessage + ' Refreshing...', 'info');
+                        setTimeout(() => location.reload(), 1500);
+                    }
+                    
+                    // Update last check timestamp
+                    const certTime = data.certificates?.latest_timestamp;
+                    const projTime = data.projects?.latest_timestamp;
+                    
+                    if (certTime || projTime) {
+                        const times = [certTime, projTime].filter(t => t);
+                        if (times.length > 0) {
+                            lastUpdatesCheck = times.sort().reverse()[0];
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Error checking data updates:', err);
+            }
+        }
+        
+        // Show notification
+        function showNotification(message, type) {
+            // Remove any existing notifications first
+            const existing = document.querySelector('.polling-notification');
+            if (existing) existing.remove();
+            
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = 'alert alert-' + type + ' alert-dismissible fade show polling-notification';
+            notification.style.position = 'fixed';
+            notification.style.top = '20px';
+            notification.style.right = '20px';
+            notification.style.zIndex = '9999';
+            notification.style.minWidth = '300px';
+            notification.innerHTML = message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+            
+            // Add to page
+            document.body.appendChild(notification);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(function() {
+                notification.remove();
+            }, 5000);
+        }
+        
+        // Initialize polling when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initial check
+            checkAttendanceUpdates();
+            checkDataUpdates();
+            
+            // Set up polling intervals
+            setInterval(checkAttendanceUpdates, POLL_INTERVAL);
+            setInterval(checkDataUpdates, POLL_INTERVAL);
+        });
+    </script>
 </body>
 </html>

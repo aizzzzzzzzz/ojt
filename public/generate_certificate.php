@@ -211,12 +211,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        $pdf->Output('D', 'certificate_' . $student_id . '.pdf');
-
+        
+        $_SESSION['success_message'] = "Certificate generated successfully and notification email sent to student!";
+        
+        
         if (file_exists($signaturePath)) {
             unlink($signaturePath);
         }
 
+        
+        header("Location: supervisor_dashboard.php");
         exit;
     }
     

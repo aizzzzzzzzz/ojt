@@ -56,7 +56,7 @@
                         $latest = $records[0];
 
                         $acc_minutes = $acc_map[$student_id] ?? 0;
-                        $required_minutes = $required_hours * 60;
+                        $required_minutes = 0; 
                         $eligible_for_eval = $acc_minutes >= $required_minutes;
                         $already_evaluated = isset($evaluated_students[$student_id]);
                         $acc_display = floor($acc_minutes / 60) . "h " . ($acc_minutes % 60) . "m";

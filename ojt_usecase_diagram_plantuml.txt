@@ -1,0 +1,120 @@
+@startuml OJT System Use Case Diagram
+left to right direction
+
+skinparam packageStyle rectangle
+
+actor "Admin" as Admin
+actor "Supervisor" as Supervisor
+actor "Student" as Student
+
+rectangle "Authentication" {
+    usecase "Login as Admin" as UC_AdminLogin
+    usecase "Login as Supervisor" as UC_SupervisorLogin
+    usecase "Login as Student" as UC_StudentLogin
+}
+
+rectangle "Admin Functions" {
+    usecase "Add Supervisor" as UC_AddSupervisor
+    usecase "Manage Supervisors" as UC_ManageSupervisors
+    usecase "View System Statistics" as UC_ViewStats
+    usecase "Upload Files" as UC_UploadFiles
+}
+
+rectangle "Supervisor Functions" {
+    usecase "Add Student" as UC_AddStudent
+    usecase "Create Project" as UC_CreateProject
+    usecase "Manage Projects" as UC_ManageProjects
+    usecase "Upload Documents" as UC_UploadDocs
+    usecase "Mark Student Absent" as UC_MarkAbsent
+    usecase "View Attendance" as UC_ViewAttendance
+    usecase "Verify Attendance" as UC_VerifyAttendance
+    usecase "Evaluate Student" as UC_EvaluateStudent
+    usecase "Generate Certificate" as UC_GenerateCert
+}
+
+rectangle "Student Functions" {
+    usecase "Record Daily Task" as UC_RecordTask
+    usecase "Time In/Out" as UC_TimeInOut
+    usecase "View Attendance History" as UC_ViewAttendanceHistory
+    usecase "Export Attendance" as UC_ExportAttendance
+    usecase "View Projects" as UC_ViewProjects
+    usecase "Submit Project" as UC_SubmitProject
+    usecase "View Submissions" as UC_ViewSubmissions
+    usecase "View Evaluation" as UC_ViewEvaluation
+}
+
+rectangle "Project Management" {
+    usecase "Review Submissions" as UC_ReviewSubmissions
+    usecase "View Submission" as UC_ViewSubmission
+    usecase "Download File" as UC_DownloadFile
+    usecase "Grade Submission" as UC_GradeSubmission
+    usecase "Approve Submission" as UC_ApproveSubmission
+    usecase "Reject Submission" as UC_RejectSubmission
+}
+
+rectangle "Certificate Process" {
+    usecase "Check Eligibility" as UC_CheckEligibility
+    usecase "Generate PDF" as UC_GeneratePDF
+    usecase "Add Signature" as UC_AddSignature
+    usecase "Download Certificate" as UC_DownloadCert
+}
+
+rectangle "Document Management" {
+    usecase "View PDF" as UC_ViewPDF
+    usecase "Delete Document" as UC_DeleteDocument
+}
+
+' Relationships - Authentication
+Admin --> UC_AdminLogin
+Supervisor --> UC_SupervisorLogin
+Student --> UC_StudentLogin
+
+' Admin Relationships
+UC_AdminLogin --> UC_AddSupervisor
+UC_AdminLogin --> UC_ManageSupervisors
+UC_AdminLogin --> UC_ViewStats
+UC_AdminLogin --> UC_UploadFiles
+
+' Supervisor Relationships
+UC_SupervisorLogin --> UC_AddStudent
+UC_SupervisorLogin --> UC_CreateProject
+UC_SupervisorLogin --> UC_ManageProjects
+UC_SupervisorLogin --> UC_UploadDocs
+UC_SupervisorLogin --> UC_MarkAbsent
+UC_SupervisorLogin --> UC_ViewAttendance
+UC_SupervisorLogin --> UC_VerifyAttendance
+UC_SupervisorLogin --> UC_EvaluateStudent
+UC_SupervisorLogin --> UC_GenerateCert
+
+' Student Relationships
+UC_StudentLogin --> UC_RecordTask
+UC_StudentLogin --> UC_TimeInOut
+UC_StudentLogin --> UC_ViewAttendanceHistory
+UC_StudentLogin --> UC_ExportAttendance
+UC_StudentLogin --> UC_ViewProjects
+UC_StudentLogin --> UC_SubmitProject
+UC_StudentLogin --> UC_ViewSubmissions
+UC_StudentLogin --> UC_ViewEvaluation
+
+' Project Management Relationships
+UC_ManageProjects --> UC_ReviewSubmissions
+UC_ReviewSubmissions --> UC_ViewSubmission
+UC_ReviewSubmissions --> UC_DownloadFile
+UC_ReviewSubmissions --> UC_GradeSubmission
+UC_GradeSubmission --> UC_ApproveSubmission
+UC_GradeSubmission --> UC_RejectSubmission
+
+' Certificate Process Relationships
+UC_EvaluateStudent --> UC_CheckEligibility
+UC_CheckEligibility --> UC_GeneratePDF
+UC_GeneratePDF --> UC_AddSignature
+UC_AddSignature --> UC_DownloadCert
+
+' Document Management Relationships
+UC_UploadDocs --> UC_ViewPDF
+UC_ViewPDF --> UC_DeleteDocument
+
+' Student Submit to Review
+UC_SubmitProject --> UC_ReviewSubmissions
+
+@enduml

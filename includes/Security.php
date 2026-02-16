@@ -66,7 +66,7 @@ class Security {
         return htmlspecialchars($data, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
 
-    public function validateFileUpload($file, $allowedTypes = [], $maxSize = 5242880) { // 5MB default
+    public function validateFileUpload($file, $allowedTypes = [], $maxSize = 5242880) { 
         $errors = [];
 
         if ($file['error'] !== UPLOAD_ERR_OK) {

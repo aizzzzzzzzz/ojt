@@ -1,0 +1,186 @@
+flowchart TD
+    %% Start Point
+    START([OJT Management System])
+
+    %% User Roles Selection
+    ROLES{Choose Role}
+    ADMIN[Admin Login<br/>admin_login.php]
+    SUPERVISOR[Supervisor Login<br/>supervisor_login.php]
+    STUDENT[Student Login<br/>student_login.php]
+
+    %% Authentication Flows
+    ADMIN_AUTH{Authentication<br/>Success?}
+    SUP_AUTH{Authentication<br/>Success?}
+    STUD_AUTH{Authentication<br/>Success?}
+
+    %% Admin Dashboard & Functions
+    ADMIN_DASH[Admin Dashboard<br/>admin_dashboard.php]
+    ADD_SUPER[Add New Supervisor<br/>add_employer.php]
+    MANAGE_SUPER[Manage Supervisors]
+    UPLOAD_FILES[Upload Files<br/>upload_documents.php]
+
+    %% Supervisor Dashboard & Functions
+    SUPER_DASH[Supervisor Dashboard<br/>supervisor_dashboard.php]
+    ADD_STUDENT[Add Student<br/>add_student.php]
+    CREATE_PROJECT[Create Project<br/>create_project.php]
+    MANAGE_PROJECTS[Manage Projects<br/>manage_projects.php]
+    UPLOAD_DOCS[Upload Documents<br/>upload_documents.php]
+    MARK_ABSENT[Mark Student Absent<br/>mark_absent.php]
+    VIEW_ATTENDANCE[View Attendance Records]
+    VERIFY_ATTENDANCE[Verify Attendance<br/>verify_attendance.php]
+    EVALUATE_STUDENT[Evaluate Student<br/>evaluate_student.php]
+    GENERATE_CERT[Generate Certificate<br/>generate_certificate.php]
+    ADD_SIGNATURE[Add Signature<br/>add_signature.php]
+
+    %% Student Dashboard & Functions
+    STUD_DASH[Student Dashboard<br/>student_dashboard.php]
+    RECORD_TASK[Record Daily Task]
+    TIME_IN_OUT[Time In/Out Actions<br/>student_attendance_content.php]
+    VIEW_ATTENDANCE_HIST[View Attendance History]
+    EXPORT_ATTENDANCE[Export Attendance<br/>export_attendance.php]
+    VIEW_PROJECTS[View Available Projects]
+    SUBMIT_PROJECT[Submit Project<br/>submit_project.php]
+    VIEW_SUBMISSIONS[View Submissions<br/>project_submissions.php]
+    VIEW_EVALUATION[View Evaluation<br/>view_evaluation.php]
+
+    %% Project Submission Options
+    SUBMIT_CHOICE{Submission Method}
+    CODE_EDITOR[Code Editor<br/>Built-in IDE]
+    FILE_UPLOAD[File Upload<br/>upload_documents.php]
+
+    %% Project Review Process
+    REVIEW_SUBMISSIONS[Review Submissions<br/>project_submissions.php]
+    VIEW_SUBMISSION[View Submission<br/>view_submission.php]
+    DOWNLOAD_FILE[Download File<br/>download.php]
+    GRADE_SUBMISSION[Grade Submission<br/>grade_submission.php]
+    APPROVE_SUBMISSION[Approve Submission<br/>approve_submission.php]
+    REJECT_SUBMISSION[Reject Submission<br/>reject_submission.php]
+
+    %% Certificate Process
+    CHECK_ELIGIBILITY{Eligible for<br/>Certificate?}
+    GENERATE_CERT_PDF[Generate PDF<br/>generate_pdf.php]
+    DOWNLOAD_CERT[Download Certificate<br/>download_certificate.php]
+
+    %% Document Management (Corrected Flow)
+    UPLOAD_DOCS --> VIEW_UPLOADED_DOCS[View Uploaded Documents]
+    VIEW_UPLOADED_DOCS --> DOWNLOAD_DOCUMENT[Download Document<br/>download.php]
+    DOWNLOAD_DOCUMENT --> DELETE_DOC[Delete Document<br/>delete_document.php]
+    DELETE_DOC --> UPLOAD_DOCS
+
+    %% End Points
+    LOGOUT[Logout<br/>logout.php]
+    BACK_TO_START[Back to Start]
+
+    %% Main Flow Connections
+    START --> ROLES
+    ROLES -->|Admin| ADMIN
+    ROLES -->|Supervisor| SUPERVISOR
+    ROLES -->|Student| STUDENT
+
+    %% Authentication
+    ADMIN --> ADMIN_AUTH
+    ADMIN_AUTH -->|Yes| ADMIN_DASH
+    ADMIN_AUTH -->|No| ADMIN
+
+    SUPERVISOR --> SUP_AUTH
+    SUP_AUTH -->|Yes| SUPER_DASH
+    SUP_AUTH -->|No| SUPERVISOR
+
+    STUDENT --> STUD_AUTH
+    STUD_AUTH -->|Yes| STUD_DASH
+    STUD_AUTH -->|No| STUDENT
+
+    %% Admin Functions
+    ADMIN_DASH --> ADD_SUPER
+    ADMIN_DASH --> MANAGE_SUPER
+    ADMIN_DASH --> VIEW_STATS
+    ADMIN_DASH --> UPLOAD_FILES
+    ADD_SUPER --> ADMIN_DASH
+    MANAGE_SUPER --> ADMIN_DASH
+    VIEW_STATS --> ADMIN_DASH
+    UPLOAD_FILES --> ADMIN_DASH
+
+    %% Supervisor Functions
+    SUPER_DASH --> ADD_STUDENT
+    SUPER_DASH --> CREATE_PROJECT
+    SUPER_DASH --> MANAGE_PROJECTS
+    SUPER_DASH --> UPLOAD_DOCS
+    SUPER_DASH --> MARK_ABSENT
+    SUPER_DASH --> VIEW_ATTENDANCE
+    SUPER_DASH --> VERIFY_ATTENDANCE
+    SUPER_DASH --> EVALUATE_STUDENT
+    SUPER_DASH --> GENERATE_CERT
+
+    ADD_STUDENT --> SUPER_DASH
+    CREATE_PROJECT --> SUPER_DASH
+    MANAGE_PROJECTS --> REVIEW_SUBMISSIONS
+    UPLOAD_DOCS --> SUPER_DASH
+    MARK_ABSENT --> SUPER_DASH
+    VIEW_ATTENDANCE --> VERIFY_ATTENDANCE
+    VERIFY_ATTENDANCE --> SUPER_DASH
+    EVALUATE_STUDENT --> SUPER_DASH
+
+    %% Project Management Flow
+    MANAGE_PROJECTS --> REVIEW_SUBMISSIONS
+    REVIEW_SUBMISSIONS --> VIEW_SUBMISSION
+    VIEW_SUBMISSION --> DOWNLOAD_FILE
+    DOWNLOAD_FILE --> GRADE_SUBMISSION
+    GRADE_SUBMISSION --> APPROVE_SUBMISSION
+    GRADE_SUBMISSION --> REJECT_SUBMISSION
+    APPROVE_SUBMISSION --> CHECK_ELIGIBILITY
+    REJECT_SUBMISSION --> STUD_DASH
+
+    %% Certificate Generation
+    GENERATE_CERT --> CHECK_ELIGIBILITY
+    CHECK_ELIGIBILITY -->|Yes| GENERATE_CERT_PDF
+    CHECK_ELIGIBILITY -->|No| SUPER_DASH
+    GENERATE_CERT_PDF --> ADD_SIGNATURE
+    ADD_SIGNATURE --> DOWNLOAD_CERT
+    DOWNLOAD_CERT --> SUPER_DASH
+
+    %% Student Functions
+    STUD_DASH --> RECORD_TASK
+    STUD_DASH --> TIME_IN_OUT
+    STUD_DASH --> VIEW_ATTENDANCE_HIST
+    STUD_DASH --> EXPORT_ATTENDANCE
+    STUD_DASH --> VIEW_PROJECTS
+    STUD_DASH --> VIEW_SUBMISSIONS
+    STUD_DASH --> VIEW_EVALUATION
+
+    RECORD_TASK --> STUD_DASH
+    TIME_IN_OUT --> VIEW_ATTENDANCE_HIST
+    VIEW_ATTENDANCE_HIST --> EXPORT_ATTENDANCE
+    EXPORT_ATTENDANCE --> STUD_DASH
+    VIEW_PROJECTS --> SUBMIT_PROJECT
+    VIEW_SUBMISSIONS --> STUD_DASH
+    VIEW_EVALUATION --> STUD_DASH
+
+    %% Submission Process
+    SUBMIT_PROJECT --> SUBMIT_CHOICE
+    SUBMIT_CHOICE -->|Code| CODE_EDITOR
+    SUBMIT_CHOICE -->|File| FILE_UPLOAD
+    CODE_EDITOR --> REVIEW_SUBMISSIONS
+    FILE_UPLOAD --> REVIEW_SUBMISSIONS
+
+    %% Logout Flow
+    ADMIN_DASH --> LOGOUT
+    SUPER_DASH --> LOGOUT
+    STUD_DASH --> LOGOUT
+    LOGOUT --> BACK_TO_START
+    BACK_TO_START --> START
+
+    %% Styling Classes
+    classDef adminClass fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef supervisorClass fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef studentClass fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef processClass fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef decisionClass fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    classDef endClass fill:#f5f5f5,stroke:#616161,stroke-width:2px
+
+    %% Apply Classes
+    class ADMIN,AUTH_ADMIN,AUTH_SUP,AUTH_STUD,ADMIN_DASH,ADD_SUPER,MANAGE_SUPER,VIEW_STATS,UPLOAD_FILES adminClass
+    class SUPERVISOR,SUPER_DASH,ADD_STUDENT,CREATE_PROJECT,MANAGE_PROJECTS,UPLOAD_DOCS,MARK_ABSENT,VIEW_ATTENDANCE,VERIFY_ATTENDANCE,EVALUATE_STUDENT,GENERATE_CERT,ADD_SIGNATURE supervisorClass
+    class STUDENT,STUD_DASH,RECORD_TASK,TIME_IN_OUT,VIEW_ATTENDANCE_HIST,EXPORT_ATTENDANCE,VIEW_PROJECTS,SUBMIT_PROJECT,VIEW_SUBMISSIONS,VIEW_EVALUATION,CODE_EDITOR,FILE_UPLOAD studentClass
+    class REVIEW_SUBMISSIONS,VIEW_SUBMISSION,DOWNLOAD_FILE,GRADE_SUBMISSION,APPROVE_SUBMISSION,REJECT_SUBMISSION,CHECK_ELIGIBILITY,GENERATE_CERT_PDF,DOWNLOAD_CERT,VIEW_UPLOADED_DOCS,DOWNLOAD_DOCUMENT,DELETE_DOC processClass
+    class SUBMIT_CHOICE decisionClass
+    class START,LOGOUT,BACK_TO_START,ADMIN_AUTH,SUP_AUTH,STUD_AUTH endClass

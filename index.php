@@ -2,7 +2,7 @@
 session_start();
 require_once __DIR__ . '/private/config.php';
 
-// Check if any admin exists
+
 $stmt = $pdo->prepare("SELECT COUNT(*) FROM admins");
 $stmt->execute();
 $admin_count = $stmt->fetchColumn();
