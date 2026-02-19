@@ -9,3 +9,4 @@ storage/uploads/
 *.pdf
 
 .env
+remove_comments.php

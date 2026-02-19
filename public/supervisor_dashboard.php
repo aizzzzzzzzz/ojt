@@ -619,12 +619,10 @@ $evaluated_students = get_evaluated_students($pdo);
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Polling mechanism for real-time updates (replaces WebSocket)
         let lastAttendanceCheck = null;
         let lastUpdatesCheck = null;
         const POLL_INTERVAL = 10000; // Poll every 10 seconds
         
-        // Check for attendance updates
         async function checkAttendanceUpdates() {
             try {
                 const url = 'api/check_attendance.php?since=' + encodeURIComponent(lastAttendanceCheck || '');
@@ -633,7 +631,6 @@ $evaluated_students = get_evaluated_students($pdo);
                 
                 if (data.success && data.latest_timestamp) {
                     if (lastAttendanceCheck && data.latest_timestamp > lastAttendanceCheck) {
-                        // New attendance data detected
                         showNotification('New attendance data detected! Refreshing...', 'info');
                         setTimeout(() => location.reload(), 1500);
                     }
@@ -644,7 +641,6 @@ $evaluated_students = get_evaluated_students($pdo);
             }
         }
         
-        // Check for certificate and project updates
         async function checkDataUpdates() {
             try {
                 const url = 'api/check_updates.php?since=' + encodeURIComponent(lastUpdatesCheck || '');
@@ -655,13 +651,11 @@ $evaluated_students = get_evaluated_students($pdo);
                     let hasUpdates = false;
                     let updateMessage = '';
                     
-                    // Check certificate updates
                     if (data.certificates && data.certificates.has_updates) {
                         hasUpdates = true;
                         updateMessage = 'New certificate generated!';
                     }
                     
-                    // Check project submission updates
                     if (data.projects && data.projects.has_updates) {
                         hasUpdates = true;
                         updateMessage = 'New project submission!';
@@ -672,7 +666,6 @@ $evaluated_students = get_evaluated_students($pdo);
                         setTimeout(() => location.reload(), 1500);
                     }
                     
-                    // Update last check timestamp
                     const certTime = data.certificates?.latest_timestamp;
                     const projTime = data.projects?.latest_timestamp;
                     
@@ -688,13 +681,10 @@ $evaluated_students = get_evaluated_students($pdo);
             }
         }
         
-        // Show notification
         function showNotification(message, type) {
-            // Remove any existing notifications first
             const existing = document.querySelector('.polling-notification');
             if (existing) existing.remove();
             
-            // Create notification element
             const notification = document.createElement('div');
             notification.className = 'alert alert-' + type + ' alert-dismissible fade show polling-notification';
             notification.style.position = 'fixed';
@@ -704,22 +694,17 @@ $evaluated_students = get_evaluated_students($pdo);
             notification.style.minWidth = '300px';
             notification.innerHTML = message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
             
-            // Add to page
             document.body.appendChild(notification);
             
-            // Auto-remove after 5 seconds
             setTimeout(function() {
                 notification.remove();
             }, 5000);
         }
         
-        // Initialize polling when page loads
         document.addEventListener('DOMContentLoaded', function() {
-            // Initial check
             checkAttendanceUpdates();
             checkDataUpdates();
             
-            // Set up polling intervals
             setInterval(checkAttendanceUpdates, POLL_INTERVAL);
             setInterval(checkDataUpdates, POLL_INTERVAL);
         });
