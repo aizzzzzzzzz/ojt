@@ -621,7 +621,7 @@ $evaluated_students = get_evaluated_students($pdo);
     <script>
         let lastAttendanceCheck = null;
         let lastUpdatesCheck = null;
-        const POLL_INTERVAL = 10000; // Poll every 10 seconds
+        const POLL_INTERVAL = 10000;
         
         async function checkAttendanceUpdates() {
             try {
