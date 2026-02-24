@@ -1439,12 +1439,10 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Polling mechanism for real-time updates (replaces WebSocket)
     let lastAttendanceCheck = null;
     let lastUpdatesCheck = null;
-    const POLL_INTERVAL = 15000; // Poll every 15 seconds
+    const POLL_INTERVAL = 15000;
     
-    // Check for attendance verification updates
     async function checkAttendanceUpdates() {
         try {
             const url = 'api/check_attendance.php?since=' + encodeURIComponent(lastAttendanceCheck || '') + '&student_id=<?= htmlspecialchars($student_id) ?>';
@@ -1453,7 +1451,6 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
             
             if (data.success && data.latest_timestamp) {
                 if (lastAttendanceCheck && data.latest_timestamp > lastAttendanceCheck) {
-                    // Attendance was verified
                     showNotification('Your attendance has been verified! Refreshing...', 'success');
                     setTimeout(() => location.reload(), 1500);
                 }
@@ -1463,8 +1460,6 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
             console.error('Error checking attendance updates:', err);
         }
     }
-    
-    // Check for project submission status updates
     async function checkProjectUpdates() {
         try {
             const url = 'api/check_updates.php?since=' + encodeURIComponent(lastUpdatesCheck || '') + '&type=project&student_id=<?= htmlspecialchars($student_id) ?>';
@@ -1472,12 +1467,10 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
             const data = await response.json();
             
             if (data.success && data.projects && data.projects.has_updates) {
-                // New project updates
                 showNotification('Your project submission has been graded! Refreshing...', 'info');
                 setTimeout(() => location.reload(), 1500);
             }
             
-            // Update last check timestamp
             if (data.projects?.latest_timestamp) {
                 lastUpdatesCheck = data.projects.latest_timestamp;
             }
@@ -1486,13 +1479,10 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
         }
     }
     
-    // Show notification
     function showNotification(message, type) {
-        // Remove any existing notifications first
         const existing = document.querySelector('.polling-notification');
         if (existing) existing.remove();
         
-        // Create notification element
         const notification = document.createElement('div');
         notification.className = 'alert alert-' + type + ' alert-dismissible fade show polling-notification';
         notification.style.position = 'fixed';
@@ -1502,22 +1492,17 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
         notification.style.minWidth = '300px';
         notification.innerHTML = message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
         
-        // Add to page
         document.body.appendChild(notification);
         
-        // Auto-remove after 5 seconds
         setTimeout(function() {
             notification.remove();
         }, 5000);
     }
     
-    // Initialize polling when page loads
     document.addEventListener('DOMContentLoaded', function() {
-        // Initial check
         checkAttendanceUpdates();
         checkProjectUpdates();
         
-        // Set up polling intervals
         setInterval(checkAttendanceUpdates, POLL_INTERVAL);
         setInterval(checkProjectUpdates, POLL_INTERVAL);
     });

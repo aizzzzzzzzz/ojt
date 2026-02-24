@@ -44,24 +44,18 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-// ========== GLOBAL FUNCTIONS ==========
 
 function switchTab(tabName, button) {
-    // Hide all tab contents
     const tabContents = document.querySelectorAll('.tab-content');
     tabContents.forEach(content => content.classList.remove('active'));
 
-    // Remove active class from all tab buttons
     const tabButtons = document.querySelectorAll('.tab-button');
     tabButtons.forEach(btn => btn.classList.remove('active'));
 
-    // Show selected tab content
     document.getElementById(tabName + '-tab').classList.add('active');
 
-    // Add active class to clicked button
     button.classList.add('active');
 
-    // Hide/show welcome header and summary based on tab
     const welcomeHeader = document.getElementById('welcomeHeader');
     const summarySection = document.getElementById('summarySection');
 
@@ -72,9 +66,7 @@ function switchTab(tabName, button) {
         document.getElementById('submissionSection').style.display = 'none';
         document.getElementById('projects-section').style.display = 'block';
 
-        // Initialize CodeMirror if not already done
         if (!window.codeEditor) {
-            // Wait a bit for the tab to be visible
             setTimeout(initCodeEditor, 100);
         }
     } else {
@@ -83,38 +75,28 @@ function switchTab(tabName, button) {
     }
 }
 
-// Project selection for submission
 function selectProjectForSubmission(projectId, projectName) {
-    // Show submission section
     document.getElementById('projects-section').style.display = 'none';
     document.getElementById('submissionSection').style.display = 'block';
 
-    // Set project info
     document.getElementById('selectedProjectName').textContent = projectName;
     document.getElementById('projectId').value = projectId;
 
-    // Reset form and preview
     document.getElementById('submissionForm').reset();
     document.getElementById('editorPreview').srcdoc = '';
     document.getElementById('submissionFile').value = '';
 
-    // Switch to code tab by default
     switchSubmissionTab('code');
 
-    // Initialize CodeMirror and attach events after display is set
     setTimeout(() => {
-        // Reset editor content to default
         if (window.codeEditor && typeof window.codeEditor.setValue === 'function') {
             window.codeEditor.setValue(`<?php echo htmlspecialchars($defaultCode); ?>`);
         } else {
-            // Reinitialize editor if not properly set up
             initCodeEditor();
         }
 
-        // Attach run button event
         const runBtn = document.getElementById('runCodeBtn');
         if (runBtn) {
-            // Remove existing event listeners
             const newRunBtn = runBtn.cloneNode(true);
             runBtn.parentNode.replaceChild(newRunBtn, runBtn);
             newRunBtn.addEventListener('click', runCodePreview);
@@ -123,7 +105,6 @@ function selectProjectForSubmission(projectId, projectName) {
 }
 
 function cancelSubmission() {
-    // Hide submission section, show project list
     document.getElementById('submissionSection').style.display = 'none';
     document.getElementById('projects-section').style.display = 'block';
 }
@@ -140,7 +121,6 @@ function switchSubmissionTab(tabType) {
         document.getElementById('fileTabBtn').style.borderBottom = 'none';
         document.getElementById('fileTabBtn').style.color = '#999';
 
-        // Initialize CodeMirror if not already done
         if (!window.codeEditor) {
             setTimeout(initCodeEditor, 50);
         }
@@ -155,20 +135,17 @@ function switchSubmissionTab(tabType) {
     }
 }
 
-// Run code for preview (safe iframe display)
 function runCodePreview(event) {
     event.preventDefault();
     if (window.codeEditor && typeof window.codeEditor.getValue === 'function') {
         const code = window.codeEditor.getValue();
         const iframe = document.getElementById('editorPreview');
-        // Display code safely in iframe without execution
         iframe.srcdoc = code;
     } else {
         console.error('Code editor not initialized yet.');
     }
 }
 
-// Initialize CodeMirror editor
 function initCodeEditor() {
     const textarea = document.getElementById('codeEditor');
     if (!textarea) {
@@ -176,7 +153,6 @@ function initCodeEditor() {
         return;
     }
 
-    // Clean up any existing editor
     if (window.codeEditor && window.codeEditor.toTextArea) {
         try {
             window.codeEditor.toTextArea();
@@ -185,7 +161,6 @@ function initCodeEditor() {
         }
     }
 
-    // Create new editor instance
     window.codeEditor = CodeMirror.fromTextArea(textarea, {
         lineNumbers: true,
         theme: "monokai",
@@ -202,7 +177,6 @@ function initCodeEditor() {
         }
     });
 
-    // Refresh the editor to ensure proper rendering
     setTimeout(() => {
         if (window.codeEditor) {
             window.codeEditor.refresh();
@@ -213,7 +187,6 @@ function initCodeEditor() {
     return window.codeEditor;
 }
 
-// Full Screen IDE Functions (optional)
 function openFullScreenIDE(projectId, projectName) {
     currentProjectId = projectId;
     document.getElementById('ideProjectName').textContent = 'Project: ' + projectName;
@@ -245,16 +218,13 @@ function runCode() {
     }
 }
 
-// ========== DOM CONTENT LOADED ==========
 document.addEventListener('DOMContentLoaded', function() {
-    // Handle form submission validation
     const form = document.getElementById('submissionForm');
     if (form) {
         form.addEventListener('submit', function(e) {
             const submissionType = document.getElementById('submissionType').value;
 
             if (submissionType === 'code') {
-                // Save editor content to textarea
                 if (window.codeEditor) {
                     window.codeEditor.save();
                 }
@@ -277,7 +247,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Initialize export form date ranges to current month
     const today = new Date().toISOString().split('T')[0];
     const firstDay = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
 
@@ -292,14 +261,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     <?php if (!empty($today_row) && $today_row['verified'] == 1): ?>
-    // Check if modal has already been shown today using localStorage
     const todayDate = '<?= date('Y-m-d') ?>';
     const modalShownKey = 'attendance_modal_shown_' + todayDate;
 
     if (!localStorage.getItem(modalShownKey)) {
         var myModal = new bootstrap.Modal(document.getElementById('verifiedModal'), {});
         myModal.show();
-        // Mark modal as shown for today
         localStorage.setItem(modalShownKey, 'true');
     }
     <?php endif; ?>

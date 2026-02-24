@@ -1,8 +1,4 @@
 <?php
-/**
- * Attendance handling functions
- * Note: WebSocket notifications have been removed - using polling instead
- */
 
 function handle_attendance_action($pdo, $student_id, $today, $action) {
     $allowed = ['time_in','lunch_out','lunch_in','time_out'];
@@ -26,7 +22,7 @@ function handle_attendance_action($pdo, $student_id, $today, $action) {
                 $insert->execute([$student_id, $today, $now]);
                 $pdo->commit();
                 
-                // Note: WebSocket notification removed - using polling instead
+                
                 
                 return "Time In recorded at " . date('H:i:s', strtotime($now)) . ".";
             }
@@ -88,7 +84,7 @@ function handle_attendance_action($pdo, $student_id, $today, $action) {
                 $upd->execute($params);
                 $pdo->commit();
                 
-                // Note: WebSocket notification removed - using polling instead
+                
                 
                 return ucfirst(str_replace('_',' ', $action)) . " recorded at " . date('H:i:s', strtotime($now)) . ".";
             }

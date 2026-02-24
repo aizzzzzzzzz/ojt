@@ -1,11 +1,9 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Polling mechanism for real-time updates
         let lastAttendanceCheck = null;
         let lastUpdatesCheck = null;
-        const POLL_INTERVAL = 10000; // Poll every 10 seconds
+        const POLL_INTERVAL = 10000;
         
-        // Check for attendance updates
         async function checkAttendanceUpdates() {
             try {
                 const url = 'api/check_attendance.php' + (lastAttendanceCheck ? '?since=' + encodeURIComponent(lastAttendanceCheck) : '');
@@ -24,7 +22,6 @@
             }
         }
         
-        // Check for certificate and project updates
         async function checkDataUpdates() {
             try {
                 const url = 'api/check_updates.php' + (lastUpdatesCheck ? '?since=' + encodeURIComponent(lastUpdatesCheck) : '');
@@ -65,7 +62,6 @@
             }
         }
         
-        // Show notification
         function showNotification(message, type) {
             const existing = document.querySelector('.polling-notification');
             if (existing) existing.remove();
@@ -86,7 +82,6 @@
             }, 5000);
         }
         
-        // Initialize polling when page loads
         document.addEventListener('DOMContentLoaded', function() {
             checkAttendanceUpdates();
             checkDataUpdates();

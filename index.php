@@ -1,4 +1,12 @@
 <?php
+if (!isset($_SERVER['HTTPS']) || $_SERVER['HTTPS'] !== 'on') {
+    if (!in_array($_SERVER['HTTP_HOST'] ?? '', ['localhost', '127.0.0.1'])) {
+        $https_url = 'https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+        header('Location: ' . $https_url, true, 301);
+        exit;
+    }
+}
+
 session_start();
 require_once __DIR__ . '/private/config.php';
 
