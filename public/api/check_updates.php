@@ -16,8 +16,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 session_start();
-include_once __DIR__ . '/../private/config.php';
-include_once __DIR__ . '/../includes/db.php';
+include_once __DIR__ . '/../../private/config.php';
+include_once __DIR__ . '/../../includes/db.php';
 
 $is_authenticated = false;
 $user_type = null;

@@ -89,11 +89,9 @@ body { background:#e9f5ff; }
     <form method="POST">
 
         <div class="mb-3">
-            <label class="form-label">Select Student:</label>
-
+            
             <?php if (!$selected_student_id): ?>
                 <select name="student_id" class="form-control" required>
-                    <option value="">-- Choose Student --</option>
                     <?php foreach ($students as $s): ?>
                         <option value="<?= $s['student_id'] ?>">
                             <?= htmlspecialchars($s['name']) ?>

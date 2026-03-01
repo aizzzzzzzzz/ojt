@@ -21,12 +21,16 @@ $success = "";
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $new_password = $_POST['new_password'];
     $confirm_password = $_POST['confirm_password'];
+    $isFirstTimeStudentOrSupervisor = (
+        !empty($_SESSION['first_time_login']) &&
+        in_array($_SESSION['role'] ?? '', ['student', 'employer'], true)
+    );
 
     if (empty($new_password) || empty($confirm_password)) {
         $error = "All fields are required.";
     } elseif ($new_password !== $confirm_password) {
         $error = "Passwords do not match.";
-    } elseif (!validate_password($new_password)) {
+    } elseif ($isFirstTimeStudentOrSupervisor && !validate_password($new_password)) {
         $error = "Password must be at least 8 characters with uppercase, lowercase, number, and special character.";
     } else {
         $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
@@ -40,6 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         unset($_SESSION['change_password']);
+        unset($_SESSION['first_time_login']);
         $success = "Password changed successfully! Redirecting to dashboard...";
 
         echo "<script>

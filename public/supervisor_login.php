@@ -32,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($employer['password_changed'] == 0) {
             $_SESSION['change_password'] = true;
+            $_SESSION['first_time_login'] = true;
             header("Location: change_password.php");
             exit;
         }
@@ -48,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Employer Login</title>
+    <title>Supervisor Login</title>
     <style>
         body {
             margin: 0;
@@ -159,7 +160,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
     <div class="login-container">
-        <h2>Employer Login</h2>
+        <h2>Supervisor Login</h2>
         <form method="post">
             <div class="form-group">
                 <label for="username">Username</label>

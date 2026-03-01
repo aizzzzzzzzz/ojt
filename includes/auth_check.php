@@ -26,7 +26,7 @@ function require_role($required_role) {
     }
 }
 
-function get_current_user() {
+function get_current_session_user() {
     if (!isset($_SESSION['user_id']) || !isset($_SESSION['role'])) {
         return null;
     }
@@ -37,3 +37,4 @@ function get_current_user() {
     ];
 }
 ?>
+

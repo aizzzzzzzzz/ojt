@@ -158,9 +158,9 @@ $email_config = [
     'smtp_username' => getenv('SMTP_USERNAME') ?: 'aizjedlian@gmail.com',
     'smtp_password' => getenv('SMTP_PASSWORD') ?: 'kriiazezwyeqqpnw',
     'from_email' => getenv('FROM_EMAIL') ?: 'noreply@yourdomain.com',
-    'from_name' => getenv('FROM_NAME') ?: 'OJT System',
+    'from_name' => getenv('FROM_NAME') ?: 'Internship System',
     'reply_to_email' => getenv('REPLY_TO_EMAIL') ?: 'noreply@yourdomain.com',
-    'reply_to_name' => getenv('REPLY_TO_NAME') ?: 'OJT System Support',
+    'reply_to_name' => getenv('REPLY_TO_NAME') ?: 'Internship System Support',
     'debug_mode' => getenv('EMAIL_DEBUG') ?: false,
 ];
 

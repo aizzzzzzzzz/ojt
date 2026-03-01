@@ -14,7 +14,7 @@
             <button type="submit" name="save_task"
                 class="action-btn btn-primary"
                 style="margin-top:10px;">
-                💾 Save Task
+                 Save Task
             </button>
         </form>
 

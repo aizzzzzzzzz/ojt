@@ -54,6 +54,10 @@
         background: #f8f9fa;
         border-radius: 10px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
     }
 
     .welcome-section p {
@@ -62,16 +66,32 @@
         margin: 5px 0;
     }
 
-    .welcome-section a {
-        color: #007bff;
-        text-decoration: none;
-        font-weight: 500;
-        transition: color 0.3s ease;
+    .welcome-content {
+        text-align: left;
     }
 
-    .welcome-section a:hover {
-        text-decoration: underline;
-        color: #0056b3;
+    .logout-btn {
+        display: inline-block;
+        background: #dc3545;
+        color: #fff;
+        padding: 10px 16px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        line-height: 1;
+        white-space: nowrap;
+        transition: background 0.2s ease, transform 0.2s ease;
+    }
+
+    .logout-btn:hover {
+        background: #bb2d3b;
+        color: #fff;
+        transform: translateY(-1px);
+    }
+
+    .logout-btn:focus-visible {
+        outline: 3px solid rgba(220, 53, 69, 0.35);
+        outline-offset: 2px;
     }
 
     .summary-grid {
@@ -249,6 +269,16 @@
             font-size: 24px;
         }
 
+        .welcome-section {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .logout-btn {
+            width: 100%;
+            text-align: center;
+        }
+
         .dashboard-container h3 {
             font-size: 18px;
         }
@@ -331,9 +361,11 @@
 <body>
 <div class="dashboard-container">
     <div class="welcome-section">
-        <h2>Welcome, <?= htmlspecialchars($admin['full_name'] ?? $admin['username']) ?>!</h2>
-        <p>You are logged in as an administrator.</p>
-        <p><a href="logout.php">Logout</a></p>
+        <div class="welcome-content">
+            <h2>Welcome, <?= htmlspecialchars($admin['full_name'] ?? $admin['username']) ?>!</h2>
+            <p>You are logged in as an administrator.</p>
+        </div>
+        <a href="logout.php" class="logout-btn">Logout</a>
     </div>
 
     <div class="summary-grid">

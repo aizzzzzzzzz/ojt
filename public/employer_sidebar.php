@@ -13,5 +13,5 @@
     </div>
 
     <a href="evaluate_student.php">📝 Evaluations</a>
-    <a href="logout.php" class="logout">🚪 Logout</a>
+    <a href="logout.php" class="logout"> Logout</a>
 </div>

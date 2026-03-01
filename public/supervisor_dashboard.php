@@ -36,6 +36,38 @@ $students = get_students_list($pdo, $_SESSION['employer_id'] ?? null);
 $attendance = get_attendance_records($pdo);
 $acc_map = get_total_minutes($pdo);
 $evaluated_students = get_evaluated_students($pdo);
+$evaluation_pass_map = [];
+
+$student_ids = [];
+foreach ($students as $student_row) {
+    $student_ids[] = (int) $student_row['student_id'];
+}
+
+if (!empty($student_ids)) {
+    $placeholders = implode(',', array_fill(0, count($student_ids), '?'));
+    $eval_result_stmt = $pdo->prepare("
+        SELECT
+            student_id,
+            (
+                COALESCE(attendance_rating, 0) +
+                COALESCE(work_quality_rating, 0) +
+                COALESCE(initiative_rating, 0) +
+                COALESCE(communication_rating, 0) +
+                COALESCE(teamwork_rating, 0) +
+                COALESCE(adaptability_rating, 0) +
+                COALESCE(professionalism_rating, 0) +
+                COALESCE(problem_solving_rating, 0) +
+                COALESCE(technical_skills_rating, 0)
+            ) / 9.0 AS avg_rating
+        FROM evaluations
+        WHERE student_id IN ($placeholders)
+    ");
+    $eval_result_stmt->execute($student_ids);
+
+    while ($eval_row = $eval_result_stmt->fetch(PDO::FETCH_ASSOC)) {
+        $evaluation_pass_map[(int) $eval_row['student_id']] = ((float) $eval_row['avg_rating']) >= 3.0;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -475,6 +507,7 @@ $evaluated_students = get_evaluated_students($pdo);
                         $eligible_for_eval = $acc_minutes >= $required_minutes;
                         $completed_hours = $acc_minutes >= $required_minutes;
                         $already_evaluated = isset($evaluated_students[$student_id]);
+                        $evaluation_passed = $evaluation_pass_map[$student_id] ?? false;
                         $acc_display = floor($acc_minutes / 60) . "h " . ($acc_minutes % 60) . "m";
 
                         $status = $latest['status'] ?: '---';
@@ -527,13 +560,18 @@ $evaluated_students = get_evaluated_students($pdo);
                             <?php elseif ($already_evaluated && $completed_hours): ?>
                                 <div style="display: flex; flex-direction: column; gap: 5px;">
                                     <span style="color:green; font-weight:bold;">✔ Evaluation Completed</span>
-                                    <form method="POST" action="delete_student.php" style="margin:0;" onsubmit="return confirm('Are you sure you want to delete this student? This action cannot be undone.');">
-                                        <input type="hidden" name="student_id" value="<?= htmlspecialchars($student_id) ?>">
-                                        <button type="submit" class="btn btn-danger btn-sm">🗑️ Delete Student</button>
-                                    </form>
+                                    <?php if ($evaluation_passed): ?>
+                                        <a href="add_signature.php?student_id=<?= $student_id ?>" class="btn btn-warning btn-sm">
+                                            ✍️ Add Signature
+                                        </a>
+                                    <?php else: ?>
+                                        <span style="color:#dc3545; font-weight:bold;">Evaluation Failed</span>
+                                    <?php endif; ?>
                                 </div>
                             <?php elseif ($already_evaluated): ?>
-                                <span style="color:green; font-weight:bold;">✔ Evaluation Completed</span>
+                                <div style="display: flex; flex-direction: column; gap: 5px;">
+                                    <span style="color:green; font-weight:bold;">✔ Evaluation Completed</span>
+                                </div>
                             <?php else: ?>
                                 -
                             <?php endif; ?>
@@ -589,7 +627,6 @@ $evaluated_students = get_evaluated_students($pdo);
                         <?php if ($already_evaluated): ?>
                                     <p style="margin-top:15px;">
                                         <?php
-                                        
                                         $cert_check = $pdo->prepare("SELECT certificate_id, certificate_no, generated_at FROM certificates WHERE student_id = ? ORDER BY generated_at DESC LIMIT 1");
                                         $cert_check->execute([$student_id]);
                                         $existing_cert = $cert_check->fetch(PDO::FETCH_ASSOC);
@@ -597,15 +634,23 @@ $evaluated_students = get_evaluated_students($pdo);
                                         if ($existing_cert): ?>
                                             <span style="color: green; font-weight: bold;">✓ Certificate Generated</span>
                                             <br><small style="color: #666;">Certificate No: <?= htmlspecialchars($existing_cert['certificate_no']) ?></small>
-                                        <?php else:
+                                        <?php elseif ($evaluation_passed):
                                             $signaturePath = 'assets/signature_' . $employer_id . '_' . $student_id . '.png';
                                             if (file_exists($signaturePath)): ?>
                                                 <a href="generate_certificate.php?student_id=<?= $student_id ?>" class="btn btn-success btn-sm">📄 Generate Certificate</a>
                                             <?php else: ?>
                                                 <a href="add_signature.php?student_id=<?= $student_id ?>" class="btn btn-warning btn-sm">✍️ Add Signature</a>
                                             <?php endif; ?>
+                                        <?php else: ?>
+                                            <span style="color:#dc3545; font-weight:bold;">Evaluation Failed</span>
                                         <?php endif; ?>
                                     </p>
+                                    <?php if ($completed_hours): ?>
+                                        <form method="POST" action="delete_student.php" style="margin-top: 10px;" onsubmit="return confirm('Are you sure you want to delete this student? This action cannot be undone.');">
+                                            <input type="hidden" name="student_id" value="<?= htmlspecialchars($student_id) ?>">
+                                            <button type="submit" class="btn btn-danger btn-sm">🗑️ Delete Student</button>
+                                        </form>
+                                    <?php endif; ?>
                                 <?php endif; ?>
                             </div>
                         </td>
@@ -650,12 +695,7 @@ $evaluated_students = get_evaluated_students($pdo);
                 if (data.success) {
                     let hasUpdates = false;
                     let updateMessage = '';
-                    
-                    if (data.certificates && data.certificates.has_updates) {
-                        hasUpdates = true;
-                        updateMessage = 'New certificate generated!';
-                    }
-                    
+
                     if (data.projects && data.projects.has_updates) {
                         hasUpdates = true;
                         updateMessage = 'New project submission!';
@@ -666,14 +706,10 @@ $evaluated_students = get_evaluated_students($pdo);
                         setTimeout(() => location.reload(), 1500);
                     }
                     
-                    const certTime = data.certificates?.latest_timestamp;
                     const projTime = data.projects?.latest_timestamp;
-                    
-                    if (certTime || projTime) {
-                        const times = [certTime, projTime].filter(t => t);
-                        if (times.length > 0) {
-                            lastUpdatesCheck = times.sort().reverse()[0];
-                        }
+
+                    if (projTime) {
+                        lastUpdatesCheck = projTime;
                     }
                 }
             } catch (err) {

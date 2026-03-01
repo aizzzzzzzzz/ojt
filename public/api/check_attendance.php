@@ -15,8 +15,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 session_start();
-include_once __DIR__ . '/../private/config.php';
-include_once __DIR__ . '/../includes/db.php';
+include_once __DIR__ . '/../../private/config.php';
+include_once __DIR__ . '/../../includes/db.php';
 
 $is_authenticated = false;
 if (isset($_SESSION['employer_id']) || isset($_SESSION['admin_id']) || isset($_SESSION['student_id'])) {

@@ -20,6 +20,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             if ($student['password_changed'] == 0) {
                 $_SESSION['change_password'] = true;
+                $_SESSION['first_time_login'] = true;
                 header("Location: change_password.php");
                 exit;
             }

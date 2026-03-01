@@ -16,6 +16,16 @@ $success = "";
 $error = "";
 
 $selected_student_id = $_GET['student_id'] ?? '';
+$selected_student_name = null;
+
+if ($selected_student_id !== '') {
+    foreach ($students as $student) {
+        if ((string) $student['student_id'] === (string) $selected_student_id) {
+            $selected_student_name = $student['name'];
+            break;
+        }
+    }
+}
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
@@ -64,93 +74,246 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 }
 ?>
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>Final Evaluation</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<style>
-body { background:#e9f5ff; }
-.container { background:white; padding:25px; border-radius:12px; margin-top:30px; box-shadow:0 4px 12px rgba(0,0,0,0.1); }
-.rating-label { font-weight:bold; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Final Evaluation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            color: #2c3e50;
+            line-height: 1.5;
+        }
+
+        .evaluation-page {
+            padding: 20px;
+        }
+
+        .evaluation-card {
+            width: 100%;
+            max-width: 980px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.96);
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            padding: 28px;
+        }
+
+        .top-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .page-title {
+            margin: 0;
+            font-size: 1.9rem;
+            font-weight: 700;
+            color: #1f3b57;
+        }
+
+        .page-subtitle {
+            margin: 6px 0 0;
+            color: #5f7488;
+            font-size: 0.98rem;
+        }
+
+        .student-block {
+            background: #f8f9fa;
+            border: 1px solid #dfe6ee;
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin-bottom: 22px;
+        }
+
+        .student-name {
+            margin: 0;
+            font-size: 1rem;
+            color: #1f3b57;
+        }
+
+        .section-card {
+            background: #f8f9fa;
+            border: 1px solid #dfe6ee;
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 22px;
+        }
+
+        .section-title {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #1f3b57;
+        }
+
+        .section-help {
+            margin: 6px 0 0;
+            color: #5f7488;
+            font-size: 0.92rem;
+        }
+
+        .ratings-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px 16px;
+            margin-top: 16px;
+        }
+
+        .rating-item label,
+        .form-label {
+            display: inline-block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #274b6d;
+        }
+
+        .form-select,
+        .form-control {
+            border-color: #c7d5e4;
+            min-height: 46px;
+        }
+
+        .form-select:focus,
+        .form-control:focus {
+            border-color: #7ab4f8;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.15);
+        }
+
+        textarea.form-control {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .actions-row {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 4px;
+        }
+
+        @media (max-width: 768px) {
+            .evaluation-page {
+                padding: 14px;
+            }
+
+            .evaluation-card {
+                padding: 18px;
+                border-radius: 12px;
+            }
+
+            .top-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .ratings-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .actions-row {
+                flex-direction: column-reverse;
+                align-items: stretch;
+            }
+        }
+    </style>
 </head>
 <body>
 
-<div class="container">
-    <h2 class="mb-4">Final Evaluation Form</h2>
-    <a href="supervisor_dashboard.php
-" class="btn btn-secondary mb-3">Back</a>
+<div class="evaluation-page">
+    <div class="evaluation-card">
+        <div class="top-actions">
+            <div>
+                <h1 class="page-title">Final Evaluation Form</h1>
+                <p class="page-subtitle">Rate student performance across core OJT criteria.</p>
+            </div>
+            <a href="supervisor_dashboard.php" class="btn btn-outline-secondary">Back to Dashboard</a>
+        </div>
 
-    <?php if ($success): ?>
-        <div class="alert alert-success"><?= $success ?></div>
-    <?php endif; ?>
+        <?php if ($success): ?>
+            <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
+        <?php endif; ?>
 
-    <?php if ($error): ?>
-        <div class="alert alert-danger"><?= $error ?></div>
-    <?php endif; ?>
+        <?php if ($error): ?>
+            <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
+        <?php endif; ?>
 
-    <form method="POST">
+        <?php if ($selected_student_id !== '' && $selected_student_name === null): ?>
+            <div class="alert alert-warning">Selected student was not found. Please choose a valid student.</div>
+        <?php endif; ?>
 
-        <div class="mb-3">
-            <label class="form-label">Select Student:</label>
+        <form method="POST">
+            <div class="student-block">
+                <label class="form-label" for="student_id">Select Student</label>
 
-            <?php if (!$selected_student_id): ?>
-                <select name="student_id" class="form-control" required>
-                    <option value="">-- Choose Student --</option>
-                    <?php foreach ($students as $s): ?>
-                        <option value="<?= $s['student_id'] ?>">
-                            <?= htmlspecialchars($s['name']) ?>
-                        </option>
+                <?php if ($selected_student_name === null): ?>
+                    <select id="student_id" name="student_id" class="form-select" required>
+                        <option value="">-- Choose Student --</option>
+                        <?php foreach ($students as $s): ?>
+                            <option value="<?= $s['student_id'] ?>">
+                                <?= htmlspecialchars($s['name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                <?php else: ?>
+                    <input type="hidden" name="student_id" value="<?= htmlspecialchars((string) $selected_student_id) ?>">
+                    <p class="student-name"><strong>Student:</strong> <?= htmlspecialchars($selected_student_name) ?></p>
+                <?php endif; ?>
+            </div>
+
+            <div class="section-card">
+                <h2 class="section-title">Ratings</h2>
+                <p class="section-help">Use the scale: 1 = Poor, 5 = Excellent.</p>
+
+                <?php
+                $criteria = [
+                    "attendance_rating" => "Attendance",
+                    "work_quality_rating" => "Quality of Work",
+                    "initiative_rating" => "Initiative",
+                    "communication_rating" => "Communication",
+                    "teamwork_rating" => "Teamwork",
+                    "adaptability_rating" => "Adaptability",
+                    "professionalism_rating" => "Professionalism",
+                    "problem_solving_rating" => "Problem Solving",
+                    "technical_skills_rating" => "Technical Skills"
+                ];
+                ?>
+
+                <div class="ratings-grid">
+                    <?php foreach ($criteria as $field => $label): ?>
+                        <div class="rating-item">
+                            <label for="<?= $field ?>"><?= $label ?></label>
+                            <select id="<?= $field ?>" name="<?= $field ?>" class="form-select" required>
+                                <option value="">Select Rating</option>
+                                <option value="1">1 - Poor</option>
+                                <option value="2">2 - Fair</option>
+                                <option value="3">3 - Good</option>
+                                <option value="4">4 - Very Good</option>
+                                <option value="5">5 - Excellent</option>
+                            </select>
+                        </div>
                     <?php endforeach; ?>
-                </select>
-            <?php else: ?>
-                <input type="hidden" name="student_id" value="<?= $selected_student_id ?>">
-                <p><strong>Student:</strong>
-                    <?= htmlspecialchars(
-                        $students[array_search($selected_student_id, array_column($students,'student_id'))]['name']
-                    ) ?>
-                </p>
-            <?php endif; ?>
-        </div>
+                </div>
+            </div>
 
-        <h5 class="mt-4">Ratings (1 = Poor, 5 = Excellent)</h5>
+            <div class="section-card">
+                <label class="form-label" for="comments">Comments (optional)</label>
+                <textarea id="comments" name="comments" class="form-control" rows="4"></textarea>
+            </div>
 
-        <?php
-        $criteria = [
-            "attendance_rating" => "Attendance",
-            "work_quality_rating" => "Quality of Work",
-            "initiative_rating" => "Initiative",
-            "communication_rating" => "Communication",
-            "teamwork_rating" => "Teamwork",
-            "adaptability_rating" => "Adaptability",
-            "professionalism_rating" => "Professionalism",
-            "problem_solving_rating" => "Problem Solving",
-            "technical_skills_rating" => "Technical Skills"
-        ];
-
-        foreach ($criteria as $field => $label):
-        ?>
-        <div class="mb-3">
-            <label class="rating-label"><?= $label ?></label>
-            <select name="<?= $field ?>" class="form-control" required>
-                <option value="">Select Rating</option>
-                <option value="1">1 - Poor</option>
-                <option value="2">2 - Fair</option>
-                <option value="3">3 - Good</option>
-                <option value="4">4 - Very Good</option>
-                <option value="5">5 - Excellent</option>
-            </select>
-        </div>
-        <?php endforeach; ?>
-
-        <div class="mb-3">
-            <label class="form-label">Comments (optional)</label>
-            <textarea name="comments" class="form-control" rows="4"></textarea>
-        </div>
-
-        <button class="btn btn-primary">Submit Evaluation</button>
-
-    </form>
+            <div class="actions-row">
+                <button type="submit" class="btn btn-primary">Submit Evaluation</button>
+            </div>
+        </form>
+    </div>
 </div>
 
 </body>

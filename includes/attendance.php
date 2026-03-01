@@ -11,7 +11,7 @@ function handle_attendance_action($pdo, $student_id, $today, $action) {
         $stmt = $pdo->prepare("SELECT * FROM attendance WHERE student_id = ? AND log_date = ? LIMIT 1 FOR UPDATE");
         $stmt->execute([$student_id, $today]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        $now = date('Y-m-d H:i:s');
+        $now = $pdo->query("SELECT DATE_FORMAT(UTC_TIMESTAMP() + INTERVAL 8 HOUR, '%Y-%m-%d %H:%i:%s')")->fetchColumn();
 
         if (!$row) {
             if ($action !== 'time_in') {

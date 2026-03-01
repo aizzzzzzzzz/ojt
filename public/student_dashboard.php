@@ -290,7 +290,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attendance_action']))
             $stmt = $pdo->prepare("SELECT * FROM attendance WHERE student_id = ? AND log_date = ? LIMIT 1 FOR UPDATE");
             $stmt->execute([$student_id, $today]);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            $now = date('Y-m-d H:i:s');
+            $now = $pdo->query("SELECT DATE_FORMAT(UTC_TIMESTAMP() + INTERVAL 8 HOUR, '%Y-%m-%d %H:%i:%s')")->fetchColumn();
 
             if (!$row) {
                 if ($action !== 'time_in') {
@@ -388,6 +388,14 @@ $hours = floor($total_minutes/60);
 $minutes = $total_minutes % 60;
 $statusClass = ($hours >= 200) ? 'completed' : 'in-progress';
 $statusText = ($hours >= 200) ? 'Completed' : 'In Progress';
+
+$evaluation_stmt = $pdo->prepare("SELECT e.*, em.name AS supervisor_name FROM evaluations e LEFT JOIN employers em ON e.employer_id = em.employer_id WHERE e.student_id = ? ORDER BY e.evaluation_date DESC LIMIT 1");
+$evaluation_stmt->execute([$student_id]);
+$student_evaluation = $evaluation_stmt->fetch(PDO::FETCH_ASSOC);
+
+$certificate_check_stmt = $pdo->prepare("SELECT certificate_id FROM certificates WHERE student_id = ? ORDER BY generated_at DESC LIMIT 1");
+$certificate_check_stmt->execute([$student_id]);
+$has_generated_certificate = (bool) $certificate_check_stmt->fetch(PDO::FETCH_ASSOC);
 
 $projects_stmt = $pdo->prepare("SELECT * FROM projects ORDER BY created_at DESC");
 $projects_stmt->execute();
@@ -1370,8 +1378,13 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
         ) 
     ?></h2>
     <div class="action-buttons">
-        <a href="logout.php" class="action-btn btn-logout" style="text-decoration:none;">🚪 Logout</a>
-        <a href="download_certificate.php" class="action-btn btn-primary" style="text-decoration:none;">📄 Download Certificate</a>
+        <a href="logout.php" class="action-btn btn-logout" style="text-decoration:none;">Logout</a>
+        <?php if ($has_generated_certificate): ?>
+            <a href="download_certificate.php" class="action-btn btn-primary" style="text-decoration:none;">Download Certificate</a>
+        <?php endif; ?>
+        <?php if ($student_evaluation): ?>
+            <a href="download_evaluation.php" class="action-btn btn-primary" style="text-decoration:none;">Download Evaluation</a>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -1440,8 +1453,20 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     let lastAttendanceCheck = null;
-    let lastUpdatesCheck = null;
+    let lastProjectCheck = null;
+    let lastCertificateCheck = null;
+    let hasAttendanceBaseline = false;
+    let hasProjectBaseline = false;
+    let hasCertificateBaseline = false;
+    let hasAutoRefreshed = false;
     const POLL_INTERVAL = 15000;
+
+    function triggerSingleRefresh(message, type) {
+        if (hasAutoRefreshed) return;
+        hasAutoRefreshed = true;
+        showNotification(message + ' Refreshing...', type);
+        setTimeout(() => location.reload(), 1500);
+    }
     
     async function checkAttendanceUpdates() {
         try {
@@ -1450,32 +1475,77 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
             const data = await response.json();
             
             if (data.success && data.latest_timestamp) {
+                if (!hasAttendanceBaseline) {
+                    lastAttendanceCheck = data.latest_timestamp;
+                    hasAttendanceBaseline = true;
+                    return;
+                }
+
                 if (lastAttendanceCheck && data.latest_timestamp > lastAttendanceCheck) {
-                    showNotification('Your attendance has been verified! Refreshing...', 'success');
-                    setTimeout(() => location.reload(), 1500);
+                    triggerSingleRefresh('Your attendance has been verified!', 'success');
                 }
                 lastAttendanceCheck = data.latest_timestamp;
+            } else if (data.success && !hasAttendanceBaseline) {
+                hasAttendanceBaseline = true;
             }
         } catch (err) {
             console.error('Error checking attendance updates:', err);
         }
     }
+
     async function checkProjectUpdates() {
         try {
-            const url = 'api/check_updates.php?since=' + encodeURIComponent(lastUpdatesCheck || '') + '&type=project&student_id=<?= htmlspecialchars($student_id) ?>';
+            const url = 'api/check_updates.php?since=' + encodeURIComponent(lastProjectCheck || '') + '&type=project&student_id=<?= htmlspecialchars($student_id) ?>';
             const response = await fetch(url);
             const data = await response.json();
-            
-            if (data.success && data.projects && data.projects.has_updates) {
-                showNotification('Your project submission has been graded! Refreshing...', 'info');
-                setTimeout(() => location.reload(), 1500);
-            }
-            
-            if (data.projects?.latest_timestamp) {
-                lastUpdatesCheck = data.projects.latest_timestamp;
+
+            if (data.success && data.projects?.latest_timestamp) {
+                const latestProjectTime = data.projects.latest_timestamp;
+
+                if (!hasProjectBaseline) {
+                    lastProjectCheck = latestProjectTime;
+                    hasProjectBaseline = true;
+                    return;
+                }
+
+                if (lastProjectCheck && latestProjectTime > lastProjectCheck && data.projects.has_updates) {
+                    triggerSingleRefresh('Your project submission has been graded!', 'info');
+                }
+
+                lastProjectCheck = latestProjectTime;
+            } else if (data.success && !hasProjectBaseline) {
+                hasProjectBaseline = true;
             }
         } catch (err) {
             console.error('Error checking project updates:', err);
+        }
+    }
+
+    async function checkCertificateUpdates() {
+        try {
+            const url = 'api/check_updates.php?since=' + encodeURIComponent(lastCertificateCheck || '') + '&type=certificate&student_id=<?= htmlspecialchars($student_id) ?>';
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.success && data.certificates?.latest_timestamp) {
+                const latestCertificateTime = data.certificates.latest_timestamp;
+
+                if (!hasCertificateBaseline) {
+                    lastCertificateCheck = latestCertificateTime;
+                    hasCertificateBaseline = true;
+                    return;
+                }
+
+                if (lastCertificateCheck && latestCertificateTime > lastCertificateCheck && data.certificates.has_updates) {
+                    triggerSingleRefresh('New certificate generated!', 'success');
+                }
+
+                lastCertificateCheck = latestCertificateTime;
+            } else if (data.success && !hasCertificateBaseline) {
+                hasCertificateBaseline = true;
+            }
+        } catch (err) {
+            console.error('Error checking certificate updates:', err);
         }
     }
     
@@ -1502,9 +1572,11 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
     document.addEventListener('DOMContentLoaded', function() {
         checkAttendanceUpdates();
         checkProjectUpdates();
+        checkCertificateUpdates();
         
         setInterval(checkAttendanceUpdates, POLL_INTERVAL);
         setInterval(checkProjectUpdates, POLL_INTERVAL);
+        setInterval(checkCertificateUpdates, POLL_INTERVAL);
     });
 </script>
 <script>

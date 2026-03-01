@@ -1,4 +1,5 @@
 <?php
+session_start();
 include_once __DIR__ . '/../private/config.php';
 
 if (!isset($_SESSION['employer_id']) || $_SESSION['role'] !== "employer") {
@@ -7,6 +8,7 @@ if (!isset($_SESSION['employer_id']) || $_SESSION['role'] !== "employer") {
 }
 
 $employer_id = (int)$_SESSION['employer_id'];
+$error = '';
 
 if (!isset($_GET['student_id'])) {
     header("Location: supervisor_dashboard.php");
@@ -75,24 +77,28 @@ if ($emp) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_signature'])) {
     $signaturePath = 'assets/signature_' . $employer_id . '_' . $student_id . '.png';
     $signature_saved = false;
+    $upload_error = '';
 
     if (!empty($_POST['signature_data'])) {
         $data = $_POST['signature_data'];
         if (preg_match('/^data:image\/(\w+);base64,/', $data, $type)) {
             $data = substr($data, strpos($data, ',') + 1);
-            $decoded_data = base64_decode($data);
+            $decoded_data = base64_decode($data, true);
             if ($decoded_data !== false && !empty($decoded_data)) {
                 if (!is_dir('assets')) {
                     mkdir('assets', 0777, true);
                 }
                 file_put_contents($signaturePath, $decoded_data);
                 $signature_saved = true;
+            } else {
+                $upload_error = 'Invalid signature data.';
             }
+        } else {
+            $upload_error = 'Invalid signature format.';
         }
     }
 
     elseif (!empty($_FILES['signature_file']['tmp_name'])) {
-        $upload_error = '';
         if ($_FILES['signature_file']['error'] !== UPLOAD_ERR_OK) {
             $upload_error = 'File upload error: ' . $_FILES['signature_file']['error'];
         } else {
@@ -143,14 +149,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_signature'])) {
                 }
             }
         }
-        if (!empty($upload_error)) {
-            echo "<p style='color: red;'>Error: " . htmlspecialchars($upload_error) . "</p>";
-            echo "<br><a href='add_signature.php?student_id=" . htmlspecialchars($student_id) . "'>Back</a>";
-            exit;
-        }
+    }
+    else {
+        $upload_error = 'Please draw a signature on the canvas or upload a signature file.';
     }
 
-    if ($signature_saved) {
+    if (!empty($upload_error)) {
+        $error = $upload_error;
+    } elseif ($signature_saved) {
         
         
         require_once __DIR__ . '/../lib/fpdf.php';
@@ -347,65 +353,127 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_signature'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add Signature</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
-        .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        .signature-pad { border: 1px solid #ccc; border-radius: 5px; }
-        .btn { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        .btn:hover { background: #0056b3; }
+        body { background: #e9f5ff; }
+        .signature-wrapper {
+            border: 1px solid #cfd8e3;
+            border-radius: 10px;
+            background: #fff;
+            display: inline-block;
+            padding: 10px;
+        }
+        .signature-pad {
+            border: 1px dashed #9fb3c8;
+            border-radius: 8px;
+            background: #ffffff;
+            touch-action: none;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Add Signature for Certificate</h2>
-        <p><strong>Student:</strong> <?= htmlspecialchars($student['name']) ?></p>
-        <p><strong>Hours Completed:</strong> <?= $hours ?> hr <?= $minutes ?> min</p>
-        <p><strong>Employer:</strong> <?= htmlspecialchars($employer_name) ?></p>
-        <?php if (isset($error)): ?>
-            <p style="color: red;"><?= htmlspecialchars($error) ?></p>
-        <?php endif; ?>
+    <div class="container py-4">
+        <div class="mx-auto bg-white shadow-sm rounded-3 p-4" style="max-width: 760px;">
+            <h2 class="h4 mb-3">Add Signature for Certificate</h2>
+            <p class="mb-1"><strong>Student:</strong> <?= htmlspecialchars($student['name']) ?></p>
+            <p class="mb-1"><strong>Hours Completed:</strong> <?= $hours ?> hr <?= $minutes ?> min</p>
+            <p class="mb-3"><strong>Employer:</strong> <?= htmlspecialchars($employer_name) ?></p>
+            <?php if (!empty($error)): ?>
+                <div class="alert alert-danger py-2 mb-3"><?= htmlspecialchars($error) ?></div>
+            <?php endif; ?>
+
         <form method="post" enctype="multipart/form-data">
-            <h4>Draw Signature</h4>
-            <canvas id="signature-pad" class="signature-pad" width="400" height="200"></canvas><br>
-            <button type="button" onclick="clearSignature()">Clear</button><br><br>
+            <h4 class="h6">Draw Signature</h4>
+            <div class="signature-wrapper mb-2">
+                <canvas id="signature-pad" class="signature-pad" width="600" height="220"></canvas>
+            </div>
+            <div class="mb-3">
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearSignature()">Clear Canvas</button>
+            </div>
+
+            <div class="mb-3">
+                <label for="signature_file" class="form-label mb-1">Or Upload Signature (PNG/JPG)</label>
+                <input type="file" class="form-control" name="signature_file" id="signature_file" accept="image/png,image/jpeg">
+                <div class="form-text">Use this if you already have a digital signature image.</div>
+            </div>
+
             <input type="hidden" name="signature_data" id="signature-data">
-            <button type="submit" name="add_signature" class="btn">Add Signature</button>
+            <div class="d-flex gap-2">
+                <button type="submit" name="add_signature" class="btn btn-primary">Add Signature</button>
+                <a href="supervisor_dashboard.php" class="btn btn-outline-secondary">Back</a>
+            </div>
         </form>
-        <br><a href="supervisor_dashboard.php">Back</a>
+        </div>
     </div>
     <script>
         const canvas = document.getElementById('signature-pad');
         const ctx = canvas.getContext('2d');
-        const blankDataURL = canvas.toDataURL();
         let drawing = false;
+
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#1f2937';
+
+        function getPosition(event) {
+            const rect = canvas.getBoundingClientRect();
+            const isTouch = event.touches && event.touches.length > 0;
+            const clientX = isTouch ? event.touches[0].clientX : event.clientX;
+            const clientY = isTouch ? event.touches[0].clientY : event.clientY;
+            return { x: clientX - rect.left, y: clientY - rect.top };
+        }
+
         canvas.addEventListener('mousedown', startDrawing);
         canvas.addEventListener('mousemove', draw);
         canvas.addEventListener('mouseup', stopDrawing);
         canvas.addEventListener('mouseout', stopDrawing);
+        canvas.addEventListener('touchstart', startDrawing, { passive: false });
+        canvas.addEventListener('touchmove', draw, { passive: false });
+        canvas.addEventListener('touchend', stopDrawing);
+
         function startDrawing(e) {
+            e.preventDefault();
+            const pos = getPosition(e);
             drawing = true;
             ctx.beginPath();
-            ctx.moveTo(e.offsetX, e.offsetY);
+            ctx.moveTo(pos.x, pos.y);
         }
+
         function draw(e) {
             if (!drawing) return;
-            ctx.lineTo(e.offsetX, e.offsetY);
+            e.preventDefault();
+            const pos = getPosition(e);
+            ctx.lineTo(pos.x, pos.y);
             ctx.stroke();
         }
+
         function stopDrawing() {
             drawing = false;
         }
+
         function clearSignature() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
+
+        function hasSignatureStroke() {
+            const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            for (let i = 3; i < pixels.length; i += 4) {
+                if (pixels[i] !== 0) return true;
+            }
+            return false;
+        }
+
         document.querySelector('form').addEventListener('submit', function(e) {
-            const dataURL = canvas.toDataURL();
-            if (dataURL === blankDataURL) {
+            const hasUpload = document.getElementById('signature_file').files.length > 0;
+            if (!hasUpload && !hasSignatureStroke()) {
                 e.preventDefault();
-                alert('Please draw a signature on the canvas before submitting.');
+                alert('Please draw a signature or upload a signature file before submitting.');
                 return false;
             }
-            document.getElementById('signature-data').value = dataURL;
+            if (hasSignatureStroke()) {
+                document.getElementById('signature-data').value = canvas.toDataURL('image/png');
+            } else {
+                document.getElementById('signature-data').value = '';
+            }
         });
     </script>
 </body>

@@ -9,6 +9,16 @@ if (!isset($_SESSION['role']) || ($_SESSION['role'] !== 'admin' && $_SESSION['ro
 
 $success = "";
 $error = "";
+$form_data = [
+    'username' => '',
+    'first_name' => '',
+    'middle_name' => '',
+    'last_name' => '',
+    'email' => '',
+    'required_hours' => '',
+    'course' => '',
+    'school' => '',
+];
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $username       = trim($_POST['username']);
@@ -20,6 +30,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $required_hours = trim($_POST['required_hours']);
     $course         = trim($_POST['course']);
     $school         = trim($_POST['school']);
+
+    $form_data = [
+        'username' => $username,
+        'first_name' => $first_name,
+        'middle_name' => $middle_name,
+        'last_name' => $last_name,
+        'email' => $email,
+        'required_hours' => $required_hours,
+        'course' => $course,
+        'school' => $school,
+    ];
 
     if (!empty($username) && !empty($first_name) && !empty($last_name) && !empty($password) && !empty($required_hours) && !empty($course) && !empty($school)) {
         $stmt = $pdo->prepare("SELECT * FROM students WHERE username = ?");
@@ -98,19 +119,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         .add-student-container {
             background: rgba(255, 255, 255, 0.95);
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            padding: 32px;
+            border-radius: 14px;
+            box-shadow: 0 10px 30px rgba(10, 36, 99, 0.14);
             width: 100%;
-            max-width: 400px;
-            text-align: center;
+            max-width: 820px;
+            border: 1px solid #e5e7eb;
         }
 
         .add-student-container h2 {
-            margin-bottom: 30px;
-            font-size: 28px;
-            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 30px;
+            font-weight: 700;
             color: #2c3e50;
+            text-align: left;
+        }
+
+        .subtitle {
+            margin: 0 0 22px;
+            color: #64748b;
+            font-size: 14px;
         }
 
         .success-msg {
@@ -137,8 +165,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             line-height: 1.4;
         }
 
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .form-group-full {
+            grid-column: span 2;
+        }
+
         .form-group {
-            margin-bottom: 20px;
             text-align: left;
         }
 
@@ -146,8 +183,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             display: block;
             margin-bottom: 8px;
             font-size: 14px;
-            font-weight: 500;
-            color: #555;
+            font-weight: 600;
+            color: #334155;
         }
 
         .form-group label .icon {
@@ -159,13 +196,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         .add-student-container input[type="password"],
         .add-student-container input[type="number"] {
             width: 100%;
-            padding: 14px;
-            border: 1px solid #d1d5db;
+            padding: 12px 14px;
+            border: 1px solid #cbd5e1;
             border-radius: 8px;
-            font-size: 16px;
+            font-size: 15px;
             box-sizing: border-box;
             transition: border-color 0.3s ease, box-shadow 0.3s ease;
             outline: none;
+            background: #fff;
         }
 
         .add-student-container input:focus {
@@ -173,33 +211,73 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
         }
 
-        .add-btn {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(90deg, #007bff, #00c6ff);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: opacity 0.3s ease, transform 0.2s ease;
-            margin-top: 10px;
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 20px;
         }
 
-        .add-btn:hover {
+        .action-btn {
+            min-width: 150px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
+            text-decoration: none;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .action-btn-primary {
+            background: linear-gradient(90deg, #007bff, #00c6ff);
+            color: white;
+        }
+
+        .action-btn-secondary {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+
+        .action-btn:hover {
             opacity: 0.9;
             transform: translateY(-1px);
         }
 
-        .add-btn:active {
+        .action-btn:active {
             transform: translateY(0);
+        }
+
+        @media (max-width: 768px) {
+            .add-student-container {
+                padding: 20px;
+                max-width: 96%;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-group-full {
+                grid-column: span 1;
+            }
+
+            .form-actions {
+                flex-direction: column;
+            }
+
+            .action-btn {
+                width: 100%;
+            }
         }
     </style>
 </head>
 <body>
     <div class="add-student-container">
         <h2>Add Student</h2>
+        <p class="subtitle">Create a student account and set their internship profile details.</p>
         <?php if (!empty($success)): ?>
             <div class="success-msg"><?= htmlspecialchars($success) ?></div>
         <?php endif; ?>
@@ -207,45 +285,47 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             <div class="error-msg"><?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
         <form method="post">
-            <div class="form-group">
-                <label for="username"><span class="icon">👤</span> Username</label>
-                <input type="text" id="username" name="username" placeholder="Enter username" required>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="username"><span class="icon">👤</span> Username</label>
+                    <input type="text" id="username" name="username" placeholder="Enter username" value="<?= htmlspecialchars($form_data['username']) ?>" required>
+                </div>
+                <div class="form-group">
+                    <label for="email"><span class="icon">📧</span> Email</label>
+                    <input type="email" id="email" name="email" placeholder="Enter email address" value="<?= htmlspecialchars($form_data['email']) ?>" required>
+                </div>
+                <div class="form-group">
+                    <label for="first_name"><span class="icon">📝</span> First Name</label>
+                    <input type="text" id="first_name" name="first_name" placeholder="Enter first name" value="<?= htmlspecialchars($form_data['first_name']) ?>" required>
+                </div>
+                <div class="form-group">
+                    <label for="middle_name"><span class="icon">📝</span> Middle Name</label>
+                    <input type="text" id="middle_name" name="middle_name" placeholder="Enter middle name (optional)" value="<?= htmlspecialchars($form_data['middle_name']) ?>">
+                </div>
+                <div class="form-group">
+                    <label for="last_name"><span class="icon">📝</span> Last Name</label>
+                    <input type="text" id="last_name" name="last_name" placeholder="Enter last name" value="<?= htmlspecialchars($form_data['last_name']) ?>" required>
+                </div>
+                <div class="form-group">
+                    <label for="required_hours"><span class="icon">⏰</span> Required Hours</label>
+                    <input type="number" id="required_hours" name="required_hours" min="1" step="1" placeholder="e.g. 200" value="<?= htmlspecialchars($form_data['required_hours']) ?>" required>
+                </div>
+                <div class="form-group form-group-full">
+                    <label for="course"><span class="icon">🎓</span> Course</label>
+                    <input type="text" id="course" name="course" placeholder="Enter course (e.g. BSIT, BSEd)" value="<?= htmlspecialchars($form_data['course']) ?>" required>
+                </div>
+                <div class="form-group form-group-full">
+                    <label for="school"><span class="icon">🏫</span> School</label>
+                    <input type="text" id="school" name="school" placeholder="Enter school name" value="<?= htmlspecialchars($form_data['school']) ?>" required>
+                </div>
+                <div class="form-group form-group-full">
+                    <label for="password"><span class="icon">🔒</span> Password</label>
+                    <input type="password" id="password" name="password" placeholder="Enter password" required>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="first_name"><span class="icon">📝</span> First Name</label>
-                <input type="text" id="first_name" name="first_name" placeholder="Enter First name" required>
-            </div>
-            <div class="form-group">
-                <label for="middle_name"><span class="icon">📝</span> Middle Name</label>
-                <input type="text" id="middle_name" name="middle_name" placeholder="Enter Middle name (optional)">
-            </div>
-            <div class="form-group">
-                <label for="last_name"><span class="icon">📝</span> Last Name</label>
-                <input type="text" id="last_name" name="last_name" placeholder="Enter Last name" required>
-            </div>
-            <div class="form-group">
-                <label for="email"><span class="icon">📧</span> Email</label>
-                <input type="email" id="email" name="email" placeholder="Enter email address" required>
-            </div>
-            <div class="form-group">
-                <label for="course"><span class="icon">🎓</span> Course</label>
-                <input type="text" id="course" name="course" placeholder="Enter Course (e.g. BSIT, BSEd)" required>
-            </div>
-            <div class="form-group">
-                <label for="school"><span class="icon">🏫</span> School</label>
-                <input type="text" id="school" name="school" placeholder="Enter school name" required>
-            </div>
-            <div class="form-group">
-                <label for="required_hours"><span class="icon">⏰</span> Required Hours</label>
-                <input type="text" id="required_hours" name="required_hours" placeholder="e.g. 200" required>
-            </div>
-            <div class="form-group">
-                <label for="password"><span class="icon">🔒</span> Password</label>
-                <input type="password" id="password" name="password" placeholder="Enter password" required>
-            </div>
-            <div style="display: flex; gap: 10px; justify-content: center;">
-                <button type="submit" class="add-btn" style="flex: 1; padding: 12px; font-size: 14px;">Add Student</button>
-                <a href="supervisor_dashboard.php" class="add-btn" style="flex: 1; padding: 12px; font-size: 14px; text-decoration: none; display: inline-block; text-align: center;">Back</a>
+            <div class="form-actions">
+                <a href="supervisor_dashboard.php" class="action-btn action-btn-secondary">Back</a>
+                <button type="submit" class="action-btn action-btn-primary">Add Student</button>
             </div>
         </form>
     </div>
