@@ -1,40 +1,50 @@
 <?php
 function require_role($required_role) {
-    session_start();
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
 
-    if (!isset($_SESSION['user_id'])) {
-        header("Location: ../public/index.php");
+    $role = $_SESSION['role'] ?? null;
+    $isAuthenticated =
+        ($role === 'student' && !empty($_SESSION['student_id'])) ||
+        ($role === 'employer' && !empty($_SESSION['employer_id'])) ||
+        ($role === 'admin' && !empty($_SESSION['admin_id']));
+
+    if (!$isAuthenticated) {
+        header("Location: ../index.php");
         exit;
     }
 
-    if (!isset($_SESSION['role']) || $_SESSION['role'] !== $required_role) {
-        if (isset($_SESSION['role'])) {
-            if ($_SESSION['role'] === 'student') {
-                header("Location: ../public/student_dashboard.php");
-            } elseif ($_SESSION['role'] === 'employer') {
-                header("Location: ../public/supervisor_dashboard.php
-");
-            } elseif ($_SESSION['role'] === 'admin') {
-                header("Location: ../public/admin_dashboard.php");
-            } else {
-                header("Location: ../public/index.php");
-            }
+    if ($role !== $required_role) {
+        if ($role === 'student') {
+            header("Location: student_dashboard.php");
+        } elseif ($role === 'employer') {
+            header("Location: supervisor_dashboard.php");
+        } elseif ($role === 'admin') {
+            header("Location: admin_dashboard.php");
         } else {
-            header("Location: ../public/index.php");
+            header("Location: ../index.php");
         }
         exit;
     }
 }
 
 function get_current_session_user() {
-    if (!isset($_SESSION['user_id']) || !isset($_SESSION['role'])) {
+    $role = $_SESSION['role'] ?? null;
+
+    if ($role === 'student' && !empty($_SESSION['student_id'])) {
+        $id = (int) $_SESSION['student_id'];
+    } elseif ($role === 'employer' && !empty($_SESSION['employer_id'])) {
+        $id = (int) $_SESSION['employer_id'];
+    } elseif ($role === 'admin' && !empty($_SESSION['admin_id'])) {
+        $id = (int) $_SESSION['admin_id'];
+    } else {
         return null;
     }
 
     return [
-        'id' => $_SESSION['user_id'],
-        'role' => $_SESSION['role']
+        'id' => $id,
+        'role' => $role,
     ];
 }
 ?>
-

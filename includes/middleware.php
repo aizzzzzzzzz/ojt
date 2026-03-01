@@ -5,14 +5,14 @@ require_once __DIR__ . '/../private/config.php';
 
 function require_admin() {
     if (empty($_SESSION['admin_id'])) {
-        header("Location: ../admin_login.php");
+        header("Location: admin_login.php");
         exit;
     }
 }
 
 function require_employer() {
     if (empty($_SESSION['employer_id'])) {
-        header("Location: ../employer_login.php");
+        header("Location: supervisor_login.php");
         exit;
     }
 }

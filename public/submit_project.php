@@ -90,8 +90,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['project_file'])) {
         $current_timestamp = strtotime($current_time);
         $due_timestamp = strtotime($due_date_str);
         
-        echo "<p>DEBUG: Current timestamp: $current_timestamp (" . date('Y-m-d H:i:s', $current_timestamp) . ")</p>";
-        echo "<p>DEBUG: Due timestamp: $due_timestamp (" . date('Y-m-d H:i:s', $due_timestamp) . ")</p>";
         
         if ($current_timestamp === false || $due_timestamp === false) {
             $submission_status = 'On Time';
