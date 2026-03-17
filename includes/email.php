@@ -1,8 +1,24 @@
 <?php
 
-require_once __DIR__ . '/../lib/phpmailer/PHPMailer-master/src/PHPMailer.php';
-require_once __DIR__ . '/../lib/phpmailer/PHPMailer-master/src/SMTP.php';
-require_once __DIR__ . '/../lib/phpmailer/PHPMailer-master/src/Exception.php';
+$phpmailerBase = __DIR__ . '/../lib/phpmailer/PHPMailer-master/src';
+$phpmailerFiles = [
+    $phpmailerBase . '/PHPMailer.php',
+    $phpmailerBase . '/SMTP.php',
+    $phpmailerBase . '/Exception.php'
+];
+$phpmailerAvailable = true;
+foreach ($phpmailerFiles as $file) {
+    if (!is_file($file)) {
+        $phpmailerAvailable = false;
+        error_log("PHPMailer file missing: " . $file);
+    }
+}
+
+if ($phpmailerAvailable) {
+    require_once $phpmailerFiles[0];
+    require_once $phpmailerFiles[1];
+    require_once $phpmailerFiles[2];
+}
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
@@ -13,6 +29,10 @@ function send_email($to, $subject, $body, $altBody = '', $attachments = []) {
 
     if (!isset($email_config) || empty($email_config['smtp_host'])) {
         return "Email configuration not found. Please configure email settings in config.php";
+    }
+
+    if (!class_exists('PHPMailer\\PHPMailer\\PHPMailer')) {
+        return "Email library not available on this server.";
     }
 
     $mail = new PHPMailer(true);
@@ -92,8 +112,36 @@ function send_test_email($test_email) {
     return send_email($test_email, $subject, $body, $altBody);
 }
 
-function send_evaluation_notification($student_email, $student_name, $supervisor_name) {
-    $subject = "OJT Evaluation Completed - " . $student_name;
+function send_evaluation_notification($student_email, $student_name, $supervisor_name, $evaluation_passed = null, $average_rating = null) {
+    $subject = "OJT Evaluation Result - " . $student_name;
+    $header_title = "Evaluation Completed";
+    $header_color = "#007bff";
+    $result_message = "<p>Your OJT evaluation has been completed by your supervisor, <strong>$supervisor_name</strong>.</p><p>Please log in to your account to view your evaluation details.</p>";
+    $result_alt = "Your OJT evaluation has been completed by your supervisor, $supervisor_name.\n\nPlease log in to your account to view your evaluation details.";
+
+    if ($evaluation_passed === true) {
+        $header_title = "Evaluation Result: Passed";
+        $header_color = "#28a745";
+        $average_line = $average_rating !== null
+            ? "<p>Your average rating is <strong>" . number_format((float) $average_rating, 2) . "</strong>.</p>"
+            : "";
+        $average_alt = $average_rating !== null
+            ? "\nAverage Rating: " . number_format((float) $average_rating, 2)
+            : "";
+        $result_message = "<p>Your OJT evaluation has been completed by your supervisor, <strong>$supervisor_name</strong>.</p><p><strong>Result:</strong> Passed</p>$average_line<p>If all requirements are complete, your certificate can now be processed in the OJT system.</p>";
+        $result_alt = "Your OJT evaluation has been completed by your supervisor, $supervisor_name.\n\nResult: Passed$average_alt\n\nIf all requirements are complete, your certificate can now be processed in the OJT system.";
+    } elseif ($evaluation_passed === false) {
+        $header_title = "Evaluation Result: Not Passed";
+        $header_color = "#dc3545";
+        $average_line = $average_rating !== null
+            ? "<p>Your average rating is <strong>" . number_format((float) $average_rating, 2) . "</strong>.</p>"
+            : "";
+        $average_alt = $average_rating !== null
+            ? "\nAverage Rating: " . number_format((float) $average_rating, 2)
+            : "";
+        $result_message = "<p>Your OJT evaluation has been completed by your supervisor, <strong>$supervisor_name</strong>.</p><p><strong>Result:</strong> Not Passed</p>$average_line<p>Please review your supervisor's feedback and coordinate your next steps.</p>";
+        $result_alt = "Your OJT evaluation has been completed by your supervisor, $supervisor_name.\n\nResult: Not Passed$average_alt\n\nPlease review your supervisor's feedback and coordinate your next steps.";
+    }
 
     $body = "
         <html>
@@ -101,7 +149,7 @@ function send_evaluation_notification($student_email, $student_name, $supervisor
             <style>
                 body { font-family: Arial, sans-serif; }
                 .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background: #28a745; color: white; padding: 20px; text-align: center; }
+                .header { background: $header_color; color: white; padding: 20px; text-align: center; }
                 .content { padding: 20px; background: #f8f9fa; }
                 .footer { text-align: center; padding: 10px; color: #666; }
                 .button { display: inline-block; padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0; }
@@ -110,13 +158,11 @@ function send_evaluation_notification($student_email, $student_name, $supervisor
         <body>
             <div class='container'>
                 <div class='header'>
-                    <h2>Evaluation Completed</h2>
+                    <h2>$header_title</h2>
                 </div>
                 <div class='content'>
                     <p>Dear <strong>$student_name</strong>,</p>
-                    <p>Your OJT evaluation has been completed by your supervisor, <strong>$supervisor_name</strong>.</p>
-                    <p>You can now download your completion certificate from the OJT system.</p>
-                    <p>Please log in to your account to access your certificate.</p>
+                    $result_message
                 </div>
                 <div class='footer'>
                     <p>This is an automated message from the OJT System.</p>
@@ -126,7 +172,49 @@ function send_evaluation_notification($student_email, $student_name, $supervisor
         </html>
     ";
 
-    $altBody = "Dear $student_name,\n\nYour OJT evaluation has been completed by your supervisor, $supervisor_name.\n\nYou can now download your completion certificate from the OJT system.\n\nPlease log in to your account to access your certificate.\n\nThis is an automated message from the OJT System.";
+    $altBody = "Dear $student_name,\n\n$result_alt\n\nThis is an automated message from the OJT System.";
+
+    return send_email($student_email, $subject, $body, $altBody);
+}
+
+function send_certificate_notification($student_email, $student_name, $supervisor_name, $certificate_no = null) {
+    $subject = "OJT Certificate Generated - " . $student_name;
+    $header_title = "Certificate Generated";
+    $header_color = "#28a745";
+    $cert_line = $certificate_no ? "<p><strong>Certificate No:</strong> " . htmlspecialchars($certificate_no) . "</p>" : "";
+    $cert_alt = $certificate_no ? "\nCertificate No: " . $certificate_no : "";
+
+    $body = "
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: $header_color; color: white; padding: 20px; text-align: center; }
+                .content { padding: 20px; background: #f8f9fa; }
+                .footer { text-align: center; padding: 10px; color: #666; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <h2>$header_title</h2>
+                </div>
+                <div class='content'>
+                    <p>Dear <strong>$student_name</strong>,</p>
+                    <p>Your OJT certificate has been generated by your supervisor, <strong>$supervisor_name</strong>.</p>
+                    $cert_line
+                    <p>You can now log in to your account to download your certificate.</p>
+                </div>
+                <div class='footer'>
+                    <p>This is an automated message from the OJT System.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+    ";
+
+    $altBody = "Dear $student_name,\n\nYour OJT certificate has been generated by your supervisor, $supervisor_name.$cert_alt\n\nYou can now log in to your account to download your certificate.\n\nThis is an automated message from the OJT System.";
 
     return send_email($student_email, $subject, $body, $altBody);
 }

@@ -1,17 +1,57 @@
 <?php
-header("Location: login.php");
-exit;
 session_start();
-require __DIR__ . '/../private/config.php';
+require_once __DIR__ . '/../private/config.php';
+require_once __DIR__ . '/../includes/middleware.php';
 
-$error = "";
+$error = '';
 
-if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $username = trim($_POST['username']);
-    $password = $_POST['password'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $username = sanitize_input($_POST['username'] ?? '');
+    $password = $_POST['password'] ?? '';
 
-    if (!empty($username) && !empty($password)) {
-        $stmt = $pdo->prepare("SELECT * FROM students WHERE username = ?");
+    if ($username === '' || $password === '') {
+        $error = "Please fill in all fields.";
+    } else {
+        $stmt = $pdo->prepare("SELECT * FROM admins WHERE username = ? LIMIT 1");
+        $stmt->execute([$username]);
+        $admin = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($admin && password_verify($password, $admin['password'])) {
+            $_SESSION['admin_id'] = $admin['admin_id'];
+            $_SESSION['admin_username'] = $admin['username'];
+            $_SESSION['admin_full_name'] = $admin['full_name'] ?? $admin['username'];
+            $_SESSION['role'] = 'admin';
+            $_SESSION['is_admin'] = true;
+
+            write_audit_log('Admin Login', "Admin {$admin['username']} logged in.");
+
+            header("Location: admin_dashboard.php");
+            exit;
+        }
+
+        $stmt = $pdo->prepare("SELECT * FROM employers WHERE username = ? LIMIT 1");
+        $stmt->execute([$username]);
+        $employer = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($employer && password_verify($password, $employer['password'])) {
+            $_SESSION['employer_id'] = $employer['employer_id'];
+            $_SESSION['employer_name'] = $employer['name'];
+            $_SESSION['role'] = 'employer';
+            $_SESSION['is_admin'] = false;
+
+            $employerPasswordChanged = (int)($employer['password_changed'] ?? 0);
+            if ($employerPasswordChanged === 0) {
+                $_SESSION['change_password'] = true;
+                $_SESSION['first_time_login'] = true;
+                header("Location: change_password.php");
+                exit;
+            }
+
+            header("Location: supervisor_dashboard.php");
+            exit;
+        }
+
+        $stmt = $pdo->prepare("SELECT * FROM students WHERE username = ? LIMIT 1");
         $stmt->execute([$username]);
         $student = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -20,7 +60,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $_SESSION['role'] = "student";
             $_SESSION['success'] = "Login successful!";
 
-            if ($student['password_changed'] == 0) {
+            $studentPasswordChanged = (int)($student['password_changed'] ?? 0);
+            if ($studentPasswordChanged === 0) {
                 $_SESSION['change_password'] = true;
                 $_SESSION['first_time_login'] = true;
                 header("Location: change_password.php");
@@ -29,26 +70,28 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             header("Location: student_dashboard.php");
             exit;
-        } else {
-            $error = "Invalid username or password!";
         }
-    } else {
-        $error = "Please fill in all fields.";
+
+        $error = "Invalid username or password!";
     }
 }
+
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM admins");
+$stmt->execute();
+$admin_count = $stmt->fetchColumn();
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Login</title>
+    <title>Login</title>
     <style>
         body {
             margin: 0;
             padding: 0;
             font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #e8f5e8, #d1ecf1);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -59,22 +102,27 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         .login-container {
             background: rgba(255, 255, 255, 0.95);
             padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            border-radius: 14px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             width: 100%;
-            max-width: 350px;
+            max-width: 380px;
             text-align: center;
         }
 
         .login-container h2 {
-            margin-bottom: 30px;
+            margin-bottom: 10px;
             font-size: 28px;
             font-weight: 600;
             color: #2c3e50;
         }
 
+        .login-container p {
+            margin: 0 0 25px 0;
+            color: #666;
+        }
+
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 18px;
             text-align: left;
         }
 
@@ -89,7 +137,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         .login-container input[type="text"],
         .login-container input[type="password"] {
             width: 100%;
-            padding: 14px;
+            padding: 12px;
             border: 1px solid #d1d5db;
             border-radius: 8px;
             font-size: 16px;
@@ -100,14 +148,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         .login-container input[type="text"]:focus,
         .login-container input[type="password"]:focus {
-            border-color: #28a745;
-            box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+            border-color: #6b5bff;
+            box-shadow: 0 0 0 3px rgba(107, 91, 255, 0.15);
         }
 
         .login-btn {
             width: 100%;
-            padding: 14px;
-            background: linear-gradient(90deg, #28a745, #85e085);
+            padding: 12px;
+            background: linear-gradient(90deg, #6b5bff, #5aa9ff);
             color: white;
             border: none;
             border-radius: 8px;
@@ -115,16 +163,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             font-weight: 600;
             cursor: pointer;
             transition: opacity 0.3s ease, transform 0.2s ease;
-            margin-top: 10px;
+            margin-top: 8px;
         }
 
         .login-btn:hover {
             opacity: 0.9;
             transform: translateY(-1px);
-        }
-
-        .login-btn:active {
-            transform: translateY(0);
         }
 
         .error-msg {
@@ -136,6 +180,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             border: 1px solid #fecaca;
             font-size: 14px;
             text-align: left;
+        }
+
+        .setup-link {
+            display: inline-block;
+            margin-top: 14px;
+            font-size: 14px;
         }
 
         @media (max-width: 480px) {
@@ -153,7 +203,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 </head>
 <body>
     <div class="login-container">
-        <h2>Student Login</h2>
+        <h2>Login</h2>
+        <p>Use your account credentials to continue.</p>
         <?php if (!empty($error)): ?>
             <div class="error-msg"><?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
@@ -168,8 +219,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             </div>
             <button type="submit" class="login-btn">Login</button>
         </form>
+        <?php if ((int)$admin_count === 0): ?>
+            <a class="setup-link" href="add_first_admin.php">First-time Setup</a>
+        <?php endif; ?>
     </div>
 </body>
-</html>
-
 </html>

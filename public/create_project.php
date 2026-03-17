@@ -42,27 +42,26 @@ body { font-family: "Segoe UI", sans-serif; background: #e3f2fd; padding:20px; }
 <body>
 <div class="dashboard-container">
     <h2>Create New Project</h2>
-    <a href="supervisor_dashboard.php
-" class="btn btn-outline-secondary mb-3">⬅ Back</a>
+    <a href="manage_projects.php" class="btn btn-outline-secondary mb-3">⬅ Back</a>
     <?php if ($success_message): ?>
         <div class="success-msg"><?= htmlspecialchars($success_message) ?></div>
     <?php endif; ?>
 
     <form method="POST">
-        <label>Project Name:</label><br>
-        <input type="text" name="project_name" class="form-control" required><br>
+        <label for="project_name">Project Name:</label><br>
+        <input id="project_name" type="text" name="project_name" class="form-control" required><br>
 
-        <label>Description:</label><br>
-        <textarea name="description" class="form-control" rows="4"></textarea><br>
+        <label for="project_description">Description:</label><br>
+        <textarea id="project_description" name="description" class="form-control" rows="4"></textarea><br>
 
-        <label>Start Date:</label><br>
-        <input type="date" name="start_date" class="form-control" required><br>
+        <label for="project_start_date">Start Date:</label><br>
+        <input id="project_start_date" type="date" name="start_date" class="form-control" required><br>
 
-        <label>Due Date:</label><br>
-        <input type="date" name="due_date" class="form-control" required><br>
+        <label for="project_due_date">Due Date:</label><br>
+        <input id="project_due_date" type="date" name="due_date" class="form-control" required><br>
 
-        <label>Status:</label><br>
-        <select name="status" class="form-control">
+        <label for="project_status">Status:</label><br>
+        <select id="project_status" name="status" class="form-control">
             <option value="Pending">Pending</option>
             <option value="Ongoing">Ongoing</option>
             <option value="Completed">Completed</option>

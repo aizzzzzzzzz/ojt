@@ -4,6 +4,7 @@ session_start();
 include_once __DIR__ . '/../private/config.php';
 require_once __DIR__ . '/../lib/fpdf.php';
 require_once __DIR__ . '/../includes/email.php';
+require_once __DIR__ . '/../includes/Blockchain.php';
 
 if (!isset($_SESSION['employer_id']) || $_SESSION['role'] !== "employer") {
     header("Location: employer_login.php");
@@ -69,7 +70,7 @@ $minutes = $total_minutes % 60;
 
 $employer_name = "(assigned organization)";
 $supervisor_name = "(supervisor name)";
-$emp_stmt = $pdo->prepare("SELECT name, company FROM employers WHERE employer_id = ?");
+$emp_stmt = $pdo->prepare("SELECT name, company, company_id FROM employers WHERE employer_id = ?");
 $emp_stmt->execute([$employer_id]);
 $emp = $emp_stmt->fetch(PDO::FETCH_ASSOC);
 if ($emp) {
@@ -77,15 +78,42 @@ if ($emp) {
     $supervisor_name = $emp['name'];
 }
 
-$signaturePath = 'assets/signature_' . $employer_id . '_' . $student_id . '.png';
-$signatureExists = file_exists($signaturePath);
+$company_logo_path = '';
+$company_logo_candidates = [];
+if (!empty($emp) && !empty($emp['company_id'])) {
+    $company_logo_candidates[] = 'assets/company_logo_company_' . $emp['company_id'];
+}
+$company_logo_candidates[] = 'assets/company_logo_employer_' . $employer_id;
+$company_logo_candidates[] = 'assets/company_logo';
+$company_logo_exts = ['png', 'jpg', 'jpeg'];
+foreach ($company_logo_candidates as $candidate) {
+    foreach ($company_logo_exts as $ext) {
+        $candidate_path = $candidate . '.' . $ext;
+        if (file_exists($candidate_path)) {
+            $company_logo_path = $candidate_path;
+            break 2;
+        }
+    }
+}
+
+$signaturePath = '';
+if (!empty($evaluation['signature_path'])) {
+    $signaturePath = $evaluation['signature_path'];
+} else {
+    $signaturePath = 'assets/signature_' . $employer_id . '_' . $student_id . '.png';
+}
+$signatureExists = !empty($signaturePath) && file_exists($signaturePath);
+
+$certificateHashColumns = [];
+try {
+    $columnStmt = $pdo->query("SHOW COLUMNS FROM certificate_hashes");
+    $certificateHashColumns = array_column($columnStmt->fetchAll(PDO::FETCH_ASSOC), 'Field');
+} catch (Throwable $e) {
+    error_log("Could not load certificate_hashes columns: " . $e->getMessage());
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['generate'])) {
-        if (!$signatureExists) {
-            header("Location: add_signature.php?student_id=$student_id");
-            exit;
-        }
 
         class CertificatePDF extends FPDF {
             public $certificate_no;
@@ -139,9 +167,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdf->Image($logoPath, 15, 12, 22);
         }
 
-        $companyLogoPath = 'assets/company_logo.png';
-        if (file_exists($companyLogoPath)) {
-            $pdf->Image($companyLogoPath, $pdf->GetPageWidth() - 37, 12, 22);
+        if (!empty($company_logo_path) && file_exists($company_logo_path)) {
+            $companyLogoSize = 30;
+            $companyLogoX = $pdf->GetPageWidth() - 15 - $companyLogoSize;
+            $pdf->Image($company_logo_path, $companyLogoX, 12, $companyLogoSize);
         }
 
         $pdf->SetY(15);
@@ -203,9 +232,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $certificatePath, $total_hours
         ]);
 
+        // Insert certificate hash for verification (or update if already exists)
+        $hashStmt = $pdo->prepare("INSERT INTO certificate_hashes (student_id, certificate_hash, generated_at) VALUES (?, ?, NOW()) ON DUPLICATE KEY UPDATE certificate_hash = VALUES(certificate_hash), generated_at = NOW()");
+        $hashStmt->execute([$student_id, $certificate_no]);
+
+        // Add certificate to blockchain
+        $blockchain = new Blockchain();
+        $blockchainResult = $blockchain->addCertificate(
+            $student_id,
+            $certificate_no,
+            $student['name'],
+            $employer_name,
+            $total_hours
+        );
+
+        $dataHash = Blockchain::buildCertificateHash(
+            $student_id,
+            $certificate_no,
+            $student['name'],
+            $employer_name,
+            $total_hours
+        );
+
+        $optionalUpdates = [];
+        $optionalParams = [];
+
+        if (in_array('data_hash', $certificateHashColumns, true)) {
+            $optionalUpdates[] = "data_hash = ?";
+            $optionalParams[] = $dataHash;
+        }
+
+        if (in_array('chain_status', $certificateHashColumns, true)) {
+            $optionalUpdates[] = "chain_status = ?";
+            $optionalParams[] = $blockchainResult['chain_status'] ?? 'pending';
+        }
+
+        if (in_array('tx_hash', $certificateHashColumns, true)) {
+            $optionalUpdates[] = "tx_hash = ?";
+            $optionalParams[] = $blockchainResult['tx_hash'] ?? null;
+        }
+
+        if (in_array('chain_network', $certificateHashColumns, true)) {
+            $optionalUpdates[] = "chain_network = ?";
+            $optionalParams[] = $blockchainResult['network'] ?? 'sepolia';
+        }
+
+        if (in_array('anchored_at', $certificateHashColumns, true)) {
+            if (($blockchainResult['chain_status'] ?? '') === 'confirmed') {
+                $optionalUpdates[] = "anchored_at = NOW()";
+            }
+        }
+
+        if (!empty($optionalUpdates)) {
+            $optionalParams[] = $student_id;
+            $updateSql = "UPDATE certificate_hashes SET " . implode(', ', $optionalUpdates) . " WHERE student_id = ?";
+            try {
+                $optionalStmt = $pdo->prepare($updateSql);
+                $optionalStmt->execute($optionalParams);
+            } catch (Throwable $e) {
+                error_log("Optional blockchain metadata update failed: " . $e->getMessage());
+            }
+        }
+        
+        // Log blockchain result for debugging
+        error_log("Blockchain addCertificate result: " . json_encode($blockchainResult));
+
         if (!empty($student['email'])) {
             $capitalized_student_name = ucwords(strtolower($student['name']));
-            $email_result = send_evaluation_notification($student['email'], $capitalized_student_name, $supervisor_name);
+            $email_result = send_certificate_notification($student['email'], $capitalized_student_name, $supervisor_name, $certificate_no);
             if ($email_result !== true) {
                 error_log("Failed to send certificate notification: " . $email_result);
             }
@@ -215,20 +309,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['success_message'] = "Certificate generated successfully and notification email sent to student!";
         
         
-        if (file_exists($signaturePath)) {
-            unlink($signaturePath);
-        }
-
-        
         header("Location: supervisor_dashboard.php");
         exit;
     }
     
     if (isset($_POST['another'])) {
-        if (file_exists($signaturePath)) {
-            unlink($signaturePath);
-        }
-        header("Location: add_signature.php?student_id=$student_id");
+        header("Location: generate_certificate.php?student_id=$student_id");
         exit;
     }
 }
@@ -292,6 +378,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             align-items: center;
             justify-content: center;
             font-weight: bold;
+        }
+        .alert {
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            border: 1px solid transparent;
+            font-weight: 600;
+        }
+        .alert-warning {
+            background: #fff3cd;
+            border-color: #ffeeba;
+            color: #856404;
         }
         .student-info {
             background: #f8f9fa;
@@ -416,9 +514,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </h2>
         
         <?php if ($signatureExists): ?>
-        <div class="success-message">
-            ✓ Signature added successfully. Ready to generate certificate!
-        </div>
+            <div class="success-message">
+                ✓ Supervisor signature on file.
+            </div>
+        <?php else: ?>
+            <div class="alert alert-warning" role="alert">
+                No signature found yet. The certificate will be generated without a signature.
+            </div>
         <?php endif; ?>
         
         <div class="student-info">
@@ -439,7 +541,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="info-item">
                     <span class="info-label">Status</span>
                     <span class="info-value">
-                        <?= $signatureExists ? 'Ready for Generation' : 'Signature Required' ?>
+                        <?= $signatureExists ? 'Ready for Generation' : 'Signature Missing' ?>
                         <span class="status-badge <?= $signatureExists ? 'status-complete' : 'status-pending' ?>">
                             <?= $signatureExists ? '✓' : '!' ?>
                         </span>
@@ -449,31 +551,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         
         <div class="action-buttons">
-            <?php if (!$signatureExists): ?>
-                <a href="add_signature.php?student_id=<?= $student_id ?>" class="btn btn-primary">
-                    <span class="btn-icon">✍️</span>
-                    Add Signature
-                </a>
-            <?php else: ?>
-                <form method="post" style="grid-column: 1 / -1;">
-                    <button type="submit" name="generate" class="btn btn-success" style="width: 100%;">
-                        <span class="btn-icon">📄</span>
-                        Generate PDF Certificate
+            <form method="post" style="grid-column: 1 / -1;">
+                <button type="submit" name="generate" class="btn btn-success" style="width: 100%;">
+                    <span class="btn-icon">📄</span>
+                    Generate PDF Certificate
+                </button>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                    <button type="submit" name="another" class="btn btn-primary">
+                        <span class="btn-icon">🔄</span>
+                        Generate Another Certificate
                     </button>
-                    
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
-                        <button type="submit" name="another" class="btn btn-primary">
-                            <span class="btn-icon">🔄</span>
-                            Generate Another Certificate
-                        </button>
-                        
-                        <a href="supervisor_dashboard.php" class="btn btn-secondary">
-                            <span class="btn-icon">←</span>
-                            Back to Dashboard
-                        </a>
-                    </div>
-                </form>
-            <?php endif; ?>
+
+                    <a href="supervisor_dashboard.php" class="btn btn-secondary">
+                        <span class="btn-icon">←</span>
+                        Back to Dashboard
+                    </a>
+                </div>
+            </form>
         </div>
     </div>
 </body>

@@ -14,6 +14,16 @@ $host = getenv('DB_HOST') ?: "sql106.infinityfree.com";
 $db   = getenv('DB_NAME') ?: "if0_41121145_student_db";
 $user = getenv('DB_USER') ?: "if0_41121145";
 $pass = getenv('DB_PASS') ?: "6fvGRVlsh9";
+$backup_cron_token = getenv('BACKUP_CRON_TOKEN') ?: "";
+if (empty($backup_cron_token)) {
+    $tokenFile = __DIR__ . '/backup_token.php';
+    if (is_file($tokenFile)) {
+        $loaded = include $tokenFile;
+        if (is_string($loaded) && $loaded !== '') {
+            $backup_cron_token = $loaded;
+        }
+    }
+}
 
 
 if ($is_local) {
@@ -41,7 +51,12 @@ header("Referrer-Policy: strict-origin-when-cross-origin");
 header("Permissions-Policy: geolocation=(), microphone=(), camera=()");
 
 
-header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' data: https: blob:; font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; connect-src 'self' https:; frame-ancestors 'self';");
+$csp = "default-src 'self'; script-src 'self' 'unsafe-inline'";
+if ($is_local) {
+    $csp .= " 'unsafe-eval'";
+}
+$csp .= " https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' data: https: blob:; font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; connect-src 'self' https:; frame-ancestors 'self';";
+header("Content-Security-Policy: {$csp}");
 
 
 if (session_status() === PHP_SESSION_NONE) {

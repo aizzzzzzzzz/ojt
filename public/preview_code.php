@@ -31,11 +31,12 @@ if ($hasPHP) {
 }
 
 function executePHPCode($code) {
-    if (!isEvalAvailable()) {
+    $tempFile = createTempPhpFile($code);
+    if ($tempFile === null) {
         showPHPCodeWithoutExecution($code);
         return;
     }
-    
+
     ob_start();
     
     $previousErrorReporting = error_reporting(E_ALL);
@@ -43,11 +44,15 @@ function executePHPCode($code) {
     ini_set('display_errors', '1');
     
     try {
-        eval('?>' . $code);
+        include $tempFile;
     } catch (Throwable $e) {
         echo "<div style=\"background: #ffebee; border: 1px solid #f44336; padding: 10px; margin: 10px 0; border-radius: 4px;\">";
         echo "<strong style=\"color: #c62828;\">Error:</strong> " . htmlspecialchars($e->getMessage());
         echo "</div>";
+    } finally {
+        if (is_file($tempFile)) {
+            @unlink($tempFile);
+        }
     }
     
     error_reporting($previousErrorReporting);
@@ -58,26 +63,35 @@ function executePHPCode($code) {
     echo $output;
 }
 
-function isEvalAvailable() {
-    $disabledFunctions = explode(',', ini_get('disable_functions'));
-    $disabledFunctions = array_map('trim', $disabledFunctions);
-    
-    if (in_array('eval', $disabledFunctions)) {
-        return false;
+function createTempPhpFile($code) {
+    $tempDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'ojt_preview';
+    if (!is_dir($tempDir) && !@mkdir($tempDir, 0700, true) && !is_dir($tempDir)) {
+        return null;
     }
-    
-    try {
-        @eval('return true;');
-        return true;
-    } catch (Throwable $e) {
-        return false;
+
+    $tempFile = tempnam($tempDir, 'preview_');
+    if ($tempFile === false) {
+        return null;
     }
+
+    $phpFile = $tempFile . '.php';
+    if (!@rename($tempFile, $phpFile)) {
+        $phpFile = $tempFile;
+    }
+
+    $bytes = @file_put_contents($phpFile, $code);
+    if ($bytes === false) {
+        @unlink($phpFile);
+        return null;
+    }
+
+    return $phpFile;
 }
 
 function showPHPCodeWithoutExecution($code) {
     echo "<div style=\"background: #fff3cd; border: 1px solid #ffc107; padding: 15px; margin: 10px 0; border-radius: 4px;\">";
     echo "<strong style=\"color: #856404;\">⚠️ PHP Preview Not Available</strong><br>";
-    echo "<span style=\"color: #856404;\">Your hosting provider (Infinity Free) has disabled PHP code execution for security reasons.</span>";
+    echo "<span style=\"color: #856404;\">PHP preview is unavailable on this server due to execution restrictions.</span>";
     echo "</div>";
     
     echo "<div style=\"margin-top: 15px;\">";

@@ -221,29 +221,17 @@ $admin_count = $stmt->fetchColumn();
 <body>
   <div class="header">
     <h1>OJT Management System</h1>
-    <p>Welcome to the OJT Management System</p>
   </div>
 
   <div class="role-cards">
     <div class="card">
-      <div class="card-icon">👨‍💼</div>
-      <h3>Admin</h3>
-      <a href="public/admin_login.php" class="btn btn-admin">Login as Admin</a>
+      <div class="card-icon">🔐</div>
+      <h3>Login</h3>
+      <p></p>
+      <a href="public/login.php" class="btn btn-admin">Login</a>
       <?php if ($admin_count == 0): ?>
       <a href="public/add_first_admin.php" class="btn btn-admin" style="margin-top: 10px; font-size: 14px; padding: 8px 16px;">First-time Setup</a>
       <?php endif; ?>
-    </div>
-
-    <div class="card">
-      <div class="card-icon">🏢</div>
-      <h3>Supervisor</h3>
-      <a href="public/supervisor_login.php" class="btn btn-employer">Login as Supervisor</a>
-    </div>
-
-    <div class="card">
-      <div class="card-icon">🎓</div>
-      <h3>Student</h3>
-      <a href="public/student_login.php" class="btn btn-student">Login as Student</a>
     </div>
   </div>
 </body>

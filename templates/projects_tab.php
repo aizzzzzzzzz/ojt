@@ -80,14 +80,14 @@
 
             <div id="fileTab" style="display: none;">
                 <div class="form-group" style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">📎 Upload File:</label>
+                    <label for="submissionFile" style="display: block; margin-bottom: 8px; font-weight: 600;">📎 Upload File:</label>
                     <input type="file" name="submission_file" id="submissionFile" class="form-control" accept=".pdf,.doc,.docx,.txt,.zip,.rar,.php,.html,.css,.java,.js">
                 </div>
             </div>
 
             <div class="form-group" style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600;">📝 Remarks (Optional):</label>
-                <textarea name="remarks" class="form-control" rows="3" placeholder="Add any notes or comments about your submission..."></textarea>
+                <label for="submissionRemarks" style="display: block; margin-bottom: 8px; font-weight: 600;">📝 Remarks (Optional):</label>
+                <textarea id="submissionRemarks" name="remarks" class="form-control" rows="3" placeholder="Add any notes or comments about your submission..."></textarea>
             </div>
 
             <div style="display: flex; gap: 10px; margin-top: 20px;">

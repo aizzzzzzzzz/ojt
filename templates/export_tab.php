@@ -4,13 +4,13 @@
         <form method="GET" class="export-form">
             <div class="export-controls">
                 <div class="date-input-group">
-                    <label>From:</label>
-                    <input type="date" name="start_date" class="form-control" value="<?= date('Y-m-01') ?>">
+                    <label for="export_start_date">From:</label>
+                    <input id="export_start_date" type="date" name="start_date" class="form-control" value="<?= date('Y-m-01') ?>">
                 </div>
 
                 <div class="date-input-group">
-                    <label>To:</label>
-                    <input type="date" name="end_date" class="form-control" value="<?= date('Y-m-d') ?>">
+                    <label for="export_end_date">To:</label>
+                    <input id="export_end_date" type="date" name="end_date" class="form-control" value="<?= date('Y-m-d') ?>">
                 </div>
             </div>
 

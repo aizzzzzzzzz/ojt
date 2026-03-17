@@ -176,12 +176,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_signature'])) {
         $student = $stmt->fetch(PDO::FETCH_ASSOC);
         
         
-        $emp_stmt = $pdo->prepare("SELECT name, company FROM employers WHERE employer_id = ?");
+        $emp_stmt = $pdo->prepare("SELECT name, company, company_id FROM employers WHERE employer_id = ?");
         $emp_stmt->execute([$employer_id]);
         $emp = $emp_stmt->fetch(PDO::FETCH_ASSOC);
         
         $employer_name = $emp['company'] ?? '(assigned organization)';
         $supervisor_name = $emp['name'] ?? '(supervisor name)';
+        $company_logo_path = '';
+        $company_logo_candidates = [];
+        if (!empty($emp) && !empty($emp['company_id'])) {
+            $company_logo_candidates[] = 'assets/company_logo_company_' . $emp['company_id'];
+        }
+        $company_logo_candidates[] = 'assets/company_logo_employer_' . $employer_id;
+        $company_logo_candidates[] = 'assets/company_logo';
+        $company_logo_exts = ['png', 'jpg', 'jpeg'];
+        foreach ($company_logo_candidates as $candidate) {
+            foreach ($company_logo_exts as $ext) {
+                $candidate_path = $candidate . '.' . $ext;
+                if (file_exists($candidate_path)) {
+                    $company_logo_path = $candidate_path;
+                    break 2;
+                }
+            }
+        }
         
         
         $attendance_stmt = $pdo->prepare("SELECT * FROM attendance WHERE student_id = ? ORDER BY log_date DESC");
@@ -259,9 +276,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_signature'])) {
             $pdf->Image($logoPath, 15, 12, 22);
         }
 
-        $companyLogoPath = 'assets/company_logo.png';
-        if (file_exists($companyLogoPath)) {
-            $pdf->Image($companyLogoPath, $pdf->GetPageWidth() - 37, 12, 22);
+        if (!empty($company_logo_path) && file_exists($company_logo_path)) {
+            $companyLogoSize = 30;
+            $companyLogoX = $pdf->GetPageWidth() - 15 - $companyLogoSize;
+            $pdf->Image($company_logo_path, $companyLogoX, 12, $companyLogoSize);
         }
 
         $pdf->SetY(15);
@@ -327,7 +345,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_signature'])) {
         
         if (!empty($student['email'])) {
             $capitalized_student_name = ucwords(strtolower($student['name']));
-            $email_result = send_evaluation_notification($student['email'], $capitalized_student_name, $supervisor_name);
+            $email_result = send_certificate_notification($student['email'], $capitalized_student_name, $supervisor_name, $certificate_no);
             if ($email_result !== true) {
                 error_log("Failed to send certificate notification: " . $email_result);
             }

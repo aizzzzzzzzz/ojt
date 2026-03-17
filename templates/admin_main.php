@@ -2,6 +2,32 @@
 
 
 
+<?php if (!empty($_SESSION['backup_error'])): ?>
+    <div class="error-msg mb-3"><?= htmlspecialchars($_SESSION['backup_error']) ?></div>
+    <?php unset($_SESSION['backup_error']); ?>
+<?php endif; ?>
+<?php if (!empty($_SESSION['monthly_backup_status'])): ?>
+    <?php $status = $_SESSION['monthly_backup_status']; ?>
+    <div class="alert alert-<?= htmlspecialchars($status['type']) ?> mb-3"><?= htmlspecialchars($status['message']) ?></div>
+    <?php unset($_SESSION['monthly_backup_status']); ?>
+<?php endif; ?>
+
+<details class="maintenance-card mb-4">
+    <summary>Maintenance & Backups</summary>
+    <div class="maintenance-body">
+        <p class="mb-2">Download a full SQL backup of the database.</p>
+        <form method="post" action="admin_backup.php" target="_top">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+            <button type="submit" class="btn btn-success">Backup Now</button>
+        </form>
+        <p class="mb-2 mt-3">Run the monthly backup scheduler (creates a backup once per month).</p>
+        <form method="post" action="admin_monthly_backup.php" target="_top">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+            <button type="submit" class="btn btn-outline-success">Run Monthly Backup</button>
+        </form>
+    </div>
+</details>
+
 <h3>Add New Supervisor</h3>
     <div id="add-employer">
         <div class="card p-3"><div class="card-body">
@@ -12,20 +38,20 @@
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                 <div class="row">
                     <div class="col-md-3 mb-3">
-                        <label class="form-label">Username</label>
-                        <input type="text" name="username" required class="form-control">
+                        <label class="form-label" for="admin_username">Username</label>
+                        <input id="admin_username" type="text" name="username" required class="form-control">
                     </div>
                     <div class="col-md-3 mb-3">
-                        <label class="form-label">Full Name</label>
-                        <input type="text" name="name" required class="form-control">
+                        <label class="form-label" for="admin_full_name">Full Name</label>
+                        <input id="admin_full_name" type="text" name="name" required class="form-control">
                     </div>
                     <div class="col-md-3 mb-3">
-                        <label class="form-label">Company</label>
-                        <input type="text" name="company" required class="form-control">
+                        <label class="form-label" for="admin_company">Company</label>
+                        <input id="admin_company" type="text" name="company" required class="form-control">
                     </div>
                     <div class="col-md-3 mb-3">
-                        <label class="form-label">Password</label>
-                        <input type="password" name="password" required class="form-control">
+                        <label class="form-label" for="admin_password">Password</label>
+                        <input id="admin_password" type="password" name="password" required class="form-control">
                     </div>
                 </div>
                 <button type="submit" name="add_employer" class="btn btn-primary">Add Supervisor</button>

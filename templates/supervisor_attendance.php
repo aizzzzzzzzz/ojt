@@ -3,8 +3,8 @@
             <form method="post" class="row g-3">
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                 <div class="col-md-4">
-                    <label class="form-label">Select Student</label>
-                    <select name="student_id" class="form-select" required>
+                    <label class="form-label" for="supervisor_attendance_student_id">Select Student</label>
+                    <select id="supervisor_attendance_student_id" name="student_id" class="form-select" required>
                         <option value="">Choose student...</option>
                         <?php foreach ($students as $student): ?>
                             <option value="<?= htmlspecialchars($student['student_id']) ?>">
@@ -14,12 +14,12 @@
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Date</label>
-                    <input type="date" name="date" class="form-control" value="<?= date('Y-m-d') ?>" required>
+                    <label class="form-label" for="supervisor_attendance_date">Date</label>
+                    <input id="supervisor_attendance_date" type="date" name="date" class="form-control" value="<?= date('Y-m-d') ?>" required>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Reason for Absence</label>
-                    <input type="text" name="reason" class="form-control" placeholder="Enter reason..." required>
+                    <label class="form-label" for="supervisor_attendance_reason">Reason for Absence</label>
+                    <input id="supervisor_attendance_reason" type="text" name="reason" class="form-control" placeholder="Enter reason..." required>
                 </div>
                 <div class="col-12">
                     <button type="submit" name="mark_absent" class="btn btn-danger">Mark Student Absent</button>
@@ -164,13 +164,7 @@
 
                                 <?php if ($already_evaluated): ?>
                                     <p style="margin-top:15px;">
-                                        <?php
-                                        $signaturePath = 'assets/signature_' . $employer_id . '_' . $student_id . '.png';
-                                        if (file_exists($signaturePath)): ?>
-                                            <a href="generate_certificate.php?student_id=<?= $student_id ?>" class="btn btn-success btn-sm">📄 Generate Certificate</a>
-                                        <?php else: ?>
-                                            <a href="add_signature.php?student_id=<?= $student_id ?>" class="btn btn-warning btn-sm">✍️ Add Signature</a>
-                                        <?php endif; ?>
+                                        <a href="generate_certificate.php?student_id=<?= $student_id ?>" class="btn btn-success btn-sm" target="_top" rel="noopener" onclick="return openCertificateLink(this.href);">📄 Generate Certificate</a>
                                     </p>
                                 <?php endif; ?>
                             </div>
@@ -182,3 +176,19 @@
             </table>
         </div>
     </div>
+
+    <script>
+        if (typeof window.openCertificateLink !== 'function') {
+            window.openCertificateLink = function(url) {
+                if (window.top !== window.self) {
+                    try {
+                        window.top.location.href = url;
+                    } catch (err) {
+                        window.open(url, '_blank', 'noopener');
+                    }
+                    return false;
+                }
+                return true;
+            };
+        }
+    </script>

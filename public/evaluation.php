@@ -91,7 +91,8 @@ body { background:#e9f5ff; }
         <div class="mb-3">
             
             <?php if (!$selected_student_id): ?>
-                <select name="student_id" class="form-control" required>
+                <label class="form-label" for="evaluation_student_id">Student</label>
+                <select id="evaluation_student_id" name="student_id" class="form-control" required>
                     <?php foreach ($students as $s): ?>
                         <option value="<?= $s['student_id'] ?>">
                             <?= htmlspecialchars($s['name']) ?>
@@ -122,8 +123,8 @@ body { background:#e9f5ff; }
         foreach ($criteria as $field => $label):
         ?>
         <div class="mb-3">
-            <label class="rating-label"><?= $label ?></label>
-            <select name="<?= $field ?>" class="form-control" required>
+            <label class="rating-label" for="rating_<?= $field ?>"><?= $label ?></label>
+            <select id="rating_<?= $field ?>" name="<?= $field ?>" class="form-control" required>
                 <option value="">Select Rating</option>
                 <option value="1">1 - Poor</option>
                 <option value="2">2 - Fair</option>
@@ -135,8 +136,8 @@ body { background:#e9f5ff; }
         <?php endforeach; ?>
 
         <div class="mb-3">
-            <label class="form-label">Comments (optional)</label>
-            <textarea name="comments" class="form-control" rows="4"></textarea>
+            <label class="form-label" for="evaluation_comments">Comments (optional)</label>
+            <textarea id="evaluation_comments" name="comments" class="form-control" rows="4"></textarea>
         </div>
 
         <button class="btn btn-primary">Submit Evaluation</button>

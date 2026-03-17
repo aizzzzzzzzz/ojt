@@ -12,18 +12,85 @@ $employer = get_supervisor_info($pdo, $employer_id);
 
 $csrf_token = generate_csrf_token();
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_absent'])) {
-    check_csrf($_POST['csrf_token'] ?? '');
-    $student_id = $_POST['student_id'] ?? '';
-    $reason = $_POST['reason'] ?? '';
-    $date = $_POST['date'] ?? date('Y-m-d');
+$timezone = new DateTimeZone('Asia/Manila');
+$now = new DateTime('now', $timezone);
+$today = $now->format('Y-m-d');
+$late_cutoff = '10:00';
+$eod_cutoff = '17:00';
+$late_cutoff_dt = new DateTime($today . ' ' . $late_cutoff, $timezone);
+$eod_cutoff_dt = new DateTime($today . ' ' . $eod_cutoff, $timezone);
 
-    if ($student_id && $reason) {
-        $message = handle_mark_absent($pdo, $student_id, $date, $reason);
-        $_SESSION['success_message'] = $message;
-        header("Location: supervisor_dashboard.php");
-        exit;
+$company_logo_root = !empty($employer['company_id'])
+    ? 'company_logo_company_' . $employer['company_id']
+    : 'company_logo_employer_' . $employer_id;
+$company_logo_exts = ['png', 'jpg', 'jpeg'];
+$company_logo_relative = '';
+$company_logo_full_path = '';
+foreach ($company_logo_exts as $ext) {
+    $candidate = 'assets/' . $company_logo_root . '.' . $ext;
+    $candidate_full = __DIR__ . '/' . $candidate;
+    if (file_exists($candidate_full)) {
+        $company_logo_relative = $candidate;
+        $company_logo_full_path = $candidate_full;
+        break;
     }
+}
+$company_logo_exists = !empty($company_logo_full_path);
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_company_logo'])) {
+    check_csrf($_POST['csrf_token'] ?? '');
+
+    $upload_error = '';
+    if (empty($_FILES['company_logo']['tmp_name'])) {
+        $upload_error = 'Please choose a logo image to upload.';
+    } elseif ($_FILES['company_logo']['error'] !== UPLOAD_ERR_OK) {
+        $upload_error = 'File upload error: ' . $_FILES['company_logo']['error'];
+    } elseif ($_FILES['company_logo']['size'] > (2 * 1024 * 1024)) {
+        $upload_error = 'Logo is too large. Maximum size is 2 MB.';
+    } else {
+        $imgInfo = getimagesize($_FILES['company_logo']['tmp_name']);
+        if (!$imgInfo) {
+            $upload_error = 'Invalid image file.';
+        } else {
+            if (!is_dir(__DIR__ . '/assets')) {
+                mkdir(__DIR__ . '/assets', 0777, true);
+            }
+            $ext = '';
+            if ($imgInfo['mime'] === 'image/png') {
+                $ext = 'png';
+            } elseif ($imgInfo['mime'] === 'image/jpeg') {
+                $ext = 'jpg';
+            } else {
+                $upload_error = 'Unsupported image format. Supported formats: PNG, JPG.';
+            }
+
+            if (empty($upload_error)) {
+                $company_logo_relative = 'assets/' . $company_logo_root . '.' . $ext;
+                $company_logo_full_path = __DIR__ . '/' . $company_logo_relative;
+                if (!move_uploaded_file($_FILES['company_logo']['tmp_name'], $company_logo_full_path)) {
+                    $upload_error = 'Failed to save logo image.';
+                } else {
+                    foreach ($company_logo_exts as $cleanup_ext) {
+                        if ($cleanup_ext === $ext) {
+                            continue;
+                        }
+                        $cleanup_path = __DIR__ . '/assets/' . $company_logo_root . '.' . $cleanup_ext;
+                        if (file_exists($cleanup_path)) {
+                            unlink($cleanup_path);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (!empty($upload_error)) {
+        $_SESSION['error_message'] = $upload_error;
+    } else {
+        $_SESSION['success_message'] = 'Company logo updated successfully.';
+    }
+    header("Location: supervisor_dashboard.php");
+    exit;
 }
 
 $success_message = '';
@@ -32,11 +99,18 @@ if (isset($_SESSION['success_message'])) {
     unset($_SESSION['success_message']);
 }
 
+$error_message = '';
+if (isset($_SESSION['error_message'])) {
+    $error_message = $_SESSION['error_message'];
+    unset($_SESSION['error_message']);
+}
+
 $students = get_students_list($pdo, $_SESSION['employer_id'] ?? null);
 $attendance = get_attendance_records($pdo);
 $acc_map = get_total_minutes($pdo);
 $evaluated_students = get_evaluated_students($pdo);
 $evaluation_pass_map = [];
+$certificate_map = [];
 
 $student_ids = [];
 foreach ($students as $student_row) {
@@ -67,6 +141,21 @@ if (!empty($student_ids)) {
     while ($eval_row = $eval_result_stmt->fetch(PDO::FETCH_ASSOC)) {
         $evaluation_pass_map[(int) $eval_row['student_id']] = ((float) $eval_row['avg_rating']) >= 3.0;
     }
+
+    $certificate_stmt = $pdo->prepare("
+        SELECT student_id, certificate_no, generated_at
+        FROM certificates
+        WHERE student_id IN ($placeholders)
+        ORDER BY generated_at DESC
+    ");
+    $certificate_stmt->execute($student_ids);
+
+    while ($certificate_row = $certificate_stmt->fetch(PDO::FETCH_ASSOC)) {
+        $certificate_student_id = (int) $certificate_row['student_id'];
+        if (!isset($certificate_map[$certificate_student_id])) {
+            $certificate_map[$certificate_student_id] = $certificate_row;
+        }
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -92,18 +181,19 @@ if (!empty($student_ids)) {
             margin: 0;
             padding: 0;
             font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            background: linear-gradient(135deg, #eef5ff, #d8e9ff);
             color: #333;
             line-height: 1.6;
         }
 
         .dashboard-container {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            background: #ffffff;
+            padding: 28px;
+            border-radius: 16px;
+            border: 1px solid #e5edf7;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
             width: 100%;
-            max-width: 1200px;
+            max-width: 1150px;
             margin: 20px auto;
             text-align: center;
         }
@@ -116,21 +206,22 @@ if (!empty($student_ids)) {
         }
 
         .dashboard-container h3 {
-            margin-top: 30px;
-            margin-bottom: 20px;
-            font-size: 22px;
+            margin-top: 26px;
+            margin-bottom: 16px;
+            font-size: 20px;
             color: #2c3e50;
             text-align: left;
-            border-bottom: 2px solid #e0e0e0;
-            padding-bottom: 10px;
+            border-bottom: 1px solid #e6edf5;
+            padding-bottom: 8px;
         }
 
         .welcome-section {
             margin-bottom: 30px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            padding: 18px 22px;
+            background: #f7fafc;
+            border-radius: 12px;
+            border: 1px solid #e6edf5;
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
         }
 
         .welcome-section p {
@@ -149,62 +240,126 @@ if (!empty($student_ids)) {
             text-align: left;
             font-weight: 500;
         }
+        .error-msg {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #f5c6cb;
+            text-align: left;
+            font-weight: 500;
+        }
 
         .actions-section {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
+            gap: 16px;
             margin-bottom: 30px;
         }
 
         .action-card {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            border: 1px solid #e0e0e0;
+            background: #ffffff;
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid #e6edf5;
             text-align: center;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
 
         .action-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
         }
 
         .action-card .icon {
-            font-size: 2rem;
-            margin-bottom: 10px;
+            font-size: 2.2rem;
+            margin-bottom: 12px;
             color: #007bff;
         }
 
         .action-card a {
             display: block;
-            padding: 10px 15px;
-            border-radius: 5px;
+            padding: 10px 14px;
+            border-radius: 8px;
             text-decoration: none;
             font-weight: 500;
-            background: linear-gradient(90deg, #007bff, #00c6ff);
+            background: linear-gradient(90deg, #1d4ed8, #3b82f6);
             color: white;
             transition: all 0.3s ease;
         }
 
         .action-card a:hover {
-            background: linear-gradient(90deg, #0056b3, #0099cc);
+            background: linear-gradient(90deg, #1e40af, #2563eb);
             transform: translateY(-2px);
         }
 
         .attendance-actions {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
+            background: #ffffff;
+            padding: 18px;
+            border-radius: 12px;
             margin-bottom: 30px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e6edf5;
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
         }
 
         .attendance-actions h4 {
-            margin-bottom: 15px;
+            margin-bottom: 6px;
             color: #2c3e50;
+        }
+        .section-subtitle {
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-bottom: 14px;
+        }
+        .branding-grid {
+            display: grid;
+            grid-template-columns: minmax(160px, 220px) 1fr;
+            gap: 18px;
+            align-items: center;
+        }
+        .branding-preview {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        .branding-preview img {
+            max-width: 180px;
+            max-height: 120px;
+            border: 1px solid #e6edf5;
+            padding: 10px;
+            background: #ffffff;
+            border-radius: 10px;
+        }
+        .branding-form .form-label {
+            font-weight: 600;
+            color: #334155;
+        }
+        .branding-form .btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+        }
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 8px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-top: 6px;
+        }
+        .status-late {
+            background: #fff4e5;
+            color: #b45309;
+            border: 1px solid #f5d0a9;
+        }
+        .status-pending {
+            background: #eef2ff;
+            color: #4338ca;
+            border: 1px solid #c7d2fe;
         }
 
         .table-section {
@@ -230,7 +385,7 @@ if (!empty($student_ids)) {
         }
 
         th {
-            background: linear-gradient(90deg, #f8f9fa, #e9ecef);
+            background: #f1f5f9;
             font-weight: 600;
             color: #2c3e50;
             position: sticky;
@@ -260,7 +415,7 @@ if (!empty($student_ids)) {
         }
 
         .btn-success {
-            background: linear-gradient(90deg, #28a745, #85e085);
+            background: linear-gradient(90deg, #16a34a, #22c55e);
             color: white;
             border: none;
             padding: 6px 12px;
@@ -271,12 +426,12 @@ if (!empty($student_ids)) {
         }
 
         .btn-success:hover {
-            background: linear-gradient(90deg, #218838, #6c9e6c);
+            background: linear-gradient(90deg, #15803d, #16a34a);
             transform: translateY(-2px);
         }
 
         .btn-warning {
-            background: linear-gradient(90deg, #ffc107, #ffed4e);
+            background: linear-gradient(90deg, #f59e0b, #fbbf24);
             color: #212529;
             border: none;
             padding: 6px 12px;
@@ -287,12 +442,12 @@ if (!empty($student_ids)) {
         }
 
         .btn-warning:hover {
-            background: linear-gradient(90deg, #e0a800, #d39e00);
+            background: linear-gradient(90deg, #d97706, #f59e0b);
             transform: translateY(-2px);
         }
 
         .btn-danger {
-            background: linear-gradient(90deg, #dc3545, #ff6b7a);
+            background: linear-gradient(90deg, #dc2626, #ef4444);
             color: white;
             border: none;
             padding: 6px 12px;
@@ -303,7 +458,7 @@ if (!empty($student_ids)) {
         }
 
         .btn-danger:hover {
-            background: linear-gradient(90deg, #bd2130, #e04b59);
+            background: linear-gradient(90deg, #b91c1c, #dc2626);
             transform: translateY(-2px);
         }
 
@@ -356,13 +511,19 @@ if (!empty($student_ids)) {
             }
 
             .actions-section {
-                flex-direction: column;
+                grid-template-columns: 1fr;
             }
 
             .action-card {
                 min-width: unset;
             }
 
+            .branding-grid {
+                grid-template-columns: 1fr;
+            }
+            .branding-preview {
+                align-items: center;
+            }
             table, thead, tbody, th, td, tr {
                 display: block;
                 width: 100%;
@@ -412,6 +573,9 @@ if (!empty($student_ids)) {
         <?php if (!empty($success_message)): ?>
             <div class="success-msg"><?= $success_message ?></div>
         <?php endif; ?>
+        <?php if (!empty($error_message)): ?>
+            <div class="error-msg"><?= htmlspecialchars($error_message) ?></div>
+        <?php endif; ?>
 
         <div class="welcome-section">
             <h2>Welcome, <?= htmlspecialchars($employer['name']) ?>!</h2>
@@ -423,10 +587,6 @@ if (!empty($student_ids)) {
             <div class="action-card">
                 <div class="icon">👤</div>
                 <a href="add_student.php">Add New Student</a>
-            </div>
-            <div class="action-card">
-                <div class="icon">📋</div>
-                <a href="create_project.php">Create Project</a>
             </div>
             <div class="action-card">
                 <div class="icon">✅</div>
@@ -442,35 +602,38 @@ if (!empty($student_ids)) {
             </div>
         </div>
 
+        <?php if (!$company_logo_exists): ?>
+            <h3>Company Branding</h3>
+            <div class="attendance-actions">
+                <h4>Certificate Logo</h4>
+                <div class="section-subtitle">Shown on the top-right of certificates.</div>
+                <div class="branding-grid">
+                    <div class="branding-preview">
+                        <div class="text-muted">No company logo uploaded yet.</div>
+                    </div>
+                    <div class="branding-form">
+                        <form method="post" enctype="multipart/form-data" class="row g-2">
+                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                            <div class="col-12">
+                                <label for="company_logo" class="form-label">Upload Logo (PNG/JPG, max 2MB)</label>
+                                <input type="file" class="form-control" id="company_logo" name="company_logo" accept="image/png,image/jpeg" required>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" name="upload_company_logo" class="btn btn-primary">Upload Company Logo</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
+
         <h3>Attendance Records</h3>
         
         <div class="attendance-actions">
-            <h4>Attendance Management</h4>
-            <form method="post" class="row g-3">
-                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                <div class="col-md-4">
-                    <label class="form-label">Select Student</label>
-                    <select name="student_id" class="form-select" required>
-                        <option value="">Choose student...</option>
-                        <?php foreach ($students as $student): ?>
-                            <option value="<?= htmlspecialchars($student['student_id']) ?>">
-                                <?= htmlspecialchars($student['username']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Date</label>
-                    <input type="date" name="date" class="form-control" value="<?= date('Y-m-d') ?>" required>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Reason for Absence</label>
-                    <input type="text" name="reason" class="form-control" placeholder="Enter reason..." required>
-                </div>
-                <div class="col-12">
-                    <button type="submit" name="mark_absent" class="btn btn-danger">Mark Student Absent</button>
-                </div>
-            </form>
+            <h4>Attendance Signals</h4>
+            <div class="section-subtitle">
+                Late risk: no time-in by <?= htmlspecialchars($late_cutoff) ?>. Pending verification: time-out recorded but not verified after <?= htmlspecialchars($eod_cutoff) ?>.
+            </div>
         </div>
 
         <div class="table-section">
@@ -508,9 +671,20 @@ if (!empty($student_ids)) {
                         $completed_hours = $acc_minutes >= $required_minutes;
                         $already_evaluated = isset($evaluated_students[$student_id]);
                         $evaluation_passed = $evaluation_pass_map[$student_id] ?? false;
+                        $existing_cert = $certificate_map[$student_id] ?? null;
+                        $has_certificate = $existing_cert !== null;
                         $acc_display = floor($acc_minutes / 60) . "h " . ($acc_minutes % 60) . "m";
 
                         $status = $latest['status'] ?: '---';
+                        $latest_date = $latest['log_date'] ? date('Y-m-d', strtotime($latest['log_date'])) : null;
+                        $is_today = $latest_date === $today;
+                        $has_time_in = !empty($latest['time_in']);
+                        $has_time_out = !empty($latest['time_out']);
+                        $is_verified = (int)($latest['verified'] ?? 0) === 1;
+                        $late_risk = $is_today && !$has_time_in && $now >= $late_cutoff_dt;
+                        $pending_verification = !$is_verified && $has_time_out && (
+                            ($latest_date && $latest_date < $today) || ($is_today && $now >= $eod_cutoff_dt)
+                        );
 
                         $status_class = '';
                         if (strtolower($status) === 'present') $status_class = "style='color: green; font-weight: bold;'";
@@ -536,6 +710,12 @@ if (!empty($student_ids)) {
                             <?php if ($latest['verified'] == 1): ?>
                                 <br><small style="color:green;">(Verified)</small>
                             <?php endif; ?>
+                            <?php if ($late_risk): ?>
+                                <div class="status-pill status-late">Late risk</div>
+                            <?php endif; ?>
+                            <?php if ($pending_verification): ?>
+                                <div class="status-pill status-pending">Pending verification</div>
+                            <?php endif; ?>
                         </td>
 
                         <td data-label="Total Hours (Daily)">
@@ -560,10 +740,12 @@ if (!empty($student_ids)) {
                             <?php elseif ($already_evaluated && $completed_hours): ?>
                                 <div style="display: flex; flex-direction: column; gap: 5px;">
                                     <span style="color:green; font-weight:bold;">✔ Evaluation Completed</span>
-                                    <?php if ($evaluation_passed): ?>
-                                        <a href="add_signature.php?student_id=<?= $student_id ?>" class="btn btn-warning btn-sm">
-                                            ✍️ Add Signature
+                                    <?php if ($evaluation_passed && !$has_certificate): ?>
+                                        <a href="generate_certificate.php?student_id=<?= $student_id ?>" class="btn btn-success btn-sm" target="_top" rel="noopener" onclick="return openCertificateLink(this.href);">
+                                            📄 Generate Certificate
                                         </a>
+                                    <?php elseif ($evaluation_passed && $has_certificate): ?>
+                                        <span style="color:green; font-weight:bold;">✓ Certificate Generated</span>
                                     <?php else: ?>
                                         <span style="color:#dc3545; font-weight:bold;">Evaluation Failed</span>
                                     <?php endif; ?>
@@ -624,24 +806,11 @@ if (!empty($student_ids)) {
                                     <strong>Total Hours (Accumulated):</strong> <?= $acc_display ?>
                                 </p>
 
-                        <?php if ($already_evaluated): ?>
+                                <?php if ($already_evaluated): ?>
                                     <p style="margin-top:15px;">
-                                        <?php
-                                        $cert_check = $pdo->prepare("SELECT certificate_id, certificate_no, generated_at FROM certificates WHERE student_id = ? ORDER BY generated_at DESC LIMIT 1");
-                                        $cert_check->execute([$student_id]);
-                                        $existing_cert = $cert_check->fetch(PDO::FETCH_ASSOC);
-                                        
-                                        if ($existing_cert): ?>
-                                            <span style="color: green; font-weight: bold;">✓ Certificate Generated</span>
-                                            <br><small style="color: #666;">Certificate No: <?= htmlspecialchars($existing_cert['certificate_no']) ?></small>
-                                        <?php elseif ($evaluation_passed):
-                                            $signaturePath = 'assets/signature_' . $employer_id . '_' . $student_id . '.png';
-                                            if (file_exists($signaturePath)): ?>
-                                                <a href="generate_certificate.php?student_id=<?= $student_id ?>" class="btn btn-success btn-sm">📄 Generate Certificate</a>
-                                            <?php else: ?>
-                                                <a href="add_signature.php?student_id=<?= $student_id ?>" class="btn btn-warning btn-sm">✍️ Add Signature</a>
-                                            <?php endif; ?>
-                                        <?php else: ?>
+                                        <?php if ($evaluation_passed && !$existing_cert): ?>
+                                            <a href="generate_certificate.php?student_id=<?= $student_id ?>" class="btn btn-success btn-sm" target="_top" rel="noopener" onclick="return openCertificateLink(this.href);">📄 Generate Certificate</a>
+                                        <?php elseif (!$evaluation_passed): ?>
                                             <span style="color:#dc3545; font-weight:bold;">Evaluation Failed</span>
                                         <?php endif; ?>
                                     </p>
@@ -668,6 +837,18 @@ if (!empty($student_ids)) {
         let lastUpdatesCheck = null;
         const POLL_INTERVAL = 10000;
         
+        function openCertificateLink(url) {
+            if (window.top !== window.self) {
+                try {
+                    window.top.location.href = url;
+                } catch (err) {
+                    window.open(url, '_blank', 'noopener');
+                }
+                return false;
+            }
+            return true;
+        }
+
         async function checkAttendanceUpdates() {
             try {
                 const url = 'api/check_attendance.php?since=' + encodeURIComponent(lastAttendanceCheck || '');

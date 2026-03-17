@@ -23,9 +23,9 @@
 
     .dashboard-container {
         background: rgba(255, 255, 255, 0.95);
-        padding: 30px;
-        border-radius: 15px;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        padding: 36px 40px;
+        border-radius: 18px;
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
         width: 100%;
         max-width: 1200px;
         text-align: center;
@@ -39,8 +39,8 @@
     }
 
     .dashboard-container h3 {
-        margin-top: 30px;
-        margin-bottom: 15px;
+        margin-top: 36px;
+        margin-bottom: 18px;
         font-size: 22px;
         color: #2c3e50;
         text-align: left;
@@ -49,8 +49,8 @@
     }
 
     .welcome-section {
-        margin-bottom: 30px;
-        padding: 20px;
+        margin-bottom: 34px;
+        padding: 22px 24px;
         background: #f8f9fa;
         border-radius: 10px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
@@ -97,13 +97,13 @@
     .summary-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 15px;
-        margin-bottom: 30px;
+        gap: 18px;
+        margin-bottom: 36px;
     }
 
     .summary-card {
         background: white;
-        padding: 20px;
+        padding: 22px 20px;
         border-radius: 12px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         font-size: 16px;
@@ -132,7 +132,7 @@
     }
 
     .collapse-section {
-        margin-bottom: 20px;
+        margin-bottom: 26px;
         border-radius: 10px;
         overflow: hidden;
     }
@@ -144,7 +144,7 @@
     }
 
     .collapse-section .card-body {
-        padding: 20px;
+        padding: 22px 24px;
     }
 
     .collapse {
@@ -170,13 +170,62 @@
 
     .btn {
         border-radius: 8px;
-        padding: 10px 20px;
+        padding: 10px 18px;
         font-weight: 500;
         transition: all 0.3s ease;
     }
 
+    .card p {
+        margin-bottom: 10px;
+    }
+
+    .card .btn {
+        min-width: 160px;
+    }
+
     .btn-primary {
         background: linear-gradient(90deg, #28a745, #85e085);
+    }
+
+    .maintenance-card {
+        border: 1px solid #e1e7ef;
+        border-radius: 14px;
+        background: #f9fbfd;
+        text-align: left;
+        padding: 0;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(44, 62, 80, 0.06);
+    }
+
+    .maintenance-card summary {
+        list-style: none;
+        cursor: pointer;
+        padding: 14px 18px;
+        font-weight: 600;
+        color: #2c3e50;
+        background: #eef3f8;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .maintenance-card summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .maintenance-card summary::after {
+        content: '▾';
+        font-size: 14px;
+        color: #5d6b7a;
+        transition: transform 0.2s ease;
+    }
+
+    .maintenance-card[open] summary::after {
+        transform: rotate(180deg);
+    }
+
+    .maintenance-body {
+        padding: 18px 20px 20px;
     }
 
     .btn-primary:hover {

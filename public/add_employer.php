@@ -179,24 +179,24 @@ try {
 
         <form method="post">
             <div class="mb-3">
-                <label class="form-label">Supervisor Name:</label>
-                <input type="text" class="form-control" name="name" required>
+                <label class="form-label" for="employer_name">Supervisor Name:</label>
+                <input id="employer_name" type="text" class="form-control" name="name" required>
             </div>
             
             <div class="mb-3">
-                <label class="form-label">Company:</label>
-                <input type="text" class="form-control" name="company" required>
+                <label class="form-label" for="employer_company">Company:</label>
+                <input id="employer_company" type="text" class="form-control" name="company" required>
                 <div class="form-text">If the company doesn't exist, it will be created automatically.</div>
             </div>
             
             <div class="mb-3">
-                <label class="form-label">Username:</label>
-                <input type="text" class="form-control" name="username" required>
+                <label class="form-label" for="employer_username">Username:</label>
+                <input id="employer_username" type="text" class="form-control" name="username" required>
             </div>
             
             <div class="mb-3">
-                <label class="form-label">Password:</label>
-                <input type="password" class="form-control" name="password" required>
+                <label class="form-label" for="employer_password">Password:</label>
+                <input id="employer_password" type="password" class="form-control" name="password" required>
             </div>
 
             <button type="submit" class="btn btn-primary">Add Employer</button>

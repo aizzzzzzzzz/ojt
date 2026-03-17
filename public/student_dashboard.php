@@ -529,15 +529,17 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
 <title>Student Dashboard</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/xml/xml.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/css/css.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/htmlmixed/htmlmixed.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/php/php.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/clike/clike.min.js"></script>
+    <?php if (!empty($is_local)): ?>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/xml/xml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/css/css.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/htmlmixed/htmlmixed.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/php/php.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/clike/clike.min.js"></script>
+    <?php endif; ?>
 <style>
     body {
         margin: 0;
@@ -1682,6 +1684,17 @@ function runCodePreview(event) {
     }
 }
 
+function createPlainEditor(textarea) {
+    return {
+        getValue: () => textarea.value,
+        setValue: (value) => { textarea.value = value ?? ''; },
+        save: () => {},
+        refresh: () => {},
+        focus: () => textarea.focus(),
+        toTextArea: () => {}
+    };
+}
+
 function initCodeEditor() {
     const textarea = document.getElementById('codeEditor');
     if (!textarea) {
@@ -1696,22 +1709,26 @@ function initCodeEditor() {
             console.log('Error cleaning up editor:', e);
         }
     }
-    
-    window.codeEditor = CodeMirror.fromTextArea(textarea, {
-        lineNumbers: true,
-        theme: "monokai",
-        tabSize: 4,
-        lineWrapping: true,
-        matchBrackets: true,
-        autoCloseBrackets: true,
-        mode: "application/x-httpd-php",
-        value: `<?php echo htmlspecialchars($defaultCode); ?>`,
-        viewportMargin: Infinity,
-        indentUnit: 4,
-        extraKeys: {
-            "Ctrl-Space": "autocomplete"
-        }
-    });
+
+    if (window.CodeMirror) {
+        window.codeEditor = CodeMirror.fromTextArea(textarea, {
+            lineNumbers: true,
+            theme: "monokai",
+            tabSize: 4,
+            lineWrapping: true,
+            matchBrackets: true,
+            autoCloseBrackets: true,
+            mode: "application/x-httpd-php",
+            value: `<?php echo htmlspecialchars($defaultCode); ?>`,
+            viewportMargin: Infinity,
+            indentUnit: 4,
+            extraKeys: {
+                "Ctrl-Space": "autocomplete"
+            }
+        });
+    } else {
+        window.codeEditor = createPlainEditor(textarea);
+    }
     
     setTimeout(() => {
         if (window.codeEditor) {
@@ -1729,16 +1746,28 @@ function openFullScreenIDE(projectId, projectName) {
     document.getElementById('fullscreenIDE').style.display = 'flex';
 
     if (!window.fullscreenEditor) {
-        window.fullscreenEditor = CodeMirror.fromTextArea(document.getElementById('fullscreenEditor'), {
-            lineNumbers: true,
-            theme: 'default',
-            tabSize: 4,
-            lineWrapping: true,
-            matchBrackets: true,
-            autoCloseBrackets: true,
-            mode: 'htmlmixed',
-            value: `<?php echo htmlspecialchars($defaultCode); ?>`
-        });
+        const fullscreenTextarea = document.getElementById('fullscreenEditor');
+        if (!fullscreenTextarea) {
+            return;
+        }
+
+        if (window.CodeMirror) {
+            window.fullscreenEditor = CodeMirror.fromTextArea(fullscreenTextarea, {
+                lineNumbers: true,
+                theme: 'default',
+                tabSize: 4,
+                lineWrapping: true,
+                matchBrackets: true,
+                autoCloseBrackets: true,
+                mode: 'htmlmixed',
+                value: `<?php echo htmlspecialchars($defaultCode); ?>`
+            });
+        } else {
+            if (!fullscreenTextarea.value.trim()) {
+                fullscreenTextarea.value = `<?php echo htmlspecialchars($defaultCode); ?>`;
+            }
+            window.fullscreenEditor = createPlainEditor(fullscreenTextarea);
+        }
     }
 }
 

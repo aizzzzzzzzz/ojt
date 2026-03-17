@@ -1,4 +1,6 @@
 <?php
+header("Location: login.php");
+exit;
 require_once __DIR__ . '/../private/config.php';
 require_once __DIR__ . '/../includes/middleware.php';
 
