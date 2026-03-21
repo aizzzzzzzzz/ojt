@@ -63,8 +63,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_employer'])) {
     }
 
     $company = sanitize_input($_POST['company']);
-    $stmt = $pdo->prepare("INSERT INTO employers (username,name,company,password,created_at) VALUES (?,?,?,?,NOW())");
-    $stmt->execute([$username,$name,$company,$password]);
+    $work_start = sanitize_input($_POST['work_start'] ?? '08:00');
+    $work_end   = sanitize_input($_POST['work_end']   ?? '17:00');
+    $stmt = $pdo->prepare("INSERT INTO employers (username,name,company,password,work_start,work_end,created_at) VALUES (?,?,?,?,?,?,NOW())");
+    $stmt->execute([$username,$name,$company,$password,$work_start,$work_end]);
     write_audit_log('Add Employer', $username);
     $_SESSION['employer_added_success'] = true;
     header("Location: admin_dashboard.php");
@@ -86,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_employer'])) {
 
 $students_count = $pdo->query("SELECT COUNT(*) AS count FROM students")->fetch(PDO::FETCH_ASSOC)['count'];
 $evaluations_count = $pdo->query("SELECT COUNT(*) AS count FROM evaluations")->fetch(PDO::FETCH_ASSOC)['count'];
-$employers = $pdo->query("SELECT employer_id, username, name, company FROM employers ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+$employers = $pdo->query("SELECT employer_id, username, name, company, work_start, work_end FROM employers ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 
 include_once __DIR__ . '/../templates/admin_header.php';
 include_once __DIR__ . '/../templates/admin_main.php';

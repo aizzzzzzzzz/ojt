@@ -1,13 +1,12 @@
 <div id="attendance-tab" class="tab-content active">
-    <div style="margin-bottom:20px; text-align:left; padding:16px; border:1px solid #e0e0e0; background:#fff; border-radius:10px;">
-        <h3 style="margin-top:0;">Daily Task / Activity</h3>
-
+    <div class="section-card">
+        <h3 style="margin-top:0;">End of Day Task</h3>
         <form method="POST">
             <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
             <textarea
                 name="daily_task"
                 rows="4"
-                style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc; font-size:14px;"
+                class="form-control"
                 placeholder="Write what you did today..."
             ><?= htmlspecialchars($today_row['daily_task'] ?? '') ?></textarea>
 
@@ -18,12 +17,12 @@
             </button>
         </form>
 
-        <p style="color:#777; margin-top:8px; font-size:13px;">
+        <p style="color:var(--text-muted);margin-top:8px;font-size:13px;">
             You can only write/edit your task for <strong><?= $today ?></strong>.
         </p>
     </div>
 
-    <div style="text-align:left; margin-bottom:20px; border-radius:10px; padding:16px; border:1px solid #e0e0e0; background:#f8f9fa;">
+    <div class="section-card">
     <h3 style="margin-top:0;">Attendance Actions</h3>
     <div class="attendance-actions">
     <?php
@@ -31,28 +30,65 @@
     $lunch_out_done  = !empty($today_row['lunch_out']);
     $lunch_in_done   = !empty($today_row['lunch_in']);
     $time_out_done   = !empty($today_row['time_out']);
+
+    // $before_work_start, $time_in_window_open, $time_in_window_closed,
+    // $eod_window_open, $time_in_cutoff, $eod_cutoff_dt are set in student_dashboard.php
+
     $actions = [
-        'time_in' => '🟢 Time In',
+        'time_in'   => '🟢 Time In',
         'lunch_out' => '🍽️ Lunch Out',
-        'lunch_in' => '🍽️ Lunch In',
-        'time_out' => '🔴 Time Out'
+        'lunch_in'  => '🍽️ Lunch In',
+        'time_out'  => '🔴 Time Out',
     ];
-    foreach($actions as $key=>$label):
-        $done = ${$key.'_done'};
-        $disabled = '';
-        if ($key=='lunch_out' && (!$time_in_done || $done)) $disabled=true;
-        if ($key=='lunch_in' && (!$lunch_out_done || $done)) $disabled=true;
-        if ($key=='time_out' && (!$time_in_done || $done)) $disabled=true;
+
+    foreach ($actions as $key => $label):
+        $done = ${$key . '_done'};
+
+        // Sequence checks (unchanged)
+        $seq_disabled = false;
+        if ($key === 'lunch_out' && (!$time_in_done || $done)) $seq_disabled = true;
+        if ($key === 'lunch_in'  && (!$lunch_out_done || $done)) $seq_disabled = true;
+        if ($key === 'time_out'  && (!$time_in_done || $done))   $seq_disabled = true;
+
+        // Time window checks
+        $window_disabled = false;
+        $window_hint     = '';
+        if ($key === 'time_in' && !$done) {
+            if ($before_work_start) {
+                $window_disabled = true;
+                $window_hint = 'Opens at ' . $work_start_dt->format('H:i');
+            } elseif ($time_in_window_closed) {
+                $window_disabled = true;
+                $window_hint = 'Grace period ended at ' . $time_in_cutoff->format('H:i');
+            }
+        } elseif ($key !== 'time_in' && !$done && !$seq_disabled) {
+            if (!$eod_window_open) {
+                $window_disabled = true;
+                $window_hint = 'Closed at ' . $eod_cutoff_dt->format('H:i');
+            }
+        }
+
+        $is_disabled = $done || $seq_disabled || $window_disabled;
     ?>
     <form method="post" style="margin:0;">
         <input type="hidden" name="attendance_action" value="<?= $key ?>">
-        <button type="submit" class="action-btn <?= $done||$disabled?'btn-disabled':'btn-primary' ?>" <?= $done||$disabled?'disabled':'' ?>>
+        <button
+            type="submit"
+            class="action-btn <?= $is_disabled ? 'btn-disabled' : 'btn-primary' ?>"
+            <?= $is_disabled ? 'disabled' : '' ?>
+            <?= $window_hint ? 'title="' . htmlspecialchars($window_hint) . '"' : '' ?>
+        >
             <?= $label ?>
+            <?php if ($window_hint && !$done): ?>
+                <span style="font-size:11px;font-weight:400;display:block;margin-top:2px;opacity:0.8;"><?= htmlspecialchars($window_hint) ?></span>
+            <?php endif; ?>
         </button>
     </form>
     <?php endforeach; ?>
     </div>
-    <p style="margin-top:10px; color:#666; font-size:14px;">Note: Buttons disable after recording.</p>
+    <p style="margin-top:10px;color:var(--text-muted);font-size:13px;">
+        Time In: within 10 minutes of work start &nbsp;·&nbsp; Other actions: until 3 hours after work end.
+    </p>
     </div>
 
     <h3>Attendance History</h3>
@@ -84,16 +120,16 @@
         <?php
         $status = $row['status'] ?: '---';
         $status_class = '';
-        if (strtolower($status) === 'present') $status_class = "style='color: green; font-weight: bold;'";
-        if (strtolower($status) === 'absent')  $status_class = "style='color: red; font-weight: bold;'";
-        if (strtolower($status) === 'excused') $status_class = "style='color: orange; font-weight: bold;'";
+        if (strtolower($status) === 'present') $status_class = "style='color:var(--green);font-weight:700;'";
+        if (strtolower($status) === 'absent')  $status_class = "style='color:var(--red);font-weight:700;'";
+        if (strtolower($status) === 'excused') $status_class = "style='color:var(--amber);font-weight:700;'";
         ?>
         <span <?= $status_class ?>><?= htmlspecialchars($status) ?></span>
     <td data-label="Verified">
         <?php if ($row['verified'] == 1): ?>
-            <span style="color:green; font-weight:bold;">✓ Verified</span>
+            <span class="verified-badge">✓ Verified</span>
         <?php else: ?>
-            <span style="color:orange; font-weight:bold;">⏳ Pending</span>
+            <span class="unverified-badge">⏳ Pending</span>
         <?php endif; ?>
     </td>
     <td data-label="Hours (Daily)">

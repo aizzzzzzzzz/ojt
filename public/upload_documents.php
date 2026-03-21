@@ -167,375 +167,108 @@ if (isset($_SESSION['success_message'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload Documents - OJT Supervisor Dashboard</title>
+    <title>Upload Documents</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
-            color: #333;
-            line-height: 1.6;
-            min-height: 100vh;
-        }
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+    :root{--bg:#f1f4f9;--surface:#fff;--surface2:#f8fafc;--border:#e3e8f0;--text:#111827;--text-muted:#6b7280;--accent:#4361ee;--accent-dk:#3451d1;--accent-lt:#eef1fd;--green:#16a34a;--green-lt:#dcfce7;--red:#dc2626;--red-lt:#fee2e2;--amber:#d97706;--amber-lt:#fef3c7;--radius:14px;--shadow-sm:0 1px 2px rgba(0,0,0,.05);--shadow-md:0 2px 8px rgba(0,0,0,.07),0 8px 28px rgba(0,0,0,.07);}
+    *,*::before,*::after{box-sizing:border-box;}
+    body{font-family:'DM Sans','Segoe UI',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh;margin:0;padding:28px 20px 60px;}
+    .page-card{background:var(--surface);border-radius:20px;border:1px solid var(--border);box-shadow:var(--shadow-md);width:100%;margin:0 auto;overflow:hidden;}
+    .page-topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px;}
+    .page-topbar h2{font-size:18px;font-weight:700;margin:0;}
+    .page-topbar p{font-size:13px;color:var(--text-muted);margin:2px 0 0;}
+    .page-inner{padding:24px 28px 32px;}
+    .success-msg{background:var(--green-lt);color:#15803d;padding:12px 16px;border-radius:10px;border:1px solid #bbf7d0;font-size:14px;font-weight:500;margin-bottom:16px;}
+    .error-msg{background:var(--red-lt);color:#b91c1c;padding:12px 16px;border-radius:10px;border:1px solid #fecaca;font-size:14px;font-weight:500;margin-bottom:16px;}
+    .form-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:5px;display:block;}
+    .form-control,.form-select,input,textarea,select{border-radius:9px;border:1px solid var(--border);padding:9px 12px;font-size:14px;font-family:inherit;color:var(--text);background:var(--surface);transition:border-color .2s,box-shadow .2s;width:100%;}
+    input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(67,97,238,.12);outline:none;}
+    .mb-3{margin-bottom:16px;}
+    .btn{font-family:inherit;font-size:13px;font-weight:600;border-radius:9px;padding:9px 18px;transition:all .18s;cursor:pointer;display:inline-flex;align-items:center;gap:6px;border:none;text-decoration:none;}
+    .btn-primary{background:var(--accent);color:#fff;}.btn-primary:hover{background:var(--accent-dk);transform:translateY(-1px);color:#fff;}
+    .btn-success{background:var(--green);color:#fff;}.btn-success:hover{background:#15803d;transform:translateY(-1px);color:#fff;}
+    .btn-secondary{background:var(--surface2);color:var(--text);border:1.5px solid var(--border);}.btn-secondary:hover{background:var(--border);}
+    .btn-outline-secondary{background:transparent;color:var(--text-muted);border:1.5px solid var(--border);border-radius:9px;padding:7px 14px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-family:inherit;transition:all .18s;}
+    .btn-outline-secondary:hover{background:var(--surface2);color:var(--text);}
+    .table{width:100%;border-collapse:collapse;font-size:14px;}
+    .table thead th{background:var(--surface2);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);border-bottom:1px solid var(--border);padding:11px 14px;}
+    .table tbody td{padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text);}
+    .table tbody tr:last-child td{border-bottom:none;}
+    .table tbody tr:hover td{background:var(--accent-lt);}
+    .table-section{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border);margin-top:16px;}
+    @media(max-width:768px){body{padding:10px 10px 40px;}.page-card{border-radius:14px;}.page-topbar,.page-inner{padding:14px 16px;}}
 
-        .dashboard-container {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 1200px;
-            margin: 20px auto;
-        }
-
-        .dashboard-container h2 {
-            margin-bottom: 10px;
-            font-size: 28px;
-            font-weight: 600;
-            color: #2c3e50;
-            text-align: center;
-        }
-
-        .dashboard-container h3 {
-            margin-top: 30px;
-            margin-bottom: 20px;
-            font-size: 22px;
-            color: #2c3e50;
-            border-bottom: 2px solid #e0e0e0;
-            padding-bottom: 10px;
-        }
-
-        .welcome-section {
-            margin-bottom: 30px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-            text-align: center;
-        }
-
-        .welcome-section p {
-            font-size: 16px;
-            color: #666;
-            margin: 5px 0;
-        }
-
-        .success-msg {
-            background: #d4edda;
-            color: #155724;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px solid #c3e6cb;
-            text-align: center;
-            font-weight: 500;
-        }
-
-        .error-msg {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px solid #f5c6cb;
-            text-align: center;
-            font-weight: 500;
-        }
-
-        .upload-form {
-            background: #f8f9fa;
-            padding: 30px;
-            border-radius: 10px;
-            margin-bottom: 30px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        }
-
-        .upload-form h4 {
-            margin-bottom: 20px;
-            color: #2c3e50;
-            text-align: center;
-        }
-
-        .btn-primary {
-            background: linear-gradient(90deg, #007bff, #00c6ff);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary:hover {
-            background: linear-gradient(90deg, #0056b3, #0099cc);
-            transform: translateY(-2px);
-        }
-
-        .btn-secondary {
-            background: linear-gradient(90deg, #6c757d, #8e9ba7);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .btn-secondary:hover {
-            background: linear-gradient(90deg, #545b62, #727b84);
-            transform: translateY(-2px);
-            color: white;
-        }
-
-        .table-section {
-            overflow-x: auto;
-            margin-top: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        th, td {
-            padding: 12px;
-            text-align: center;
-            border-bottom: 1px solid #e0e0e0;
-            font-size: 14px;
-        }
-
-        th {
-            background: linear-gradient(90deg, #f8f9fa, #e9ecef);
-            font-weight: 600;
-            color: #2c3e50;
-            position: sticky;
-            top: 0;
-        }
-
-        tr:nth-child(even) {
-            background: #f8f9fa;
-        }
-
-        tr:hover {
-            background: #e3f2fd;
-            transition: background 0.3s ease;
-        }
-
-        .btn-sm {
-            padding: 5px 10px;
-            font-size: 12px;
-        }
-
-        .btn-danger {
-            background: linear-gradient(90deg, #dc3545, #ff6b7a);
-            color: white;
-            border: none;
-        }
-
-        .btn-danger:hover {
-            background: linear-gradient(90deg, #bd2130, #e04b59);
-        }
-
-        .file-icon {
-            font-size: 1.5rem;
-            margin-right: 10px;
-            vertical-align: middle;
-        }
-
-        .back-link {
-            display: inline-block;
-            margin-bottom: 20px;
-            color: #007bff;
-            text-decoration: none;
-            font-weight: 500;
-        }
-
-        .back-link:hover {
-            text-decoration: underline;
-        }
-
-        .description-cell {
-            max-width: 200px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        @media (max-width: 768px) {
-            .dashboard-container {
-                padding: 20px;
-                margin: 10px;
-            }
-
-            .dashboard-container h2 {
-                font-size: 24px;
-            }
-
-            .dashboard-container h3 {
-                font-size: 18px;
-            }
-
-            .upload-form {
-                padding: 20px;
-            }
-
-            table, thead, tbody, th, td, tr {
-                display: block;
-                width: 100%;
-            }
-
-            thead tr {
-                position: absolute;
-                top: -9999px;
-                left: -9999px;
-            }
-
-            tr {
-                border: 1px solid #ddd;
-                margin-bottom: 15px;
-                border-radius: 8px;
-                padding: 10px;
-                background: white;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            }
-
-            td {
-                border: none;
-                position: relative;
-                padding-left: 50%;
-                text-align: right;
-                margin-bottom: 10px;
-            }
-
-            td::before {
-                content: attr(data-label) ": ";
-                position: absolute;
-                left: 10px;
-                width: 45%;
-                font-weight: bold;
-                text-align: left;
-                color: #2c3e50;
-            }
-        }
-    </style>
+    .page-card { max-width: 1100px; }
+    .upload-zone { background:var(--surface2); border:2px dashed var(--border); border-radius:var(--radius); padding:28px; text-align:center; transition:border-color .2s; }
+    .upload-zone:hover { border-color:var(--accent); }
+    .file-item { display:flex; justify-content:space-between; align-items:center; padding:11px 0; border-bottom:1px solid var(--border); font-size:14px; gap:12px; }
+    .file-item:last-child { border-bottom:none; }
+    .file-item a { color:var(--accent); text-decoration:none; font-weight:500; }
+    .file-item a:hover { text-decoration:underline; }
+    .file-icon { font-size:20px; flex-shrink:0; }
+    .file-meta { font-size:12px; color:var(--text-muted); }
+</style>
 </head>
 <body>
-    <div class="dashboard-container">
-        <a href="supervisor_dashboard.php" class="back-link">← Back</a>
-        
-        <div class="welcome-section">
+<div class="page-card">
+    <div class="page-topbar">
+        <div>
             <h2>Upload Documents</h2>
-            <p>Welcome, <?= htmlspecialchars($employer['username']) ?>! Upload and manage your OJT documents here.</p>
+            <p>Share documents and resources with your students</p>
         </div>
+        <a href="supervisor_dashboard.php" class="btn-outline-secondary">⬅ Back</a>
+    </div>
+    <div class="page-inner">
 
         <?php if (!empty($success_message)): ?>
-            <div class="success-msg"><?= $success_message ?></div>
+            <div class="success-msg"><?= htmlspecialchars($success_message) ?></div>
+        <?php endif; ?>
+        <?php if (!empty($error_message)): ?>
+            <div class="error-msg"><?= htmlspecialchars($error_message) ?></div>
         <?php endif; ?>
 
-        <?php if (!empty($uploadError)): ?>
-            <div class="error-msg"><?= htmlspecialchars($uploadError) ?></div>
-        <?php endif; ?>
+        <h3>Upload New Document</h3>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token ?? '') ?>">
+            <div class="upload-zone mb-3">
+                <div style="font-size:2rem;margin-bottom:10px;">📁</div>
+                <p style="color:var(--text-muted);font-size:14px;margin:0 0 14px;">Select a file to upload (PDF, DOCX, JPG, PNG — max 5MB)</p>
+                <input type="file" name="document" class="form-control" style="max-width:360px;margin:0 auto;" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Description (optional)</label>
+                <input type="text" name="description" class="form-control" placeholder="Add a short description...">
+            </div>
+            <button type="submit" name="upload_document" class="btn btn-primary">📤 Upload Document</button>
+        </form>
 
-        <div class="upload-form">
-            <h4>Upload New Document</h4>
-            <form method="post" enctype="multipart/form-data">
-                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                
-                <div class="mb-3">
-                    <label for="uploaded_file" class="form-label">Select Document</label>
-                    <input type="file" name="uploaded_file" id="uploaded_file" required class="form-control">
-                    <div class="form-text">
-                        Allowed file types: PDF, DOCX, JPG, PNG, JPEG, TXT, XLSX, PPTX<br>
-                        Maximum file size: 10MB
+        <h3 style="margin-top:28px;">Uploaded Documents</h3>
+        <?php if (!empty($documents)): ?>
+            <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:0 16px;">
+            <?php foreach ($documents as $doc): ?>
+                <div class="file-item">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <span class="file-icon">📄</span>
+                        <div>
+                            <div style="font-weight:600;color:var(--text);"><?= htmlspecialchars($doc['original_name'] ?? $doc['filename'] ?? 'Document') ?></div>
+                            <?php if (!empty($doc['description'])): ?>
+                                <div class="file-meta"><?= htmlspecialchars($doc['description']) ?></div>
+                            <?php endif; ?>
+                            <div class="file-meta"><?= htmlspecialchars($doc['uploaded_at'] ?? $doc['created_at'] ?? '') ?></div>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-shrink:0;">
+                        <a href="<?= htmlspecialchars($doc['filepath'] ?? $doc['file_path'] ?? '#') ?>" target="_blank" class="btn btn-primary btn-sm">View</a>
+                        <a href="delete_document.php?id=<?= $doc['document_id'] ?? $doc['id'] ?>" class="btn btn-sm" style="background:var(--red-lt);color:var(--red);border:1.5px solid #fecaca;" onclick="return confirm('Delete this document?')">Delete</a>
                     </div>
                 </div>
-                
-                <div class="mb-3">
-                    <label for="description" class="form-label">Description (Optional)</label>
-                    <input type="text" name="description" id="description" class="form-control" placeholder="Brief description of the document">
-                </div>
-                
-                <div class="d-grid gap-2 d-md-flex justify-content-md-center">
-                    <button type="submit" name="upload_file" class="btn btn-primary">
-                        📁 Upload Document
-                    </button>
-                    <a href="supervisor_dashboard.php" class="btn btn-secondary">Cancel</a>
-                </div>
-            </form>
-        </div>
-
-        <h3>My Uploaded Documents</h3>
-        
-        <?php if (empty($uploaded_files)): ?>
-            <div class="alert alert-info text-center">
-                <p>No documents uploaded yet. Upload your first document using the form above.</p>
+            <?php endforeach; ?>
             </div>
         <?php else: ?>
-            <div class="table-section">
-                <table class="table table-bordered align-middle">
-                    <thead>
-                        <tr>
-                            <th>Filename</th>
-                            <th>Description</th>
-                            <th>File Type</th>
-                            <th>Upload Date</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($uploaded_files as $file): 
-                            $ext = strtolower(pathinfo($file['filename'], PATHINFO_EXTENSION));
-                            $icon = '📄';
-                            if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif'])) $icon = '🖼️';
-                            elseif ($ext === 'pdf') $icon = '📕';
-                            elseif (in_array($ext, ['docx', 'doc'])) $icon = '📝';
-                            elseif (in_array($ext, ['xlsx', 'xls'])) $icon = '📊';
-                            elseif ($ext === 'pptx') $icon = '📊';
-                        ?>
-                        <tr>
-                            <td data-label="Filename">
-                                <span class="file-icon"><?= $icon ?></span>
-                                <?= htmlspecialchars($file['filename']) ?>
-                            </td>
-                            <td data-label="Description" class="description-cell">
-                                <?= !empty($file['description']) ? htmlspecialchars($file['description']) : '<em>No description</em>' ?>
-                            </td>
-                            <td data-label="File Type"><?= strtoupper($ext) ?></td>
-                            <td data-label="Upload Date"><?= date('Y-m-d H:i', strtotime($file['uploaded_at'])) ?></td>
-                            <td data-label="Actions">
-                                <a href="download.php?file_id=<?= $file['id'] ?>" class="btn btn-sm btn-primary">Download</a>
-                                <a href="delete_document.php?file_id=<?= $file['id'] ?>" 
-                                   class="btn btn-sm btn-danger"
-                                   onclick="return confirm('Are you sure you want to delete this document?')">Delete</a>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-            <div class="mt-3 text-center">
-                <p>Total documents: <strong><?= count($uploaded_files) ?></strong></p>
-            </div>
+            <p style="color:var(--text-muted);text-align:center;padding:24px 0;">No documents uploaded yet.</p>
         <?php endif; ?>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        document.getElementById('uploaded_file').addEventListener('change', function(e) {
-            const fileName = e.target.files[0]?.name;
-            if (fileName) {
-                console.log('Selected file:', fileName);
-            }
-        });
-    </script>
+</div>
 </body>
 </html>

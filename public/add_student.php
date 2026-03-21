@@ -104,258 +104,123 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add Student</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            color: #333;
-        }
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<style>
 
-        .add-student-container {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 32px;
-            border-radius: 14px;
-            box-shadow: 0 10px 30px rgba(10, 36, 99, 0.14);
-            width: 100%;
-            max-width: 820px;
-            border: 1px solid #e5e7eb;
-        }
+    :root{--bg:#f1f4f9;--surface:#fff;--surface2:#f8fafc;--border:#e3e8f0;--text:#111827;--text-muted:#6b7280;--accent:#4361ee;--accent-dk:#3451d1;--accent-lt:#eef1fd;--green:#16a34a;--green-lt:#dcfce7;--red:#dc2626;--red-lt:#fee2e2;--amber:#d97706;--amber-lt:#fef3c7;--radius:14px;--shadow-md:0 2px 8px rgba(0,0,0,.07),0 8px 28px rgba(0,0,0,.07);}
+    *,*::before,*::after{box-sizing:border-box;}
+    body{font-family:'DM Sans','Segoe UI',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh;margin:0;padding:32px 20px 60px;}
+    .page-card{background:var(--surface);border-radius:20px;border:1px solid var(--border);box-shadow:var(--shadow-md);width:100%;margin:0 auto;overflow:hidden;}
+    .page-topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px;}
+    .page-topbar h2{font-size:18px;font-weight:700;margin:0;letter-spacing:-.3px;}
+    .page-topbar p{font-size:13px;color:var(--text-muted);margin:2px 0 0;}
+    .page-inner{padding:24px 28px 32px;}
+    .page-inner h3{font-size:15px;font-weight:700;margin:24px 0 12px;padding-bottom:9px;border-bottom:1px solid var(--border);}
+    .page-inner h3:first-child{margin-top:0;}
+    .success-msg{background:var(--green-lt);color:#15803d;padding:12px 16px;border-radius:10px;border:1px solid #bbf7d0;font-size:14px;font-weight:500;margin-bottom:16px;}
+    .error-msg{background:var(--red-lt);color:#b91c1c;padding:12px 16px;border-radius:10px;border:1px solid #fecaca;font-size:14px;font-weight:500;margin-bottom:16px;}
+    .form-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:5px;display:block;}
+    .form-text{font-size:12px;color:var(--text-muted);margin-top:4px;}
+    input[type=text],input[type=email],input[type=password],input[type=number],input[type=time],input[type=date],textarea,select,.form-control{border-radius:9px;border:1px solid var(--border);padding:9px 12px;font-size:14px;font-family:inherit;color:var(--text);background:var(--surface);transition:border-color .2s,box-shadow .2s;width:100%;}
+    input:focus,textarea:focus,select:focus,.form-control:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(67,97,238,.12);outline:none;}
+    .mb-3{margin-bottom:16px;}.mb-4{margin-bottom:24px;}
+    .btn{font-family:inherit;font-size:13px;font-weight:600;border-radius:9px;padding:9px 18px;transition:all .18s;cursor:pointer;display:inline-flex;align-items:center;gap:6px;border:none;text-decoration:none;}
+    .btn-primary{background:var(--accent);color:#fff;}.btn-primary:hover{background:var(--accent-dk);transform:translateY(-1px);color:#fff;}
+    .btn-success{background:var(--green);color:#fff;}.btn-success:hover{background:#15803d;transform:translateY(-1px);color:#fff;}
+    .btn-secondary{background:var(--surface2);color:var(--text);border:1.5px solid var(--border);}.btn-secondary:hover{background:var(--border);}
+    .btn-outline-secondary{background:transparent;color:var(--text-muted);border:1.5px solid var(--border);border-radius:9px;padding:7px 14px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-family:inherit;transition:all .18s;}
+    .btn-outline-secondary:hover{background:var(--surface2);color:var(--text);}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+    .span-2{grid-column:span 2;}
+    @media(max-width:640px){body{padding:10px 10px 40px;}.page-card{border-radius:14px;}.page-topbar,.page-inner{padding:14px 16px;}.form-grid{grid-template-columns:1fr;}.span-2{grid-column:span 1;}}
 
-        .add-student-container h2 {
-            margin-bottom: 8px;
-            font-size: 30px;
-            font-weight: 700;
-            color: #2c3e50;
-            text-align: left;
-        }
-
-        .subtitle {
-            margin: 0 0 22px;
-            color: #64748b;
-            font-size: 14px;
-        }
-
-        .success-msg {
-            background: #d4edda;
-            color: #155724;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px solid #c3e6cb;
-            font-size: 16px;
-            text-align: left;
-            line-height: 1.4;
-        }
-
-        .error-msg {
-            background: #fee2e2;
-            color: #dc2626;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px solid #fecaca;
-            font-size: 16px;
-            text-align: left;
-            line-height: 1.4;
-        }
-
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 16px;
-        }
-
-        .form-group-full {
-            grid-column: span 2;
-        }
-
-        .form-group {
-            text-align: left;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #334155;
-        }
-
-        .form-group label .icon {
-            margin-right: 5px;
-        }
-
-        .add-student-container input[type="text"],
-        .add-student-container input[type="email"],
-        .add-student-container input[type="password"],
-        .add-student-container input[type="number"] {
-            width: 100%;
-            padding: 12px 14px;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            font-size: 15px;
-            box-sizing: border-box;
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
-            outline: none;
-            background: #fff;
-        }
-
-        .add-student-container input:focus {
-            border-color: #007bff;
-            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
-        }
-
-        .form-actions {
-            display: flex;
-            gap: 12px;
-            justify-content: flex-end;
-            margin-top: 20px;
-        }
-
-        .action-btn {
-            min-width: 150px;
-            padding: 12px 16px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            text-align: center;
-            text-decoration: none;
-            transition: opacity 0.2s ease, transform 0.2s ease;
-            border: none;
-            cursor: pointer;
-        }
-
-        .action-btn-primary {
-            background: linear-gradient(90deg, #007bff, #00c6ff);
-            color: white;
-        }
-
-        .action-btn-secondary {
-            background: #e2e8f0;
-            color: #0f172a;
-        }
-
-        .action-btn:hover {
-            opacity: 0.9;
-            transform: translateY(-1px);
-        }
-
-        .action-btn:active {
-            transform: translateY(0);
-        }
-
-        @media (max-width: 768px) {
-            .add-student-container {
-                padding: 20px;
-                max-width: 96%;
-            }
-
-            .form-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .form-group-full {
-                grid-column: span 1;
-            }
-
-            .form-actions {
-                flex-direction: column;
-            }
-
-            .action-btn {
-                width: 100%;
-            }
-        }
-    </style>
+    .page-card { max-width: 860px; }
+</style>
 </head>
 <body>
-    <div class="add-student-container">
-        <h2>Add Student</h2>
-        <p class="subtitle">Create a student account and set their internship profile details.</p>
+<div class="page-card">
+    <div class="page-topbar">
+        <div>
+            <h2>Add Student</h2>
+            <p>Create a student account and set their internship profile</p>
+        </div>
+        <a href="supervisor_dashboard.php" class="btn-outline-secondary">⬅ Back</a>
+    </div>
+    <div class="page-inner">
+
         <?php if (!empty($success)): ?>
             <div class="success-msg"><?= htmlspecialchars($success) ?></div>
         <?php endif; ?>
         <?php if (!empty($error)): ?>
             <div class="error-msg"><?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
+
         <form method="post">
             <div class="form-grid">
-                <div class="form-group">
-                    <label for="username"><span class="icon">👤</span> Username</label>
-                    <input type="text" id="username" name="username" placeholder="Enter username" value="<?= htmlspecialchars($form_data['username']) ?>" required>
+                <div class="mb-3">
+                    <label class="form-label" for="username">Username</label>
+                    <input type="text" id="username" name="username" placeholder="Login username" value="<?= htmlspecialchars($form_data['username']) ?>" required>
                 </div>
-                <div class="form-group">
-                    <label for="email"><span class="icon">📧</span> Email</label>
-                    <input type="email" id="email" name="email" placeholder="Enter email address" value="<?= htmlspecialchars($form_data['email']) ?>" required>
+                <div class="mb-3">
+                    <label class="form-label" for="email">Email</label>
+                    <input type="email" id="email" name="email" placeholder="Email address" value="<?= htmlspecialchars($form_data['email']) ?>" required>
                 </div>
-                <div class="form-group">
-                    <label for="first_name"><span class="icon">📝</span> First Name</label>
-                    <input type="text" id="first_name" name="first_name" placeholder="Enter first name" value="<?= htmlspecialchars($form_data['first_name']) ?>" required>
+                <div class="mb-3">
+                    <label class="form-label" for="first_name">First Name</label>
+                    <input type="text" id="first_name" name="first_name" placeholder="First name" value="<?= htmlspecialchars($form_data['first_name']) ?>" required>
                 </div>
-                <div class="form-group">
-                    <label for="middle_name"><span class="icon">📝</span> Middle Name</label>
-                    <input type="text" id="middle_name" name="middle_name" placeholder="Enter middle name (optional)" value="<?= htmlspecialchars($form_data['middle_name']) ?>">
+                <div class="mb-3">
+                    <label class="form-label" for="middle_name">Middle Name</label>
+                    <input type="text" id="middle_name" name="middle_name" placeholder="Middle name (optional)" value="<?= htmlspecialchars($form_data['middle_name']) ?>">
                 </div>
-                <div class="form-group">
-                    <label for="last_name"><span class="icon">📝</span> Last Name</label>
-                    <input type="text" id="last_name" name="last_name" placeholder="Enter last name" value="<?= htmlspecialchars($form_data['last_name']) ?>" required>
+                <div class="mb-3">
+                    <label class="form-label" for="last_name">Last Name</label>
+                    <input type="text" id="last_name" name="last_name" placeholder="Last name" value="<?= htmlspecialchars($form_data['last_name']) ?>" required>
                 </div>
-                <div class="form-group">
-                    <label for="required_hours"><span class="icon">⏰</span> Required Hours</label>
+                <div class="mb-3">
+                    <label class="form-label" for="required_hours">Required Hours</label>
                     <input type="number" id="required_hours" name="required_hours" min="1" step="1" placeholder="e.g. 200" value="<?= htmlspecialchars($form_data['required_hours']) ?>" required>
                 </div>
-                <div class="form-group form-group-full">
-                    <label for="course"><span class="icon">🎓</span> Course</label>
-                    <input type="text" id="course" name="course" placeholder="Enter course (e.g. BSIT, BSEd)" value="<?= htmlspecialchars($form_data['course']) ?>" required>
+                <div class="mb-3">
+                    <label class="form-label" for="course">Course</label>
+                    <input type="text" id="course" name="course" placeholder="e.g. BSIT, BSEd" value="<?= htmlspecialchars($form_data['course']) ?>" required>
                 </div>
-                <div class="form-group form-group-full">
-                    <label for="school"><span class="icon">🏫</span> School</label>
-                    <input type="text" id="school" name="school" placeholder="Enter school name" value="<?= htmlspecialchars($form_data['school']) ?>" required>
+                <div class="mb-3">
+                    <label class="form-label" for="school">School</label>
+                    <input type="text" id="school" name="school" placeholder="School name" value="<?= htmlspecialchars($form_data['school']) ?>" required>
                 </div>
-                <div class="form-group form-group-full">
-                    <label for="password"><span class="icon">🔒</span> Password</label>
-                    <input type="password" id="password" name="password" placeholder="Enter password" required>
+                <div class="mb-3 span-2">
+                    <label class="form-label" for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Initial password" required>
                 </div>
             </div>
-            <div class="form-actions">
-                <a href="supervisor_dashboard.php" class="action-btn action-btn-secondary">Back</a>
-                <button type="submit" class="action-btn action-btn-primary">Add Student</button>
-            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px;">Add Student</button>
         </form>
     </div>
+</div>
 
-    <div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="successModalLabel">Success</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    Student added successfully!
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                </div>
+<div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:16px;border:1px solid var(--border);">
+            <div class="modal-header" style="border-bottom:1px solid var(--border);">
+                <h5 class="modal-title" style="font-weight:700;">Student Added</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="font-size:14px;">Student account created successfully!</div>
+            <div class="modal-footer" style="border-top:1px solid var(--border);">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-    <script>
-        <?php if (!empty($success)): ?>
-            document.addEventListener('DOMContentLoaded', function() {
-                var successModal = new bootstrap.Modal(document.getElementById('successModal'));
-                successModal.show();
-            });
-        <?php endif; ?>
-    </script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    <?php if (!empty($success)): ?>
+    document.addEventListener('DOMContentLoaded', function() {
+        new bootstrap.Modal(document.getElementById('successModal')).show();
+    });
+    <?php endif; ?>
+</script>
 </body>
 </html>

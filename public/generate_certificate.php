@@ -313,10 +313,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
     
-    if (isset($_POST['another'])) {
-        header("Location: generate_certificate.php?student_id=$student_id");
-        exit;
-    }
 }
 ?>
 
@@ -326,204 +322,144 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Generate Certificate</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
     <style>
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        :root {
+            --bg:#f1f4f9;--surface:#fff;--surface2:#f8fafc;--border:#e3e8f0;
+            --text:#111827;--text-muted:#6b7280;--accent:#4361ee;--accent-dk:#3451d1;
+            --accent-lt:#eef1fd;--green:#16a34a;--green-lt:#dcfce7;--red:#dc2626;
+            --red-lt:#fee2e2;--amber:#d97706;--amber-lt:#fef3c7;
+            --radius:14px;--shadow-md:0 2px 8px rgba(0,0,0,.07),0 8px 28px rgba(0,0,0,.07);
+        }
+        *, *::before, *::after { box-sizing: border-box; }
+        body {
+            font-family: 'DM Sans', 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
             min-height: 100vh;
             margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            padding: 32px 20px 60px;
+            line-height: 1.6;
         }
-        .container { 
-            max-width: 800px;
+        .page-card {
+            max-width: 760px;
             width: 100%;
-            background: white; 
-            padding: 40px; 
-            border-radius: 20px; 
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            position: relative;
+            margin: 0 auto;
+            background: var(--surface);
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-md);
             overflow: hidden;
         }
-        .container::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 5px;
-            background: linear-gradient(90deg, #667eea, #764ba2);
-        }
-        .success-message {
-            background: #d4edda;
-            border: 1px solid #c3e6cb;
-            color: #155724;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 25px;
+        .page-topbar {
             display: flex;
             align-items: center;
-            gap: 10px;
+            justify-content: space-between;
+            padding: 18px 28px;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 12px;
         }
-        .success-message::before {
-            content: '✓';
-            background: #155724;
-            color: white;
-            width: 25px;
-            height: 25px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
+        .page-topbar h2 { font-size: 18px; font-weight: 700; margin: 0; letter-spacing: -.3px; }
+        .page-topbar p  { font-size: 13px; color: var(--text-muted); margin: 2px 0 0; }
+        .page-inner { padding: 24px 28px 32px; }
+        .success-msg {
+            background: var(--green-lt); color: #15803d;
+            padding: 12px 16px; border-radius: 10px;
+            border: 1px solid #bbf7d0; font-size: 14px;
+            font-weight: 500; margin-bottom: 20px;
+            display: flex; align-items: center; gap: 10px;
         }
-        .alert {
-            padding: 12px 16px;
-            border-radius: 10px;
-            margin-bottom: 25px;
-            border: 1px solid transparent;
-            font-weight: 600;
+        .warning-msg {
+            background: var(--amber-lt); color: var(--amber);
+            padding: 12px 16px; border-radius: 10px;
+            border: 1px solid #fde68a; font-size: 14px;
+            font-weight: 500; margin-bottom: 20px;
         }
-        .alert-warning {
-            background: #fff3cd;
-            border-color: #ffeeba;
-            color: #856404;
+        .info-block {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 24px;
         }
-        .student-info {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 25px;
-            margin-bottom: 30px;
-            border-left: 5px solid #667eea;
-        }
-        .student-info h3 {
-            margin-top: 0;
-            color: #333;
-            border-bottom: 2px solid #e9ecef;
-            padding-bottom: 10px;
+        .info-block h3 {
+            font-size: 14px; font-weight: 700; margin: 0 0 14px;
+            padding-bottom: 10px; border-bottom: 1px solid var(--border);
+            color: var(--text);
         }
         .info-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
         }
         .info-item {
-            background: white;
-            padding: 12px 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 14px;
         }
         .info-label {
-            font-weight: 600;
-            color: #555;
-            display: block;
-            font-size: 0.9em;
-            margin-bottom: 5px;
+            font-size: 11px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: .6px; color: var(--text-muted);
+            display: block; margin-bottom: 4px;
         }
-        .info-value {
-            color: #222;
-            font-size: 1.1em;
-        }
-        .action-buttons {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 30px;
-        }
-        .btn {
-            padding: 14px 24px;
-            border: none;
-            border-radius: 10px;
-            font-weight: 600;
-            font-size: 16px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            text-decoration: none;
-        }
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-        }
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-        .btn-secondary:hover {
-            background: #5a6268;
-            transform: translateY(-2px);
-        }
-        .btn-success {
-            background: #28a745;
-            color: white;
-        }
-        .btn-success:hover {
-            background: #218838;
-            transform: translateY(-2px);
-        }
-        .btn-icon {
-            font-size: 1.2em;
-        }
+        .info-value { font-size: 15px; font-weight: 600; color: var(--text); }
         .status-badge {
-            display: inline-block;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.85em;
-            font-weight: 600;
-            margin-left: 10px;
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 3px 10px; border-radius: 20px;
+            font-size: 12px; font-weight: 600; margin-left: 6px;
         }
-        .status-complete {
-            background: #d4edda;
-            color: #155724;
+        .status-complete { background: var(--green-lt); color: var(--green); }
+        .status-pending  { background: var(--amber-lt); color: var(--amber); }
+        .btn-group { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+        .btn {
+            font-family: inherit; font-size: 14px; font-weight: 600;
+            border-radius: 9px; padding: 11px 20px; transition: all .18s;
+            cursor: pointer; display: inline-flex; align-items: center;
+            justify-content: center; gap: 8px; border: none; text-decoration: none;
+            width: 100%;
         }
-        .status-pending {
-            background: #fff3cd;
-            color: #856404;
+        .btn-primary   { background: var(--accent);  color: #fff; }
+        .btn-primary:hover   { background: var(--accent-dk); transform: translateY(-1px); color: #fff; }
+        .btn-success   { background: var(--green);   color: #fff; }
+        .btn-success:hover   { background: #15803d;  transform: translateY(-1px); color: #fff; }
+        .btn-secondary { background: var(--surface2); color: var(--text); border: 1.5px solid var(--border); }
+        .btn-secondary:hover { background: var(--border); }
+        .btn-outline-secondary {
+            background: transparent; color: var(--text-muted);
+            border: 1.5px solid var(--border); border-radius: 9px;
+            padding: 7px 14px; font-size: 13px; font-weight: 600;
+            cursor: pointer; display: inline-flex; align-items: center;
+            gap: 6px; text-decoration: none; font-family: inherit; transition: all .18s;
         }
-        .back-link {
-            margin-top: 25px;
-            text-align: center;
-        }
-        .back-link a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 500;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-        }
-        .back-link a:hover {
-            text-decoration: underline;
+        .btn-outline-secondary:hover { background: var(--surface2); color: var(--text); }
+        @media (max-width: 600px) {
+            body { padding: 10px 10px 40px; }
+            .page-card { border-radius: 14px; }
+            .page-topbar, .page-inner { padding: 14px 16px; }
+            .btn-row { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2 style="color: #333; text-align: center; margin-bottom: 30px;">
-            <span style="color: #667eea;">Certificate</span> Generation
-        </h2>
-        
+<div class="page-card">
+    <div class="page-topbar">
+        <div>
+            <h2>Generate Certificate</h2>
+            <p>Review student information and generate the PDF certificate</p>
+        </div>
+        <a href="supervisor_dashboard.php" class="btn-outline-secondary">⬅ Back</a>
+    </div>
+    <div class="page-inner">
+
         <?php if ($signatureExists): ?>
-            <div class="success-message">
-                ✓ Supervisor signature on file.
-            </div>
+            <div class="success-msg">✓ Supervisor signature on file — ready to generate.</div>
         <?php else: ?>
-            <div class="alert alert-warning" role="alert">
-                No signature found yet. The certificate will be generated without a signature.
-            </div>
+            <div class="warning-msg">⚠️ No signature found. The certificate will be generated without a signature.</div>
         <?php endif; ?>
-        
-        <div class="student-info">
+
+        <div class="info-block">
             <h3>Student Information</h3>
             <div class="info-grid">
                 <div class="info-item">
@@ -541,35 +477,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="info-item">
                     <span class="info-label">Status</span>
                     <span class="info-value">
-                        <?= $signatureExists ? 'Ready for Generation' : 'Signature Missing' ?>
+                        <?= $signatureExists ? 'Ready' : 'Signature Missing' ?>
                         <span class="status-badge <?= $signatureExists ? 'status-complete' : 'status-pending' ?>">
-                            <?= $signatureExists ? '✓' : '!' ?>
+                            <?= $signatureExists ? '✓ Signed' : '! Unsigned' ?>
                         </span>
                     </span>
                 </div>
             </div>
         </div>
-        
-        <div class="action-buttons">
-            <form method="post" style="grid-column: 1 / -1;">
-                <button type="submit" name="generate" class="btn btn-success" style="width: 100%;">
-                    <span class="btn-icon">📄</span>
-                    Generate PDF Certificate
-                </button>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
-                    <button type="submit" name="another" class="btn btn-primary">
-                        <span class="btn-icon">🔄</span>
-                        Generate Another Certificate
-                    </button>
+        <form method="post">
+            <button type="submit" name="generate" class="btn btn-success">
+                📄 Generate PDF Certificate
+            </button>
+        </form>
 
-                    <a href="supervisor_dashboard.php" class="btn btn-secondary">
-                        <span class="btn-icon">←</span>
-                        Back to Dashboard
-                    </a>
-                </div>
-            </form>
-        </div>
     </div>
+</div>
 </body>
 </html>

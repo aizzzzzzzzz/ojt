@@ -57,23 +57,27 @@
                 </button>
             </div>
 
-            <small style="color: #666; display: block; margin-bottom: 10px;">💡 Supports: PHP, HTML, CSS, Java, JavaScript, and more</small>
-            <div id="codeTab" style="display: none;">
-                <div class="editor-half">
-                    <h6>Code Editor:</h6>
+            <small style="color:var(--text-muted,#6b7280); display:block; margin-bottom:10px;">💡 Supports: PHP, HTML, CSS, Java, JavaScript, and more</small>
+            <div id="codeTab" style="display:none; flex-direction:column; gap:12px;">
+                <!-- Full-width editor -->
+                <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <h6 style="margin:0; font-size:13px; font-weight:700;">Code Editor</h6>
+                        <button type="button" id="runCodeBtn" class="btn btn-primary btn-sm" onclick="runCodePreview(event)">▶ Run &amp; Preview</button>
+                    </div>
                     <div id="codeEditorContainer">
                         <textarea id="codeEditor" name="code_content"><?php echo htmlspecialchars($defaultCode); ?></textarea>
                     </div>
                 </div>
-
-                <div class="preview-half">
-                    <div class="preview-controls">
-                        <h6>Preview Output:</h6>
-                        <button type="button" id="runCodeBtn" class="btn btn-primary btn-sm">▶️ Run Code</button>
+                <!-- Collapsible preview — hidden until Run is clicked -->
+                <div id="previewPanel" style="display:none;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:#f8fafc; border:1px solid #e3e8f0; border-bottom:none; border-radius:9px 9px 0 0;">
+                        <span style="font-size:13px; font-weight:700;">Preview Output</span>
+                        <button type="button" onclick="closePreview()" style="background:none; border:none; cursor:pointer; font-size:16px; color:#6b7280; line-height:1; padding:0;">✕</button>
                     </div>
                     <iframe
                         id="editorPreview"
-                        style="width:100%; height:100%; border:1px solid #ddd; border-radius:6px;"
+                        style="width:100%; height:500px; border:1px solid #e3e8f0; border-radius:0 0 9px 9px; display:block;"
                     ></iframe>
                 </div>
             </div>

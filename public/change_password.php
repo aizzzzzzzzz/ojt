@@ -61,127 +61,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Change Password</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            color: #333;
-        }
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+    :root{--bg:#f1f4f9;--surface:#fff;--surface2:#f8fafc;--border:#e3e8f0;--text:#111827;--text-muted:#6b7280;--accent:#4361ee;--accent-dk:#3451d1;--accent-lt:#eef1fd;--green:#16a34a;--green-lt:#dcfce7;--red:#dc2626;--red-lt:#fee2e2;--radius:14px;--shadow-md:0 2px 8px rgba(0,0,0,.07),0 8px 28px rgba(0,0,0,.07);}
+    *,*::before,*::after{box-sizing:border-box;}
+    body{font-family:'DM Sans','Segoe UI',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh;margin:0;padding:32px 20px 60px;display:flex;align-items:center;justify-content:center;}
+    .page-card{background:var(--surface);border-radius:20px;border:1px solid var(--border);box-shadow:var(--shadow-md);width:100%;overflow:hidden;}
+    .page-topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px;}
+    .page-topbar h2{font-size:18px;font-weight:700;margin:0;letter-spacing:-.3px;}
+    .page-inner{padding:24px 28px 32px;}
+    .success-msg{background:var(--green-lt);color:#15803d;padding:12px 16px;border-radius:10px;border:1px solid #bbf7d0;font-size:14px;font-weight:500;margin-bottom:16px;}
+    .error-msg{background:var(--red-lt);color:#b91c1c;padding:12px 16px;border-radius:10px;border:1px solid #fecaca;font-size:14px;font-weight:500;margin-bottom:16px;}
+    .form-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:5px;display:block;}
+    input[type=text],input[type=password],input[type=date],input[type=file],.form-control,textarea,select{border-radius:9px;border:1px solid var(--border);padding:9px 12px;font-size:14px;font-family:inherit;color:var(--text);background:var(--surface);transition:border-color .2s,box-shadow .2s;width:100%;}
+    input:focus,textarea:focus,select:focus,.form-control:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(67,97,238,.12);outline:none;}
+    .btn{font-family:inherit;font-size:13px;font-weight:600;border-radius:9px;padding:9px 18px;transition:all .18s;cursor:pointer;display:inline-flex;align-items:center;gap:6px;border:none;text-decoration:none;}
+    .btn-primary{background:var(--accent);color:#fff;}.btn-primary:hover{background:var(--accent-dk);transform:translateY(-1px);color:#fff;}
+    .btn-success{background:var(--green);color:#fff;}.btn-success:hover{background:#15803d;transform:translateY(-1px);color:#fff;}
+    .btn-secondary{background:var(--surface2);color:var(--text);border:1.5px solid var(--border);}.btn-secondary:hover{background:var(--border);}
+    .btn-outline-secondary{background:transparent;color:var(--text-muted);border:1.5px solid var(--border);border-radius:9px;padding:7px 14px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-family:inherit;transition:all .18s;}
+    .btn-outline-secondary:hover{background:var(--surface2);color:var(--text);}
+    .mb-3{margin-bottom:16px;}
 
-        .change-password-container {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
-        }
-
-        .change-password-container h2 {
-            margin-bottom: 30px;
-            font-size: 28px;
-            font-weight: 600;
-            color: #2c3e50;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-            text-align: left;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            color: #555;
-        }
-
-        .change-password-container input[type="password"] {
-            width: 100%;
-            padding: 14px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            font-size: 16px;
-            box-sizing: border-box;
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
-            outline: none;
-        }
-
-        .change-password-container input[type="password"]:focus {
-            border-color: #28a745;
-            box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
-        }
-
-        .change-btn {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(90deg, #28a745, #85e085);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: opacity 0.3s ease, transform 0.2s ease;
-            margin-top: 10px;
-        }
-
-        .change-btn:hover {
-            opacity: 0.9;
-            transform: translateY(-1px);
-        }
-
-        .change-btn:active {
-            transform: translateY(0);
-        }
-
-        .error-msg {
-            background: #fee2e2;
-            color: #dc2626;
-            padding: 12px;
-            border-radius: 8px;
-            margin-top: 15px;
-            border: 1px solid #fecaca;
-            font-size: 14px;
-            text-align: left;
-        }
-
-        .success-msg {
-            background: #d1fae5;
-            color: #065f46;
-            padding: 12px;
-            border-radius: 8px;
-            margin-top: 15px;
-            border: 1px solid #a7f3d0;
-            font-size: 14px;
-            text-align: left;
-        }
-
-        @media (max-width: 480px) {
-            .change-password-container {
-                margin: 20px;
-                padding: 30px 20px;
-                width: auto;
-            }
-
-            .change-password-container h2 {
-                font-size: 24px;
-            }
-        }
-    </style>
+    .page-card { max-width:420px; }
+</style>
 </head>
 <body>
-    <div class="change-password-container">
-        <h2>Change Password</h2>
-        <p>This is your first time logging in. Please change your password to continue.</p>
+<div class="page-card">
+    <div class="page-topbar">
+        <div>
+            <h2>Change Password</h2>
+            <p style="font-size:13px;color:var(--text-muted);margin:2px 0 0;">Required before continuing</p>
+        </div>
+    </div>
+    <div class="page-inner">
+        <p style="font-size:14px;color:var(--text-muted);margin:0 0 18px;">This is your first login. Please set a new password to continue.</p>
         <?php if (!empty($error)): ?>
             <div class="error-msg"><?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
@@ -189,16 +103,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="success-msg"><?= htmlspecialchars($success) ?></div>
         <?php endif; ?>
         <form method="post">
-            <div class="form-group">
-                <label for="new_password">New Password</label>
+            <div class="mb-3">
+                <label class="form-label" for="new_password">New Password</label>
                 <input type="password" id="new_password" name="new_password" placeholder="Enter new password" required>
             </div>
-            <div class="form-group">
-                <label for="confirm_password">Confirm New Password</label>
+            <div class="mb-3">
+                <label class="form-label" for="confirm_password">Confirm Password</label>
                 <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm new password" required>
             </div>
-            <button type="submit" class="change-btn">Change Password</button>
+            <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Update Password</button>
         </form>
     </div>
+</div>
 </body>
 </html>

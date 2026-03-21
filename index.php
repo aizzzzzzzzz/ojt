@@ -20,217 +20,64 @@ $admin_count = $stmt->fetchColumn();
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OJT Management System - Home</title>
-  <meta name="description" content="Welcome to the OJT Management System. Choose your role to login.">
-  <meta name="keywords" content="OJT, Management, System, Students, Employers, Admins">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      overflow-x: hidden;
-      position: relative;
-    }
+  <title>OJT Management System</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+    :root{--bg:#f1f4f9;--surface:#fff;--surface2:#f8fafc;--border:#e3e8f0;--text:#111827;--text-muted:#6b7280;--accent:#4361ee;--accent-dk:#3451d1;--accent-lt:#eef1fd;--green:#16a34a;--green-lt:#dcfce7;--red:#dc2626;--red-lt:#fee2e2;--radius:14px;--shadow-md:0 2px 8px rgba(0,0,0,.07),0 8px 28px rgba(0,0,0,.07);}
+    *,*::before,*::after{box-sizing:border-box;}
+    body{font-family:'DM Sans','Segoe UI',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh;margin:0;padding:32px 20px 60px;display:flex;align-items:center;justify-content:center;}
+    .page-card{background:var(--surface);border-radius:20px;border:1px solid var(--border);box-shadow:var(--shadow-md);width:100%;overflow:hidden;}
+    .page-topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px;}
+    .page-topbar h2{font-size:18px;font-weight:700;margin:0;letter-spacing:-.3px;}
+    .page-inner{padding:24px 28px 32px;}
+    .success-msg{background:var(--green-lt);color:#15803d;padding:12px 16px;border-radius:10px;border:1px solid #bbf7d0;font-size:14px;font-weight:500;margin-bottom:16px;}
+    .error-msg{background:var(--red-lt);color:#b91c1c;padding:12px 16px;border-radius:10px;border:1px solid #fecaca;font-size:14px;font-weight:500;margin-bottom:16px;}
+    .form-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:5px;display:block;}
+    input[type=text],input[type=password],input[type=date],input[type=file],.form-control,textarea,select{border-radius:9px;border:1px solid var(--border);padding:9px 12px;font-size:14px;font-family:inherit;color:var(--text);background:var(--surface);transition:border-color .2s,box-shadow .2s;width:100%;}
+    input:focus,textarea:focus,select:focus,.form-control:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(67,97,238,.12);outline:none;}
+    .btn{font-family:inherit;font-size:13px;font-weight:600;border-radius:9px;padding:9px 18px;transition:all .18s;cursor:pointer;display:inline-flex;align-items:center;gap:6px;border:none;text-decoration:none;}
+    .btn-primary{background:var(--accent);color:#fff;}.btn-primary:hover{background:var(--accent-dk);transform:translateY(-1px);color:#fff;}
+    .btn-success{background:var(--green);color:#fff;}.btn-success:hover{background:#15803d;transform:translateY(-1px);color:#fff;}
+    .btn-secondary{background:var(--surface2);color:var(--text);border:1.5px solid var(--border);}.btn-secondary:hover{background:var(--border);}
+    .btn-outline-secondary{background:transparent;color:var(--text-muted);border:1.5px solid var(--border);border-radius:9px;padding:7px 14px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-family:inherit;transition:all .18s;}
+    .btn-outline-secondary:hover{background:var(--surface2);color:var(--text);}
+    .mb-3{margin-bottom:16px;}
 
-    body::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="1" fill="rgba(255,255,255,0.1)"/></svg>') repeat;
-      animation: float 20s infinite linear;
-      z-index: -1;
-    }
-
-    @keyframes float {
-      0% { transform: translateY(0px); }
-      100% { transform: translateY(-100px); }
-    }
-
-    .header {
-      text-align: center;
-      margin-bottom: 40px;
-      animation: fadeInUp 1s ease-out;
-    }
-
-    .header h1 {
-      font-size: 48px;
-      font-weight: bold;
-      color: #fff;
-      margin: 0;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-    }
-
-    .header p {
-      font-size: 20px;
-      color: #e0e0e0;
-      margin: 10px 0 0 0;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-    }
-
-    .role-cards {
-      display: flex;
-      justify-content: center;
-      gap: 30px;
-      flex-wrap: wrap;
-    }
-
-    .card {
-      background: rgba(255, 255, 255, 0.95);
-      padding: 30px;
-      border-radius: 20px;
-      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-      width: 300px;
-      text-align: center;
-      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      animation: fadeInUp 1s ease-out;
-      animation-fill-mode: both;
-    }
-
-    .card:nth-child(1) { animation-delay: 0.2s; }
-    .card:nth-child(2) { animation-delay: 0.4s; }
-    .card:nth-child(3) { animation-delay: 0.6s; }
-
-    .card:hover {
-      transform: translateY(-15px) scale(1.05);
-      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
-    }
-
-    .card-icon {
-      font-size: 60px;
-      margin-bottom: 20px;
-      transition: transform 0.3s;
-    }
-
-    .card:hover .card-icon {
-      transform: scale(1.2);
-    }
-
-    .card h3 {
-      font-size: 24px;
-      font-weight: bold;
-      margin-bottom: 15px;
-      color: #333;
-    }
-
-    .card p {
-      font-size: 16px;
-      color: #666;
-      margin-bottom: 25px;
-      line-height: 1.5;
-    }
-
-    .btn {
-      display: inline-block;
-      padding: 12px 24px;
-      border: none;
-      border-radius: 25px;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: all 0.3s;
-      text-decoration: none;
-      color: white;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .btn::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-      transition: left 0.5s;
-      pointer-events: none;
-    }
-
-    .btn:hover::before {
-      left: 100%;
-    }
-
-    .btn-admin {
-      background: linear-gradient(45deg, #007bff, #0056b3);
-    }
-    .btn-admin:hover {
-      background: linear-gradient(45deg, #0056b3, #004085);
-      transform: translateY(-2px);
-    }
-
-    .btn-employer {
-      background: linear-gradient(45deg, #20c997, #17a2b8);
-    }
-    .btn-employer:hover {
-      background: linear-gradient(45deg, #17a2b8, #138496);
-      transform: translateY(-2px);
-    }
-
-    .btn-student {
-      background: linear-gradient(45deg, #fd7e14, #e8590c);
-    }
-    .btn-student:hover {
-      background: linear-gradient(45deg, #e8590c, #d9480f);
-      transform: translateY(-2px);
-    }
-
-    @keyframes fadeInUp {
-      from {
-        opacity: 0;
-        transform: translateY(30px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    @media (max-width: 768px) {
-      .role-cards {
-        flex-direction: column;
-        align-items: center;
-      }
-
-      .card {
-        width: 90%;
-        max-width: 300px;
-      }
-
-      .header h1 {
-        font-size: 36px;
-      }
-
-      .header p {
-        font-size: 18px;
-      }
-    }
-  </style>
+    body { flex-direction:column; gap:40px; padding:40px 20px; }
+    .site-title { text-align:center; }
+    .site-title h1 { font-size:32px; font-weight:700; color:var(--text); margin:0 0 6px; letter-spacing:-.5px; }
+    .site-title p  { font-size:15px; color:var(--text-muted); margin:0; }
+    .login-card { max-width:380px; }
+    .login-header { padding:28px 28px 18px; border-bottom:1px solid var(--border); text-align:center; }
+    .login-header h2 { font-size:20px; font-weight:700; margin:0 0 4px; }
+    .login-header p  { font-size:13px; color:var(--text-muted); margin:0; }
+    .login-body { padding:22px 28px 28px; }
+    .login-body input { margin-bottom:12px; }
+    .login-btn { width:100%; justify-content:center; font-size:14px; padding:11px; margin-top:4px; }
+    .setup-link { display:block; text-align:center; margin-top:12px; font-size:13px; color:var(--text-muted); }
+    .setup-link a { color:var(--accent); text-decoration:none; font-weight:600; }
+</style>
 </head>
 <body>
-  <div class="header">
+  <div class="site-title">
     <h1>OJT Management System</h1>
+    <p>Sign in to access your dashboard</p>
   </div>
-
-  <div class="role-cards">
-    <div class="card">
-      <div class="card-icon">🔐</div>
-      <h3>Login</h3>
-      <p></p>
-      <a href="public/login.php" class="btn btn-admin">Login</a>
+  <div class="page-card login-card">
+    <div class="login-header">
+      <h2>Welcome back</h2>
+      <p>Enter your credentials to continue</p>
+    </div>
+    <div class="login-body">
+      <form method="post" action="public/login.php">
+        <label class="form-label" for="username">Username</label>
+        <input type="text" id="username" name="username" placeholder="Enter your username" required>
+        <label class="form-label" for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="Enter your password" required>
+        <button type="submit" class="btn btn-primary login-btn">Login</button>
+      </form>
       <?php if ($admin_count == 0): ?>
-      <a href="public/add_first_admin.php" class="btn btn-admin" style="margin-top: 10px; font-size: 14px; padding: 8px 16px;">First-time Setup</a>
+        <p class="setup-link"><a href="public/add_first_admin.php">First-time Setup →</a></p>
       <?php endif; ?>
     </div>
   </div>

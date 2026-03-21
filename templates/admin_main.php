@@ -1,7 +1,3 @@
-
-
-
-
 <?php if (!empty($_SESSION['backup_error'])): ?>
     <div class="error-msg mb-3"><?= htmlspecialchars($_SESSION['backup_error']) ?></div>
     <?php unset($_SESSION['backup_error']); ?>
@@ -54,6 +50,19 @@
                         <input id="admin_password" type="password" name="password" required class="form-control">
                     </div>
                 </div>
+                <div class="row align-items-end mb-2">
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label" for="admin_work_start">Work Start Time</label>
+                        <input id="admin_work_start" type="time" name="work_start" value="08:00" required class="form-control">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label" for="admin_work_end">Work End Time</label>
+                        <input id="admin_work_end" type="time" name="work_end" value="17:00" required class="form-control">
+                    </div>
+                    <div class="col-md-6 mb-3 d-flex align-items-center">
+                        <p class="text-muted mb-0" style="font-size:13px;">⏰ Students will be blocked from accessing the dashboard outside these hours.</p>
+                    </div>
+                </div>
                 <button type="submit" name="add_employer" class="btn btn-primary">Add Supervisor</button>
             </form>
         </div></div>
@@ -68,6 +77,7 @@
                 <th>Username</th>
                 <th>Name</th>
                 <th>Company</th>
+                <th>Working Hours</th>
                 <th>Action</th>
             </tr></thead>
             <tbody>
@@ -76,6 +86,13 @@
                     <td><?= htmlspecialchars($emp['username']) ?></td>
                     <td><?= htmlspecialchars($emp['name']) ?></td>
                     <td><?= htmlspecialchars($emp['company']) ?></td>
+                    <td>
+                        <?php
+                            $ws = !empty($emp['work_start']) ? date('h:i A', strtotime($emp['work_start'])) : '08:00 AM';
+                            $we = !empty($emp['work_end'])   ? date('h:i A', strtotime($emp['work_end']))   : '05:00 PM';
+                            echo htmlspecialchars($ws) . ' – ' . htmlspecialchars($we);
+                        ?>
+                    </td>
                     <td>
                         <form method="post" style="display:inline;">
                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
@@ -114,4 +131,5 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div>    </div> <!-- /.dashboard-inner -->
+</div> <!-- /.dashboard-container -->

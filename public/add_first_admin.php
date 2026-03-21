@@ -50,163 +50,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add New Admin</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            color: #333;
-        }
+    <title>First-time Setup</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+    :root{--bg:#f1f4f9;--surface:#fff;--surface2:#f8fafc;--border:#e3e8f0;--text:#111827;--text-muted:#6b7280;--accent:#4361ee;--accent-dk:#3451d1;--accent-lt:#eef1fd;--green:#16a34a;--green-lt:#dcfce7;--red:#dc2626;--red-lt:#fee2e2;--radius:14px;--shadow-md:0 2px 8px rgba(0,0,0,.07),0 8px 28px rgba(0,0,0,.07);}
+    *,*::before,*::after{box-sizing:border-box;}
+    body{font-family:'DM Sans','Segoe UI',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh;margin:0;padding:32px 20px 60px;display:flex;align-items:center;justify-content:center;}
+    .page-card{background:var(--surface);border-radius:20px;border:1px solid var(--border);box-shadow:var(--shadow-md);width:100%;overflow:hidden;}
+    .page-topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px;}
+    .page-topbar h2{font-size:18px;font-weight:700;margin:0;letter-spacing:-.3px;}
+    .page-inner{padding:24px 28px 32px;}
+    .success-msg{background:var(--green-lt);color:#15803d;padding:12px 16px;border-radius:10px;border:1px solid #bbf7d0;font-size:14px;font-weight:500;margin-bottom:16px;}
+    .error-msg{background:var(--red-lt);color:#b91c1c;padding:12px 16px;border-radius:10px;border:1px solid #fecaca;font-size:14px;font-weight:500;margin-bottom:16px;}
+    .form-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:5px;display:block;}
+    input[type=text],input[type=password],input[type=date],input[type=file],.form-control,textarea,select{border-radius:9px;border:1px solid var(--border);padding:9px 12px;font-size:14px;font-family:inherit;color:var(--text);background:var(--surface);transition:border-color .2s,box-shadow .2s;width:100%;}
+    input:focus,textarea:focus,select:focus,.form-control:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(67,97,238,.12);outline:none;}
+    .btn{font-family:inherit;font-size:13px;font-weight:600;border-radius:9px;padding:9px 18px;transition:all .18s;cursor:pointer;display:inline-flex;align-items:center;gap:6px;border:none;text-decoration:none;}
+    .btn-primary{background:var(--accent);color:#fff;}.btn-primary:hover{background:var(--accent-dk);transform:translateY(-1px);color:#fff;}
+    .btn-success{background:var(--green);color:#fff;}.btn-success:hover{background:#15803d;transform:translateY(-1px);color:#fff;}
+    .btn-secondary{background:var(--surface2);color:var(--text);border:1.5px solid var(--border);}.btn-secondary:hover{background:var(--border);}
+    .btn-outline-secondary{background:transparent;color:var(--text-muted);border:1.5px solid var(--border);border-radius:9px;padding:7px 14px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-family:inherit;transition:all .18s;}
+    .btn-outline-secondary:hover{background:var(--surface2);color:var(--text);}
+    .mb-3{margin-bottom:16px;}
 
-        .container {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
-        }
-
-        .container h2 {
-            margin-bottom: 30px;
-            font-size: 28px;
-            font-weight: 600;
-            color: #2c3e50;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-            text-align: left;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            color: #555;
-        }
-
-        .container input[type="text"],
-        .container input[type="password"] {
-            width: 100%;
-            padding: 14px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            font-size: 16px;
-            box-sizing: border-box;
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
-            outline: none;
-        }
-
-        .container input[type="text"]:focus,
-        .container input[type="password"]:focus {
-            border-color: #007bff;
-            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
-        }
-
-        .btn {
-            width: 100%;
-            padding: 14px;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: opacity 0.3s ease, transform 0.2s ease;
-            margin-top: 10px;
-        }
-
-        .btn:hover {
-            opacity: 0.9;
-            transform: translateY(-1px);
-        }
-
-        .btn:active {
-            transform: translateY(0);
-        }
-
-        .message {
-            background: #d4edda;
-            color: #155724;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            border: 1px solid #c3e6cb;
-            font-size: 14px;
-            text-align: left;
-        }
-
-        .error-msg {
-            background: #fee2e2;
-            color: #dc2626;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            border: 1px solid #fecaca;
-            font-size: 14px;
-            text-align: left;
-        }
-
-        .back-link {
-            display: inline-block;
-            margin-top: 20px;
-            color: #007bff;
-            text-decoration: none;
-            font-size: 14px;
-        }
-
-        .back-link:hover {
-            text-decoration: underline;
-        }
-
-        @media (max-width: 480px) {
-            .container {
-                margin: 20px;
-                padding: 30px 20px;
-                width: auto;
-            }
-
-            .container h2 {
-                font-size: 24px;
-            }
-        }
-    </style>
+    .page-card { max-width:420px; }
+    .back-link { font-size:13px; color:var(--accent); text-decoration:none; font-weight:600; }
+    .back-link:hover { text-decoration:underline; }
+</style>
 </head>
 <body>
-    <div class="container">
-        <h2>Add New Admin</h2>
+<div class="page-card">
+    <div class="page-topbar">
+        <div>
+            <h2>First-time Setup</h2>
+            <p style="font-size:13px;color:var(--text-muted);margin:2px 0 0;">Create your administrator account</p>
+        </div>
+    </div>
+    <div class="page-inner">
         <?php if (!empty($message)): ?>
-            <div class="message"><?= htmlspecialchars($message) ?></div>
+            <div class="success-msg"><?= htmlspecialchars($message) ?></div>
         <?php endif; ?>
         <?php if (!empty($error)): ?>
             <div class="error-msg"><?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
         <form method="post">
-            <div class="form-group">
-                <label for="full_name">Full Name</label>
+            <div class="mb-3">
+                <label class="form-label" for="full_name">Full Name</label>
                 <input type="text" id="full_name" name="full_name" placeholder="Enter your full name" required>
             </div>
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" placeholder="Enter your username" required>
+            <div class="mb-3">
+                <label class="form-label" for="username">Username</label>
+                <input type="text" id="username" name="username" placeholder="Choose a username" required>
             </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" placeholder="Enter your password" required>
+            <div class="mb-3">
+                <label class="form-label" for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="Choose a password" required>
             </div>
-            <button type="submit" class="btn">Create Admin Account</button>
+            <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Create Admin Account</button>
         </form>
-        <a href="admin_login.php" class="back-link">← Back to Admin Login</a>
+        <div style="margin-top:16px;text-align:center;">
+            <a href="admin_login.php" class="back-link">← Back to Login</a>
+        </div>
     </div>
+</div>
 </body>
 </html>

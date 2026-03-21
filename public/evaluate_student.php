@@ -206,180 +206,55 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Final Evaluation</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
-            color: #2c3e50;
-            line-height: 1.5;
-        }
-
-        .evaluation-page {
-            padding: 20px;
-        }
-
-        .evaluation-card {
-            width: 100%;
-            max-width: 980px;
-            margin: 0 auto;
-            background: rgba(255, 255, 255, 0.96);
-            border-radius: 16px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-            padding: 28px;
-        }
-
-        .top-actions {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-
-        .page-title {
-            margin: 0;
-            font-size: 1.9rem;
-            font-weight: 700;
-            color: #1f3b57;
-        }
-
-        .page-subtitle {
-            margin: 6px 0 0;
-            color: #5f7488;
-            font-size: 0.98rem;
-        }
-
-        .student-block {
-            background: #f8f9fa;
-            border: 1px solid #dfe6ee;
-            border-radius: 10px;
-            padding: 14px 16px;
-            margin-bottom: 22px;
-        }
-
-        .student-name {
-            margin: 0;
-            font-size: 1rem;
-            color: #1f3b57;
-        }
-
-        .section-card {
-            background: #f8f9fa;
-            border: 1px solid #dfe6ee;
-            border-radius: 12px;
-            padding: 18px;
-            margin-bottom: 22px;
-        }
-
-        .section-title {
-            margin: 0;
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #1f3b57;
-        }
-
-        .section-help {
-            margin: 6px 0 0;
-            color: #5f7488;
-            font-size: 0.92rem;
-        }
-
-        .ratings-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 14px 16px;
-            margin-top: 16px;
-        }
-
-        .rating-item label,
-        .form-label {
-            display: inline-block;
-            margin-bottom: 6px;
-            font-weight: 600;
-            color: #274b6d;
-        }
-
-        .form-select,
-        .form-control {
-            border-color: #c7d5e4;
-            min-height: 46px;
-        }
-
-        .form-select:focus,
-        .form-control:focus {
-            border-color: #7ab4f8;
-            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.15);
-        }
-
-        textarea.form-control {
-            min-height: 120px;
-            resize: vertical;
-        }
-
-        .actions-row {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 4px;
-        }
-
-        .signature-wrapper {
-            border: 1px solid #dfe6ee;
-            background: #fff;
-            border-radius: 12px;
-            padding: 14px;
-        }
-
-        .signature-pad {
-            width: 100%;
-            height: 220px;
-            border: 1px dashed #b9c7d6;
-            border-radius: 10px;
-            background: #fafbfd;
-            cursor: crosshair;
-        }
-
-        .signature-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-            flex-wrap: wrap;
-        }
-
-        @media (max-width: 768px) {
-            .evaluation-page {
-                padding: 14px;
-            }
-
-            .evaluation-card {
-                padding: 18px;
-                border-radius: 12px;
-            }
-
-            .top-actions {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .ratings-grid {
-                grid-template-columns: 1fr;
-                gap: 12px;
-            }
-
-            .actions-row {
-                flex-direction: column-reverse;
-                align-items: stretch;
-            }
-        }
+        :root{--bg:#f1f4f9;--surface:#fff;--surface2:#f8fafc;--border:#e3e8f0;--text:#111827;--text-muted:#6b7280;--accent:#4361ee;--accent-dk:#3451d1;--accent-lt:#eef1fd;--green:#16a34a;--green-lt:#dcfce7;--red:#dc2626;--red-lt:#fee2e2;--radius:14px;--shadow-md:0 2px 8px rgba(0,0,0,.07),0 8px 28px rgba(0,0,0,.07);}
+        *,*::before,*::after{box-sizing:border-box;}
+        body{font-family:'DM Sans','Segoe UI',sans-serif;background:var(--bg);color:var(--text);line-height:1.5;min-height:100vh;margin:0;padding:28px 20px 60px;}
+        .evaluation-page{max-width:1000px;margin:0 auto;}
+        .evaluation-card{background:var(--surface);border-radius:20px;border:1px solid var(--border);box-shadow:var(--shadow-md);overflow:hidden;padding:0;}
+        .eval-topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px;}
+        .eval-topbar h2{font-size:18px;font-weight:700;margin:0;}
+        .eval-topbar p{font-size:13px;color:var(--text-muted);margin:2px 0 0;}
+        .eval-inner{padding:24px 28px 32px;}
+        .success-msg{background:var(--green-lt);color:#15803d;padding:12px 16px;border-radius:10px;border:1px solid #bbf7d0;font-size:14px;font-weight:500;margin-bottom:16px;}
+        .error-msg{background:var(--red-lt);color:#b91c1c;padding:12px 16px;border-radius:10px;border:1px solid #fecaca;font-size:14px;font-weight:500;margin-bottom:16px;}
+        .student-block{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:20px;}
+        .student-name{margin:0;font-size:15px;font-weight:600;}
+        .section-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:20px;}
+        .section-title{margin:0;font-size:14px;font-weight:700;}
+        .section-help{margin:6px 0 0;color:var(--text-muted);font-size:13px;}
+        .ratings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 16px;margin-top:16px;}
+        .rating-item label,.form-label{display:inline-block;margin-bottom:6px;font-weight:600;font-size:13px;}
+        .form-select,.form-control{border:1px solid var(--border);border-radius:9px;min-height:44px;font-family:inherit;font-size:14px;width:100%;padding:9px 12px;background:var(--surface);color:var(--text);transition:border-color .2s,box-shadow .2s;}
+        .form-select:focus,.form-control:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(67,97,238,.12);outline:none;}
+        textarea.form-control{min-height:120px;resize:vertical;}
+        .actions-row{display:flex;justify-content:flex-end;gap:10px;margin-top:4px;}
+        .signature-wrapper{border:1px solid var(--border);background:var(--surface);border-radius:var(--radius);padding:14px;}
+        .signature-pad{width:100%;height:220px;border:2px dashed var(--border);border-radius:10px;background:#fafbfd;cursor:crosshair;display:block;}
+        .top-actions{display:none;}
+        .btn{font-family:inherit;font-size:13px;font-weight:600;border-radius:9px;padding:9px 18px;transition:all .18s;cursor:pointer;display:inline-flex;align-items:center;gap:6px;border:none;text-decoration:none;}
+        .btn-primary{background:var(--accent);color:#fff;}.btn-primary:hover{background:var(--accent-dk);transform:translateY(-1px);color:#fff;}
+        .btn-success{background:var(--green);color:#fff;}.btn-success:hover{background:#15803d;transform:translateY(-1px);color:#fff;}
+        .btn-secondary{background:var(--surface2);color:var(--text);border:1.5px solid var(--border);}.btn-secondary:hover{background:var(--border);}
+        .btn-outline-secondary{background:transparent;color:var(--text-muted);border:1.5px solid var(--border);border-radius:9px;padding:7px 14px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-family:inherit;transition:all .18s;}
+        .btn-outline-secondary:hover{background:var(--surface2);color:var(--text);}
+        .btn-sm{padding:6px 12px!important;font-size:12px!important;}
+        @media(max-width:768px){body{padding:10px 10px 40px;}.eval-topbar,.eval-inner{padding:14px 16px;}.ratings-grid{grid-template-columns:1fr;}}
     </style>
 </head>
 <body>
-
 <div class="evaluation-page">
-    <div class="evaluation-card">
-        <div class="top-actions">
+<div class="evaluation-card">
+    <div class="eval-topbar">
+        <div>
+            <h2>Final Evaluation</h2>
+            <p>Complete and submit the student performance evaluation</p>
+        </div>
+        <a href="supervisor_dashboard.php" class="btn-outline-secondary">⬅ Back</a>
+    </div>
+    <div class="eval-inner">
+<div class="top-actions" style="display:none">
             <div>
                 <h1 class="page-title">Final Evaluation Form</h1>
                 <p class="page-subtitle">Rate student performance across core OJT criteria.</p>
@@ -526,7 +401,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         event.preventDefault();
         const pos = getCanvasPos(event);
         ctx.lineTo(pos.x, pos.y);
-        ctx.strokeStyle = '#1f3b57';
+        ctx.strokeStyle = 'var(--text)';
         ctx.lineWidth = 2;
         ctx.lineCap = 'round';
         ctx.stroke();
@@ -577,6 +452,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     setGatedState(false);
 </script>
-
+    </div>
+</div>
+</div>
 </body>
 </html>

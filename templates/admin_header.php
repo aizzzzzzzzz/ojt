@@ -4,430 +4,315 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
 <style>
+    :root {
+        --bg:         #f1f4f9;
+        --surface:    #ffffff;
+        --surface2:   #f8fafc;
+        --border:     #e3e8f0;
+        --text:       #111827;
+        --text-muted: #6b7280;
+        --accent:     #4361ee;
+        --accent-dk:  #3451d1;
+        --accent-lt:  #eef1fd;
+        --green:      #16a34a;
+        --green-lt:   #dcfce7;
+        --red:        #dc2626;
+        --red-lt:     #fee2e2;
+        --radius:     14px;
+        --shadow-sm:  0 1px 2px rgba(0,0,0,0.05);
+        --shadow:     0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.06);
+        --shadow-md:  0 2px 8px rgba(0,0,0,0.07), 0 8px 28px rgba(0,0,0,0.07);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
     body {
-        margin: 0;
-        padding: 0;
-        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-        background: linear-gradient(135deg, #74ebd5, #ACB6E5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-        padding: 20px;
-        box-sizing: border-box;
-        color: #333;
+        font-family: 'DM Sans', 'Segoe UI', sans-serif;
+        background: var(--bg);
+        color: var(--text);
         line-height: 1.6;
+        min-height: 100vh;
+        padding: 28px 20px 60px;
+        margin: 0;
     }
 
     .dashboard-container {
-        background: rgba(255, 255, 255, 0.95);
-        padding: 36px 40px;
-        border-radius: 18px;
-        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+        background: var(--surface);
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-md);
         width: 100%;
-        max-width: 1200px;
-        text-align: center;
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 0;
+        overflow: hidden;
     }
 
-    .dashboard-container h2 {
-        margin-bottom: 20px;
-        font-size: 28px;
-        font-weight: 600;
-        color: #2c3e50;
-    }
-
-    .dashboard-container h3 {
-        margin-top: 36px;
-        margin-bottom: 18px;
-        font-size: 22px;
-        color: #2c3e50;
-        text-align: left;
-        border-bottom: 2px solid #e0e0e0;
-        padding-bottom: 10px;
-    }
-
-    .welcome-section {
-        margin-bottom: 34px;
-        padding: 22px 24px;
-        background: #f8f9fa;
-        border-radius: 10px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    .topbar {
         display: flex;
+        align-items: center;
         justify-content: space-between;
-        align-items: flex-start;
+        padding: 20px 32px;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface);
         gap: 16px;
+        flex-wrap: wrap;
     }
 
-    .welcome-section p {
-        font-size: 16px;
-        color: #666;
-        margin: 5px 0;
+    .topbar-left h2 {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--text);
+        margin: 0;
+        letter-spacing: -0.3px;
     }
 
-    .welcome-content {
-        text-align: left;
+    .topbar-left p {
+        font-size: 13px;
+        color: var(--text-muted);
+        margin: 2px 0 0;
+    }
+
+    .topbar-right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .badge-role {
+        background: var(--accent-lt);
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 600;
+        padding: 4px 12px;
+        border-radius: 20px;
     }
 
     .logout-btn {
-        display: inline-block;
-        background: #dc3545;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--red);
         color: #fff;
-        padding: 10px 16px;
-        border-radius: 8px;
+        padding: 8px 16px;
+        border-radius: 9px;
         text-decoration: none;
         font-weight: 600;
-        line-height: 1;
+        font-size: 13px;
+        transition: background 0.2s, transform 0.15s;
         white-space: nowrap;
-        transition: background 0.2s ease, transform 0.2s ease;
     }
 
-    .logout-btn:hover {
-        background: #bb2d3b;
-        color: #fff;
-        transform: translateY(-1px);
+    .logout-btn:hover { background: #b91c1c; color: #fff; transform: translateY(-1px); }
+
+    .dashboard-inner { padding: 28px 32px 36px; }
+
+    .dashboard-inner h3 {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text);
+        letter-spacing: -0.2px;
+        margin: 28px 0 14px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--border);
+        text-align: left;
     }
 
-    .logout-btn:focus-visible {
-        outline: 3px solid rgba(220, 53, 69, 0.35);
-        outline-offset: 2px;
-    }
+    .dashboard-inner h3:first-child { margin-top: 0; }
 
     .summary-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 18px;
-        margin-bottom: 36px;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 14px;
+        margin-bottom: 28px;
     }
 
     .summary-card {
-        background: white;
-        padding: 22px 20px;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        font-size: 16px;
-        text-align: center;
-        transition: transform 0.3s ease;
-    }
-
-
-    .summary-card strong {
-        display: block;
-        font-size: 24px;
-        color: #2c3e50;
-        margin-top: 10px;
-    }
-
-    .section-header {
-        width: 100%;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        padding: 20px 22px;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-sm);
+        transition: box-shadow 0.2s, transform 0.2s;
         text-align: left;
-        background: #ffffff;
-        border: 1px solid #dee2e6;
-        padding: 12px 16px;
-        font-size: 16px;
-        font-weight: 600;
-        border-radius: 6px;
-        margin-bottom: 10px;
     }
 
-    .collapse-section {
-        margin-bottom: 26px;
-        border-radius: 10px;
-        overflow: hidden;
+    .summary-card:hover { box-shadow: var(--shadow); transform: translateY(-2px); }
+
+    .summary-card .label {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.7px;
+        color: var(--text-muted);
+        margin-bottom: 6px;
     }
 
-    .collapse-section .card {
-        border: none;
-        border-radius: 10px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    }
-
-    .collapse-section .card-body {
-        padding: 22px 24px;
-    }
-
-    .collapse {
-        display: none !important;
-    }
-
-    .collapse.show {
-        display: block !important;
-    }
-
-    .form-control {
-        border-radius: 8px;
-        border: 1px solid #ddd;
-        padding: 10px;
-        font-size: 14px;
-        transition: border-color 0.3s ease;
-    }
-
-    .form-control:focus {
-        border-color: #007bff;
-        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-    }
-
-    .btn {
-        border-radius: 8px;
-        padding: 10px 18px;
-        font-weight: 500;
-        transition: all 0.3s ease;
-    }
-
-    .card p {
-        margin-bottom: 10px;
-    }
-
-    .card .btn {
-        min-width: 160px;
-    }
-
-    .btn-primary {
-        background: linear-gradient(90deg, #28a745, #85e085);
+    .summary-card .value {
+        font-size: 34px;
+        font-weight: 700;
+        color: var(--text);
+        line-height: 1;
     }
 
     .maintenance-card {
-        border: 1px solid #e1e7ef;
-        border-radius: 14px;
-        background: #f9fbfd;
-        text-align: left;
-        padding: 0;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface2);
         overflow: hidden;
-        box-shadow: 0 2px 10px rgba(44, 62, 80, 0.06);
+        margin-bottom: 24px;
     }
 
     .maintenance-card summary {
         list-style: none;
         cursor: pointer;
-        padding: 14px 18px;
+        padding: 13px 18px;
         font-weight: 600;
-        color: #2c3e50;
-        background: #eef3f8;
+        font-size: 14px;
+        color: var(--text);
         display: flex;
         align-items: center;
         justify-content: space-between;
+        user-select: none;
     }
 
-    .maintenance-card summary::-webkit-details-marker {
-        display: none;
+    .maintenance-card summary::-webkit-details-marker { display: none; }
+    .maintenance-card summary::after { content: '▾'; font-size: 13px; color: var(--text-muted); transition: transform 0.2s; }
+    .maintenance-card[open] summary::after { transform: rotate(180deg); }
+
+    .maintenance-body { padding: 16px 18px 20px; border-top: 1px solid var(--border); }
+
+    .card { border: 1px solid var(--border) !important; border-radius: var(--radius) !important; box-shadow: none !important; }
+    .card-body { padding: 20px 22px !important; }
+
+    .form-label { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 5px; }
+
+    .form-control, .form-select {
+        border-radius: 9px !important;
+        border: 1px solid var(--border) !important;
+        padding: 9px 12px !important;
+        font-size: 14px !important;
+        font-family: inherit !important;
+        color: var(--text) !important;
+        background: var(--surface) !important;
+        transition: border-color 0.2s, box-shadow 0.2s !important;
     }
 
-    .maintenance-card summary::after {
-        content: '▾';
-        font-size: 14px;
-        color: #5d6b7a;
-        transition: transform 0.2s ease;
+    .form-control:focus, .form-select:focus {
+        border-color: var(--accent) !important;
+        box-shadow: 0 0 0 3px rgba(67,97,238,0.12) !important;
+        outline: none !important;
     }
 
-    .maintenance-card[open] summary::after {
-        transform: rotate(180deg);
+    .form-text { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+    .btn {
+        font-family: inherit !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        border-radius: 9px !important;
+        padding: 9px 18px !important;
+        transition: all 0.18s !important;
+        cursor: pointer !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        border: none !important;
     }
 
-    .maintenance-body {
-        padding: 18px 20px 20px;
+    .btn-primary  { background: var(--accent) !important; color: #fff !important; }
+    .btn-primary:hover  { background: var(--accent-dk) !important; transform: translateY(-1px) !important; box-shadow: 0 4px 12px rgba(67,97,238,0.28) !important; }
+
+    .btn-success  { background: var(--green) !important; color: #fff !important; }
+    .btn-success:hover  { background: #15803d !important; transform: translateY(-1px) !important; }
+
+    .btn-outline-success { background: transparent !important; color: var(--green) !important; border: 1.5px solid var(--green) !important; }
+    .btn-outline-success:hover { background: var(--green-lt) !important; transform: translateY(-1px) !important; }
+
+    .btn-outline-danger  { background: transparent !important; color: var(--red) !important; border: 1.5px solid var(--red) !important; }
+    .btn-outline-danger:hover  { background: var(--red-lt) !important; transform: translateY(-1px) !important; }
+
+    .btn-secondary { background: var(--surface2) !important; color: var(--text) !important; border: 1.5px solid var(--border) !important; }
+    .btn-secondary:hover { background: var(--border) !important; }
+
+    .table { font-size: 14px; border-collapse: separate !important; border-spacing: 0 !important; }
+
+    .table thead th {
+        background: var(--surface2) !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.6px !important;
+        color: var(--text-muted) !important;
+        border-bottom: 1px solid var(--border) !important;
+        padding: 11px 14px !important;
+        white-space: nowrap;
     }
 
-    .btn-primary:hover {
-        background: linear-gradient(90deg, #218838, #6c9e6c);
-        transform: translateY(-2px);
+    .table tbody td {
+        padding: 12px 14px !important;
+        border-bottom: 1px solid var(--border) !important;
+        vertical-align: middle !important;
+        color: var(--text) !important;
     }
 
-    .alert {
-        border-radius: 8px;
-        border: none;
-        font-weight: 500;
-    }
+    .table tbody tr:last-child td { border-bottom: none !important; }
+    .table tbody tr:hover td { background: var(--accent-lt) !important; }
 
-    .success-msg {
-        background: #d4edda;
-        color: #155724;
-        padding: 15px;
-        border-radius: 8px;
-        margin-bottom: 15px;
-        border: 1px solid #c3e6cb;
-        text-align: left;
-        font-weight: 500;
-    }
+    .table-striped tbody tr:nth-child(odd) td { background: var(--surface2) !important; }
+    .table-striped tbody tr:nth-child(odd):hover td { background: var(--accent-lt) !important; }
 
-    .error-msg {
-        background: #f8d7da;
-        color: #721c24;
-        padding: 15px;
-        border-radius: 8px;
-        margin-bottom: 15px;
-        border: 1px solid #f5c6cb;
-        text-align: left;
-        font-weight: 500;
-    }
+    .success-msg { background: var(--green-lt); color: #15803d; padding: 12px 16px; border-radius: 10px; border: 1px solid #bbf7d0; font-size: 14px; font-weight: 500; margin-bottom: 16px; }
+    .error-msg   { background: var(--red-lt);   color: #b91c1c; padding: 12px 16px; border-radius: 10px; border: 1px solid #fecaca; font-size: 14px; font-weight: 500; margin-bottom: 16px; }
 
-    .table-section {
-        overflow-x: auto;
-        margin-top: 20px;
-        border-radius: 10px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
+    .alert { border-radius: 10px !important; font-size: 14px !important; }
 
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        background: white;
-        border-radius: 10px;
-        overflow: hidden;
-    }
-
-    th, td {
-        padding: 12px;
-        text-align: left;
-        border-bottom: 1px solid #e0e0e0;
-    }
-
-    th {
-        background: #f8f9fa;
-        font-weight: 600;
-    }
-
-    .delete-btn {
-        color: #dc3545;
-        font-weight: 500;
-        text-decoration: none;
-        padding: 6px 12px;
-        border-radius: 5px;
-        transition: all 0.3s ease;
-    }
-
-    .delete-btn:hover {
-        background: #f8d7da;
-        text-decoration: none;
-        transform: translateY(-2px);
-    }
+    .modal-content  { border-radius: 16px !important; border: 1px solid var(--border) !important; }
+    .modal-header   { border-bottom: 1px solid var(--border) !important; padding: 16px 20px !important; }
+    .modal-footer   { border-top: 1px solid var(--border) !important; padding: 14px 20px !important; }
 
     @media (max-width: 768px) {
-        body {
-            padding: 10px;
-            align-items: center;
-        }
-
-        .dashboard-container {
-            width: 95%;
-            padding: 20px;
-            margin: 10px;
-        }
-
-        .dashboard-container h2 {
-            font-size: 24px;
-        }
-
-        .welcome-section {
-            flex-direction: column;
-            align-items: stretch;
-        }
-
-        .logout-btn {
-            width: 100%;
-            text-align: center;
-        }
-
-        .dashboard-container h3 {
-            font-size: 18px;
-        }
-
-        .summary-grid {
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 10px;
-        }
-
-        .summary-card strong {
-            font-size: 20px;
-        }
-
-        .collapse-section .card-body {
-            padding: 15px;
-        }
-
-        .dashboard-container input,
-        .dashboard-container input[type="file"] {
-            width: 100%;
-            max-width: none;
-        }
-
-        .btn {
-            width: 100%;
-            max-width: none;
-            margin-bottom: 10px;
-        }
-
-        table, thead, tbody, th, td, tr {
-            display: block;
-            width: 100%;
-        }
-
-        thead tr {
-            position: absolute;
-            top: -9999px;
-            left: -9999px;
-        }
-
-        tr {
-            border: 1px solid #ddd;
-            margin-bottom: 15px;
-            border-radius: 8px;
-            padding: 10px;
-            background: white;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        td {
-            border: none;
-            position: relative;
-            padding-left: 50%;
-            text-align: right;
-            margin-bottom: 10px;
-        }
-
-        td::before {
-            content: attr(data-label) ": ";
-            position: absolute;
-            left: 10px;
-            width: 45%;
-            padding-right: 10px;
-            white-space: nowrap;
-            font-weight: bold;
-            text-align: left;
-            color: #2c3e50;
-        }
-
-        .summary-card {
-            background: white;
-            padding: 15px;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            font-size: 14px;
-        }
-}
+        body { padding: 12px 12px 40px; }
+        .dashboard-container { border-radius: 14px; }
+        .topbar, .dashboard-inner { padding: 16px 18px; }
+        .summary-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+        .topbar-left h2 { font-size: 17px; }
+        .table thead { display: none; }
+        .table tbody tr { display: block; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; padding: 10px; }
+        .table tbody td { display: flex; justify-content: space-between; border: none !important; padding: 6px 8px !important; }
+        .table tbody td::before { content: attr(data-label); font-weight: 600; color: var(--text-muted); font-size: 12px; text-transform: uppercase; }
+    }
 </style>
 </head>
 <body>
 <div class="dashboard-container">
-    <div class="welcome-section">
-        <div class="welcome-content">
+    <div class="topbar">
+        <div class="topbar-left">
             <h2>Welcome, <?= htmlspecialchars($admin['full_name'] ?? $admin['username']) ?>!</h2>
-            <p>You are logged in as an administrator.</p>
+            <p>Admin Dashboard</p>
         </div>
-        <a href="logout.php" class="logout-btn">Logout</a>
+        <div class="topbar-right">
+            <span class="badge-role">Administrator</span>
+            <a href="logout.php" class="logout-btn">⎋ Logout</a>
+        </div>
     </div>
+
+    <div class="dashboard-inner">
 
     <div class="summary-grid">
         <div class="summary-card">
-            <div class="text-muted small">Students</div>
-            <div class="fs-3 fw-bold"><?= $students_count ?></div>
+            <div class="label">Students</div>
+            <div class="value"><?= $students_count ?></div>
         </div>
         <div class="summary-card">
-            <div class="text-muted small">Employers</div>
-            <div class="fs-3 fw-bold"><?= count($employers) ?></div>
+            <div class="label">Supervisors</div>
+            <div class="value"><?= count($employers) ?></div>
         </div>
         <div class="summary-card">
-            <div class="text-muted small">Evaluations</div>
-            <div class="fs-3 fw-bold"><?= $evaluations_count ?></div>
+            <div class="label">Evaluations</div>
+            <div class="value"><?= $evaluations_count ?></div>
         </div>
     </div>

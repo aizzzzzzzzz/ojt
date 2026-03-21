@@ -77,7 +77,7 @@ function handle_excel_export($pdo, $student_id, $start_date, $end_date) {
         $sheet->setCellValue('A5', 'Generated On:');
         $sheet->setCellValue('B5', date('F d, Y h:i A'));
 
-        $headers = ['Date', 'Time In', 'Lunch Out', 'Lunch In', 'Time Out', 'Status', 'Verified', 'Hours Worked', 'Daily Task / Activity'];
+        $headers = ['Date', 'Time In', 'Lunch Out', 'Lunch In', 'Time Out', 'Status', 'Verified', 'Hours Worked', 'End of Day Task'];
         $sheet->fromArray($headers, NULL, 'A7');
 
         $headerStyle = [

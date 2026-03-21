@@ -15,10 +15,26 @@ $csrf_token = generate_csrf_token();
 $timezone = new DateTimeZone('Asia/Manila');
 $now = new DateTime('now', $timezone);
 $today = $now->format('Y-m-d');
-$late_cutoff = '10:00';
-$eod_cutoff = '17:00';
-$late_cutoff_dt = new DateTime($today . ' ' . $late_cutoff, $timezone);
-$eod_cutoff_dt = new DateTime($today . ' ' . $eod_cutoff, $timezone);
+
+// Dynamic cutoffs based on employer's work schedule
+$work_start_raw = $employer['work_start'] ?? '08:00:00';
+$work_end_raw   = $employer['work_end']   ?? '17:00:00';
+
+$late_grace_minutes = (int)($employer['late_grace_minutes'] ?? 10);
+$eod_grace_hours    = (int)($employer['eod_grace_hours']    ?? 3);
+// Clamp: late grace 1–30 min, eod grace 1–6 hours
+$late_grace_minutes = max(1, min(30, $late_grace_minutes));
+$eod_grace_hours    = max(1, min(6,  $eod_grace_hours));
+
+$work_start_dt  = new DateTime($today . ' ' . $work_start_raw, $timezone);
+$late_cutoff_dt = clone $work_start_dt;
+$late_cutoff_dt->modify("+{$late_grace_minutes} minutes");
+$eod_cutoff_dt  = new DateTime($today . ' ' . $work_end_raw, $timezone);
+$eod_cutoff_dt->modify("+{$eod_grace_hours} hours");
+
+// Human-readable versions for display
+$late_cutoff = $late_cutoff_dt->format('H:i');
+$eod_cutoff  = $eod_cutoff_dt->format('H:i');
 
 $company_logo_root = !empty($employer['company_id'])
     ? 'company_logo_company_' . $employer['company_id']
@@ -36,6 +52,17 @@ foreach ($company_logo_exts as $ext) {
     }
 }
 $company_logo_exists = !empty($company_logo_full_path);
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_grace_periods'])) {
+    check_csrf($_POST['csrf_token'] ?? '');
+    $lg = max(1, min(30, (int)($_POST['late_grace_minutes'] ?? 10)));
+    $eg = max(1, min(6,  (int)($_POST['eod_grace_hours']   ?? 3)));
+    $pdo->prepare("UPDATE employers SET late_grace_minutes = ?, eod_grace_hours = ? WHERE employer_id = ?")
+        ->execute([$lg, $eg, $employer_id]);
+    $_SESSION['success_message'] = 'Grace period settings saved.';
+    header("Location: supervisor_dashboard.php");
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_company_logo'])) {
     check_csrf($_POST['csrf_token'] ?? '');
@@ -168,419 +195,281 @@ if (!empty($student_ids)) {
     <script>
         function toggleDetails(index) {
             const row = document.getElementById('details' + index);
-            if (row) {
-                row.classList.toggle('show');
-                console.log('Toggled details' + index, row.classList);
-            } else {
-                console.error('Row not found: details' + index);
-            }
+            if (!row) return;
+            const isShowing = row.classList.contains('show');
+            document.querySelectorAll('.details-row.show').forEach(r => r.classList.remove('show'));
+            if (!isShowing) row.classList.add('show');
         }
     </script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg:         #f1f4f9;
+            --surface:    #ffffff;
+            --surface2:   #f8fafc;
+            --border:     #e3e8f0;
+            --text:       #111827;
+            --text-muted: #6b7280;
+            --accent:     #4361ee;
+            --accent-dk:  #3451d1;
+            --accent-lt:  #eef1fd;
+            --green:      #16a34a;
+            --green-lt:   #dcfce7;
+            --red:        #dc2626;
+            --red-lt:     #fee2e2;
+            --amber:      #d97706;
+            --amber-lt:   #fef3c7;
+            --radius:     14px;
+            --shadow-sm:  0 1px 2px rgba(0,0,0,0.05);
+            --shadow:     0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.06);
+            --shadow-md:  0 2px 8px rgba(0,0,0,0.07), 0 8px 28px rgba(0,0,0,0.07);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; }
+
         body {
-            margin: 0;
-            padding: 0;
-            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #eef5ff, #d8e9ff);
-            color: #333;
+            font-family: 'DM Sans', 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
             line-height: 1.6;
+            min-height: 100vh;
+            padding: 28px 20px 60px;
+            margin: 0;
         }
 
         .dashboard-container {
-            background: #ffffff;
-            padding: 28px;
-            border-radius: 16px;
-            border: 1px solid #e5edf7;
-            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+            background: var(--surface);
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-md);
             width: 100%;
-            max-width: 1150px;
-            margin: 20px auto;
-            text-align: center;
-        }
-
-        .dashboard-container h2 {
-            margin-bottom: 10px;
-            font-size: 28px;
-            font-weight: 600;
-            color: #2c3e50;
-        }
-
-        .dashboard-container h3 {
-            margin-top: 26px;
-            margin-bottom: 16px;
-            font-size: 20px;
-            color: #2c3e50;
-            text-align: left;
-            border-bottom: 1px solid #e6edf5;
-            padding-bottom: 8px;
-        }
-
-        .welcome-section {
-            margin-bottom: 30px;
-            padding: 18px 22px;
-            background: #f7fafc;
-            border-radius: 12px;
-            border: 1px solid #e6edf5;
-            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
-        }
-
-        .welcome-section p {
-            font-size: 16px;
-            color: #666;
-            margin: 5px 0;
-        }
-
-        .success-msg {
-            background: #d4edda;
-            color: #155724;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px solid #c3e6cb;
-            text-align: left;
-            font-weight: 500;
-        }
-        .error-msg {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px solid #f5c6cb;
-            text-align: left;
-            font-weight: 500;
-        }
-
-        .actions-section {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-            margin-bottom: 30px;
-        }
-
-        .action-card {
-            background: #ffffff;
-            padding: 16px;
-            border-radius: 12px;
-            border: 1px solid #e6edf5;
-            text-align: center;
-            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .action-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
-        }
-
-        .action-card .icon {
-            font-size: 2.2rem;
-            margin-bottom: 12px;
-            color: #007bff;
-        }
-
-        .action-card a {
-            display: block;
-            padding: 10px 14px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: 500;
-            background: linear-gradient(90deg, #1d4ed8, #3b82f6);
-            color: white;
-            transition: all 0.3s ease;
-        }
-
-        .action-card a:hover {
-            background: linear-gradient(90deg, #1e40af, #2563eb);
-            transform: translateY(-2px);
-        }
-
-        .attendance-actions {
-            background: #ffffff;
-            padding: 18px;
-            border-radius: 12px;
-            margin-bottom: 30px;
-            border: 1px solid #e6edf5;
-            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
-        }
-
-        .attendance-actions h4 {
-            margin-bottom: 6px;
-            color: #2c3e50;
-        }
-        .section-subtitle {
-            color: #64748b;
-            font-size: 0.9rem;
-            margin-bottom: 14px;
-        }
-        .branding-grid {
-            display: grid;
-            grid-template-columns: minmax(160px, 220px) 1fr;
-            gap: 18px;
-            align-items: center;
-        }
-        .branding-preview {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-        }
-        .branding-preview img {
-            max-width: 180px;
-            max-height: 120px;
-            border: 1px solid #e6edf5;
-            padding: 10px;
-            background: #ffffff;
-            border-radius: 10px;
-        }
-        .branding-form .form-label {
-            font-weight: 600;
-            color: #334155;
-        }
-        .branding-form .btn {
-            padding: 8px 16px;
-            border-radius: 8px;
-        }
-        .status-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 3px 8px;
-            border-radius: 999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            margin-top: 6px;
-        }
-        .status-late {
-            background: #fff4e5;
-            color: #b45309;
-            border: 1px solid #f5d0a9;
-        }
-        .status-pending {
-            background: #eef2ff;
-            color: #4338ca;
-            border: 1px solid #c7d2fe;
-        }
-
-        .table-section {
-            overflow-x: auto;
-            margin-top: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            border-radius: 10px;
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 0;
             overflow: hidden;
         }
 
-        th, td {
-            padding: 12px;
-            text-align: center;
-            border-bottom: 1px solid #e0e0e0;
-            font-size: 14px;
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 32px;
+            border-bottom: 1px solid var(--border);
+            gap: 16px;
+            flex-wrap: wrap;
         }
 
-        th {
-            background: #f1f5f9;
+        .topbar-left h2 { font-size: 20px; font-weight: 700; color: var(--text); margin: 0; letter-spacing: -0.3px; }
+        .topbar-left p  { font-size: 13px; color: var(--text-muted); margin: 2px 0 0; }
+
+        .topbar-right { display: flex; align-items: center; gap: 10px; }
+
+        .badge-role {
+            background: var(--accent-lt);
+            color: var(--accent);
+            font-size: 12px;
             font-weight: 600;
-            color: #2c3e50;
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+
+        .logout-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--red);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 9px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 13px;
+            transition: background 0.2s, transform 0.15s;
+        }
+
+        .logout-btn:hover { background: #b91c1c; color: #fff; transform: translateY(-1px); }
+
+        .dashboard-inner { padding: 28px 32px 36px; }
+
+        .success-msg { background: var(--green-lt); color: #15803d; padding: 12px 16px; border-radius: 10px; border: 1px solid #bbf7d0; font-size: 14px; font-weight: 500; margin-bottom: 16px; }
+        .error-msg   { background: var(--red-lt);   color: #b91c1c; padding: 12px 16px; border-radius: 10px; border: 1px solid #fecaca; font-size: 14px; font-weight: 500; margin-bottom: 16px; }
+
+        .dashboard-inner h3 {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text);
+            margin: 28px 0 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+        }
+
+        .dashboard-inner h3:first-child { margin-top: 0; }
+
+        /* Quick Actions */
+        .actions-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+
+        .action-card {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            padding: 18px 14px;
+            border-radius: var(--radius);
+            text-align: center;
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .action-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+
+        .action-card .icon { font-size: 1.8rem; margin-bottom: 10px; display: block; }
+
+        .action-card a {
+            display: block;
+            padding: 9px 12px;
+            border-radius: 9px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 13px;
+            background: var(--accent);
+            color: white;
+            transition: background 0.2s, transform 0.15s;
+        }
+
+        .action-card a:hover { background: var(--accent-dk); transform: translateY(-1px); }
+
+        /* Attendance / branding card */
+        .attendance-actions {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            padding: 18px 20px;
+            border-radius: var(--radius);
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .attendance-actions h4 { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+
+        .section-subtitle { color: var(--text-muted); font-size: 13px; margin-bottom: 14px; }
+
+        .branding-grid { display: grid; grid-template-columns: minmax(160px, 200px) 1fr; gap: 18px; align-items: center; }
+        .branding-preview { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .branding-preview img { max-width: 180px; max-height: 120px; border: 1px solid var(--border); padding: 10px; background: var(--surface); border-radius: 10px; }
+
+        .status-pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-top: 4px; }
+        .status-late    { background: var(--amber-lt); color: var(--amber); border: 1px solid #fde68a; }
+        .status-pending { background: var(--accent-lt); color: var(--accent); border: 1px solid #c7d2fe; }
+
+        /* Table */
+        .table-section { overflow-x: auto; margin-top: 16px; border-radius: var(--radius); border: 1px solid var(--border); }
+
+        table { width: 100%; border-collapse: collapse; background: var(--surface); }
+
+        th {
+            background: var(--surface2);
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: var(--text-muted);
+            padding: 11px 14px;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
             position: sticky;
             top: 0;
         }
 
-        tr:nth-child(even) {
-            background: #f8f9fa;
-        }
+        td { padding: 12px 14px; text-align: center; border-bottom: 1px solid var(--border); font-size: 14px; color: var(--text); }
 
-        tr:hover {
-            background: #e3f2fd;
-            transition: background 0.3s ease;
-        }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: var(--accent-lt); transition: background 0.15s; }
 
-        table a {
-            color: #007bff;
-            text-decoration: none;
-            font-weight: 500;
-            padding: 4px 8px;
-            border-radius: 4px;
-            transition: background 0.3s ease;
-        }
+        /* Buttons */
+        .btn, button.btn { font-family: inherit; font-size: 13px; font-weight: 600; border-radius: 9px; padding: 7px 14px; transition: all 0.18s; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; border: none; }
 
-        table a:hover {
-            background: #e3f2fd;
-        }
+        .btn-primary    { background: var(--accent) !important; color: #fff !important; border: none !important; }
+        .btn-primary:hover  { background: var(--accent-dk) !important; transform: translateY(-1px) !important; }
 
-        .btn-success {
-            background: linear-gradient(90deg, #16a34a, #22c55e);
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 5px;
-            text-decoration: none;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
+        .btn-success    { background: var(--green) !important; color: #fff !important; border: none !important; }
+        .btn-success:hover  { background: #15803d !important; transform: translateY(-1px) !important; }
 
-        .btn-success:hover {
-            background: linear-gradient(90deg, #15803d, #16a34a);
-            transform: translateY(-2px);
-        }
+        .btn-warning    { background: #f59e0b !important; color: #fff !important; border: none !important; }
+        .btn-warning:hover  { background: var(--amber) !important; transform: translateY(-1px) !important; }
 
-        .btn-warning {
-            background: linear-gradient(90deg, #f59e0b, #fbbf24);
-            color: #212529;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 5px;
-            text-decoration: none;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
+        .btn-danger     { background: var(--red) !important; color: #fff !important; border: none !important; }
+        .btn-danger:hover   { background: #b91c1c !important; transform: translateY(-1px) !important; }
 
-        .btn-warning:hover {
-            background: linear-gradient(90deg, #d97706, #f59e0b);
-            transform: translateY(-2px);
-        }
+        .btn-outline-secondary { background: transparent !important; color: var(--text-muted) !important; border: 1.5px solid var(--border) !important; }
+        .btn-outline-secondary:hover { background: var(--surface2) !important; color: var(--text) !important; transform: translateY(-1px) !important; }
 
-        .btn-danger {
-            background: linear-gradient(90deg, #dc2626, #ef4444);
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 5px;
-            text-decoration: none;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-
-        .btn-danger:hover {
-            background: linear-gradient(90deg, #b91c1c, #dc2626);
-            transform: translateY(-2px);
-        }
-
-        .btn-outline-secondary {
-            background: transparent;
-            color: #6c757d;
-            border: 1px solid #6c757d;
-            padding: 6px 12px;
-            border-radius: 5px;
-            text-decoration: none;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-
-        .btn-outline-secondary:hover {
-            background: #6c757d;
-            color: white;
-            transform: translateY(-2px);
-        }
-
-        .details-row {
-            display: none !important;
-        }
-
-        .details-row.show {
-            display: table-row !important;
-        }
+        /* Detail rows */
+        .details-row { display: none !important; }
+        .details-row.show { display: table-row !important; }
 
         .details-content {
-            background: #f5f7fa;
+            background: var(--surface2);
             padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
             text-align: left;
         }
 
+        /* Form controls */
+        .form-control, .form-select {
+            border-radius: 9px !important;
+            border: 1px solid var(--border) !important;
+            padding: 9px 12px !important;
+            font-size: 14px !important;
+            font-family: inherit !important;
+            color: var(--text) !important;
+            transition: border-color 0.2s, box-shadow 0.2s !important;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--accent) !important;
+            box-shadow: 0 0 0 3px rgba(67,97,238,0.12) !important;
+            outline: none !important;
+        }
+
         @media (max-width: 768px) {
-            .dashboard-container {
-                padding: 20px;
-                margin: 10px;
-            }
-
-            .dashboard-container h2 {
-                font-size: 24px;
-            }
-
-            .dashboard-container h3 {
-                font-size: 18px;
-            }
-
-            .actions-section {
-                grid-template-columns: 1fr;
-            }
-
-            .action-card {
-                min-width: unset;
-            }
-
-            .branding-grid {
-                grid-template-columns: 1fr;
-            }
-            .branding-preview {
-                align-items: center;
-            }
-            table, thead, tbody, th, td, tr {
-                display: block;
-                width: 100%;
-            }
-
-            thead tr {
-                position: absolute;
-                top: -9999px;
-                left: -9999px;
-            }
-
-            tr {
-                border: 1px solid #ddd;
-                margin-bottom: 15px;
-                border-radius: 8px;
-                padding: 10px;
-                background: white;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            }
-
-            td {
-                border: none;
-                position: relative;
-                padding-left: 50%;
-                text-align: right;
-                margin-bottom: 10px;
-            }
-
-            td::before {
-                content: attr(data-label) ": ";
-                position: absolute;
-                left: 10px;
-                width: 45%;
-                font-weight: bold;
-                text-align: left;
-                color: #2c3e50;
-            }
-
-            .welcome-section, .action-card {
-                padding: 15px;
-            }
+            body { padding: 12px 12px 40px; }
+            .dashboard-container { border-radius: 14px; }
+            .topbar, .dashboard-inner { padding: 16px 18px; }
+            .actions-section { grid-template-columns: 1fr 1fr; }
+            .branding-grid { grid-template-columns: 1fr; }
+            table, thead, tbody, th, td, tr { display: block; width: 100%; }
+            thead tr { position: absolute; top: -9999px; left: -9999px; }
+            tr { border: 1px solid var(--border); margin-bottom: 10px; border-radius: 10px; padding: 10px; }
+            td { border: none; position: relative; padding-left: 50%; text-align: right; margin-bottom: 8px; }
+            td::before { content: attr(data-label); position: absolute; left: 10px; width: 45%; font-weight: 600; text-align: left; color: var(--text-muted); font-size: 12px; }
         }
     </style>
 </head>
 <body>
     <div class="dashboard-container">
+        <div class="topbar">
+            <div class="topbar-left">
+                <h2>Welcome, <?= htmlspecialchars($employer['name']) ?>!</h2>
+                <p>OJT Supervisor Dashboard</p>
+            </div>
+            <div class="topbar-right">
+                <span class="badge-role">Supervisor</span>
+                <a href="logout.php" class="logout-btn">⎋ Logout</a>
+            </div>
+        </div>
+
+        <div class="dashboard-inner">
+
         <?php if (!empty($success_message)): ?>
             <div class="success-msg"><?= $success_message ?></div>
         <?php endif; ?>
         <?php if (!empty($error_message)): ?>
             <div class="error-msg"><?= htmlspecialchars($error_message) ?></div>
         <?php endif; ?>
-
-        <div class="welcome-section">
-            <h2>Welcome, <?= htmlspecialchars($employer['name']) ?>!</h2>
-            <p>You are logged in as <strong>OJT Supervisor</strong>.</p>
-        </div>
 
         <h3>Quick Actions</h3>
         <div class="actions-section">
@@ -596,10 +485,44 @@ if (!empty($student_ids)) {
                 <div class="icon">📁</div>
                 <a href="upload_documents.php">Upload Documents</a>
             </div>
-            <div class="action-card">
-                <div class="icon">🚪</div>
-                <a href="logout.php">Logout</a>
-            </div>
+        </div>
+
+        <h3>Attendance Settings</h3>
+        <div class="attendance-actions" style="margin-bottom:20px;">
+            <h4>Grace Period Configuration</h4>
+            <div class="section-subtitle">Controls when students are flagged as late or pending verification.</div>
+            <form method="POST" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:480px;">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                <div>
+                    <label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:5px;">
+                        Late Grace Period
+                        <span style="font-size:11px;color:var(--text-muted);font-weight:400;">(1–30 min)</span>
+                    </label>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <input type="number" name="late_grace_minutes"
+                            value="<?= htmlspecialchars($late_grace_minutes) ?>"
+                            min="1" max="30" step="1"
+                            style="width:80px;border-radius:9px;border:1px solid var(--border);padding:8px 10px;font-size:14px;font-family:inherit;">
+                        <span style="font-size:13px;color:var(--text-muted);">minutes</span>
+                    </div>
+                </div>
+                <div>
+                    <label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:5px;">
+                        EOD Verification Window
+                        <span style="font-size:11px;color:var(--text-muted);font-weight:400;">(1–6 hrs)</span>
+                    </label>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <input type="number" name="eod_grace_hours"
+                            value="<?= htmlspecialchars($eod_grace_hours) ?>"
+                            min="1" max="6" step="1"
+                            style="width:80px;border-radius:9px;border:1px solid var(--border);padding:8px 10px;font-size:14px;font-family:inherit;">
+                        <span style="font-size:13px;color:var(--text-muted);">hours after work end</span>
+                    </div>
+                </div>
+                <div style="grid-column:span 2;margin-top:4px;">
+                    <button type="submit" name="save_grace_periods" class="btn btn-primary btn-sm">Save Settings</button>
+                </div>
+            </form>
         </div>
 
         <?php if (!$company_logo_exists): ?>
@@ -628,13 +551,6 @@ if (!empty($student_ids)) {
         <?php endif; ?>
 
         <h3>Attendance Records</h3>
-        
-        <div class="attendance-actions">
-            <h4>Attendance Signals</h4>
-            <div class="section-subtitle">
-                Late risk: no time-in by <?= htmlspecialchars($late_cutoff) ?>. Pending verification: time-out recorded but not verified after <?= htmlspecialchars($eod_cutoff) ?>.
-            </div>
-        </div>
 
         <div class="table-section">
             <table class="table table-bordered align-middle">
@@ -832,99 +748,8 @@ if (!empty($student_ids)) {
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        let lastAttendanceCheck = null;
-        let lastUpdatesCheck = null;
-        const POLL_INTERVAL = 10000;
-        
-        function openCertificateLink(url) {
-            if (window.top !== window.self) {
-                try {
-                    window.top.location.href = url;
-                } catch (err) {
-                    window.open(url, '_blank', 'noopener');
-                }
-                return false;
-            }
-            return true;
-        }
-
-        async function checkAttendanceUpdates() {
-            try {
-                const url = 'api/check_attendance.php?since=' + encodeURIComponent(lastAttendanceCheck || '');
-                const response = await fetch(url);
-                const data = await response.json();
-                
-                if (data.success && data.latest_timestamp) {
-                    if (lastAttendanceCheck && data.latest_timestamp > lastAttendanceCheck) {
-                        showNotification('New attendance data detected! Refreshing...', 'info');
-                        setTimeout(() => location.reload(), 1500);
-                    }
-                    lastAttendanceCheck = data.latest_timestamp;
-                }
-            } catch (err) {
-                console.error('Error checking attendance updates:', err);
-            }
-        }
-        
-        async function checkDataUpdates() {
-            try {
-                const url = 'api/check_updates.php?since=' + encodeURIComponent(lastUpdatesCheck || '');
-                const response = await fetch(url);
-                const data = await response.json();
-                
-                if (data.success) {
-                    let hasUpdates = false;
-                    let updateMessage = '';
-
-                    if (data.projects && data.projects.has_updates) {
-                        hasUpdates = true;
-                        updateMessage = 'New project submission!';
-                    }
-                    
-                    if (hasUpdates) {
-                        showNotification(updateMessage + ' Refreshing...', 'info');
-                        setTimeout(() => location.reload(), 1500);
-                    }
-                    
-                    const projTime = data.projects?.latest_timestamp;
-
-                    if (projTime) {
-                        lastUpdatesCheck = projTime;
-                    }
-                }
-            } catch (err) {
-                console.error('Error checking data updates:', err);
-            }
-        }
-        
-        function showNotification(message, type) {
-            const existing = document.querySelector('.polling-notification');
-            if (existing) existing.remove();
-            
-            const notification = document.createElement('div');
-            notification.className = 'alert alert-' + type + ' alert-dismissible fade show polling-notification';
-            notification.style.position = 'fixed';
-            notification.style.top = '20px';
-            notification.style.right = '20px';
-            notification.style.zIndex = '9999';
-            notification.style.minWidth = '300px';
-            notification.innerHTML = message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
-            
-            document.body.appendChild(notification);
-            
-            setTimeout(function() {
-                notification.remove();
-            }, 5000);
-        }
-        
-        document.addEventListener('DOMContentLoaded', function() {
-            checkAttendanceUpdates();
-            checkDataUpdates();
-            
-            setInterval(checkAttendanceUpdates, POLL_INTERVAL);
-            setInterval(checkDataUpdates, POLL_INTERVAL);
-        });
-    </script>
+    
+        </div><!-- /.dashboard-inner -->
+    </div><!-- /.dashboard-container -->
 </body>
 </html>

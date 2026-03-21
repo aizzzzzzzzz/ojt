@@ -13,7 +13,7 @@
 
 
 <div style="margin-bottom:20px; text-align:left; padding:16px; border:1px solid #e0e0e0; background:#fff; border-radius:10px;">
-    <h3 style="margin-top:0;">Daily Task / Activity</h3>
+    <h3 style="margin-top:0;">End of Day Task</h3>
 
     <form method="POST">
         <textarea
