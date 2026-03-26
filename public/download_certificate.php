@@ -58,9 +58,16 @@ if ($hours < 0) {
 }
 
 $employer_name = "(assigned organization)";
-$emp_stmt = $pdo->prepare("SELECT name FROM employers WHERE employer_id = ?");
-$emp_stmt->execute([$student['employer_id']]);
-$emp = $emp_stmt->fetch(PDO::FETCH_ASSOC);
+$emp = null;
+if (!empty($student['created_by'])) {
+    $emp_stmt = $pdo->prepare("SELECT name FROM employers WHERE employer_id = ? LIMIT 1");
+    $emp_stmt->execute([$student['created_by']]);
+    $emp = $emp_stmt->fetch(PDO::FETCH_ASSOC);
+} elseif (!empty($student['company_id'])) {
+    $emp_stmt = $pdo->prepare("SELECT name FROM employers WHERE company_id = ? ORDER BY employer_id ASC LIMIT 1");
+    $emp_stmt->execute([$student['company_id']]);
+    $emp = $emp_stmt->fetch(PDO::FETCH_ASSOC);
+}
 if ($emp) {
     $employer_name = $emp['name'];
 }

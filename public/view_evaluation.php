@@ -14,8 +14,17 @@ if (!isset($_GET['student_id']) || !is_numeric($_GET['student_id'])) {
 
 $student_id = intval($_GET['student_id']);
 
-$stmt = $pdo->prepare("SELECT * FROM students WHERE student_id = ? AND employer_id = ?");
-$stmt->execute([$student_id, $_SESSION['employer_id']]);
+$company_stmt = $pdo->prepare("SELECT company_id FROM employers WHERE employer_id = ? LIMIT 1");
+$company_stmt->execute([$_SESSION['employer_id']]);
+$company = $company_stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!empty($company['company_id'])) {
+    $stmt = $pdo->prepare("SELECT * FROM students WHERE student_id = ? AND company_id = ? LIMIT 1");
+    $stmt->execute([$student_id, $company['company_id']]);
+} else {
+    $stmt = $pdo->prepare("SELECT * FROM students WHERE student_id = ? AND created_by = ? LIMIT 1");
+    $stmt->execute([$student_id, $_SESSION['employer_id']]);
+}
 $student = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$student) {

@@ -87,7 +87,7 @@
     <?php endforeach; ?>
     </div>
     <p style="margin-top:10px;color:var(--text-muted);font-size:13px;">
-        Time In: within 10 minutes of work start &nbsp;·&nbsp; Other actions: until 3 hours after work end.
+        Time In: within <?= htmlspecialchars((string)$late_grace_minutes) ?> minutes of work start &nbsp;·&nbsp; Other actions: until <?= htmlspecialchars((string)$eod_grace_hours) ?> hours after work end.
     </p>
     </div>
 

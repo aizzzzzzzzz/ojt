@@ -191,7 +191,7 @@ $admin_count = $stmt->fetchColumn();
 <body>
 <div class="login-card">
     <div class="login-header">
-        <h1>OJT Management System</h1>
+        <h1>Internship Monitoring System</h1>
         <p>Sign in to your account to continue</p>
     </div>
     <div class="login-body">

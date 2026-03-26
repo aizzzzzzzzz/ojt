@@ -57,8 +57,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_grace_periods'])
     check_csrf($_POST['csrf_token'] ?? '');
     $lg = max(1, min(30, (int)($_POST['late_grace_minutes'] ?? 10)));
     $eg = max(1, min(6,  (int)($_POST['eod_grace_hours']   ?? 3)));
-    $pdo->prepare("UPDATE employers SET late_grace_minutes = ?, eod_grace_hours = ? WHERE employer_id = ?")
-        ->execute([$lg, $eg, $employer_id]);
+    if (!empty($employer['company_id'])) {
+        $pdo->prepare("UPDATE employers SET late_grace_minutes = ?, eod_grace_hours = ? WHERE company_id = ?")
+            ->execute([$lg, $eg, $employer['company_id']]);
+    } else {
+        $pdo->prepare("UPDATE employers SET late_grace_minutes = ?, eod_grace_hours = ? WHERE employer_id = ?")
+            ->execute([$lg, $eg, $employer_id]);
+    }
     $_SESSION['success_message'] = 'Grace period settings saved.';
     header("Location: supervisor_dashboard.php");
     exit;

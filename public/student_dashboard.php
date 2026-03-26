@@ -19,6 +19,55 @@ $student_id = authenticate_student();
 $today = date('Y-m-d');
 $messages = [];
 
+function get_student_schedule_settings($pdo, $student_id) {
+    $defaults = [
+        'work_start' => '08:00:00',
+        'work_end' => '17:00:00',
+        'late_grace_minutes' => 10,
+        'eod_grace_hours' => 3,
+    ];
+
+    $student_stmt = $pdo->prepare("SELECT created_by, company_id FROM students WHERE student_id = ? LIMIT 1");
+    $student_stmt->execute([$student_id]);
+    $student_meta = $student_stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$student_meta) {
+        return $defaults;
+    }
+
+    $employer_stmt = null;
+    if (!empty($student_meta['created_by'])) {
+        $employer_stmt = $pdo->prepare("
+            SELECT work_start, work_end, late_grace_minutes, eod_grace_hours
+            FROM employers
+            WHERE employer_id = ?
+            LIMIT 1
+        ");
+        $employer_stmt->execute([$student_meta['created_by']]);
+    } elseif (!empty($student_meta['company_id'])) {
+        $employer_stmt = $pdo->prepare("
+            SELECT work_start, work_end, late_grace_minutes, eod_grace_hours
+            FROM employers
+            WHERE company_id = ?
+            ORDER BY employer_id ASC
+            LIMIT 1
+        ");
+        $employer_stmt->execute([$student_meta['company_id']]);
+    }
+
+    $schedule = $employer_stmt ? $employer_stmt->fetch(PDO::FETCH_ASSOC) : null;
+    if (!$schedule) {
+        return $defaults;
+    }
+
+    return [
+        'work_start' => $schedule['work_start'] ?? $defaults['work_start'],
+        'work_end' => $schedule['work_end'] ?? $defaults['work_end'],
+        'late_grace_minutes' => max(1, min(30, (int)($schedule['late_grace_minutes'] ?? $defaults['late_grace_minutes']))),
+        'eod_grace_hours' => max(1, min(6, (int)($schedule['eod_grace_hours'] ?? $defaults['eod_grace_hours']))),
+    ];
+}
+
 if (isset($_GET['export']) && $_GET['export'] == 'excel') {
     if (ob_get_length()) ob_end_clean();
 
@@ -287,33 +336,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attendance_action']))
     } else {
 
         // --- Server-side time window enforcement ---
-        $post_work_start_str = '08:00:00';
-        $post_work_end_str   = '17:00:00';
-        $post_student_stmt = $pdo->prepare("SELECT employer_id FROM students WHERE student_id = ? LIMIT 1");
-        $post_student_stmt->execute([$student_id]);
-        $post_student = $post_student_stmt->fetch(PDO::FETCH_ASSOC);
-        if (!empty($post_student['employer_id'])) {
-            $post_sched_stmt = $pdo->prepare("SELECT work_start, work_end FROM employers WHERE employer_id = ? LIMIT 1");
-            $post_sched_stmt->execute([$post_student['employer_id']]);
-            $post_sched = $post_sched_stmt->fetch(PDO::FETCH_ASSOC);
-            if ($post_sched) {
-                $post_work_start_str = $post_sched['work_start'];
-                $post_work_end_str   = $post_sched['work_end'];
-            }
-        }
+        $post_schedule = get_student_schedule_settings($pdo, $student_id);
+        $post_work_start_str = $post_schedule['work_start'];
+        $post_work_end_str   = $post_schedule['work_end'];
+        $post_late_grace_minutes = $post_schedule['late_grace_minutes'];
+        $post_eod_grace_hours    = $post_schedule['eod_grace_hours'];
         $post_tz             = new DateTimeZone('Asia/Manila');
         $post_now_dt         = new DateTime('now', $post_tz);
         $post_work_start_dt  = new DateTime($today . ' ' . $post_work_start_str, $post_tz);
         $post_time_in_cutoff = clone $post_work_start_dt;
-        $post_time_in_cutoff->modify('+10 minutes');
+        $post_time_in_cutoff->modify("+{$post_late_grace_minutes} minutes");
         $post_eod_cutoff     = new DateTime($today . ' ' . $post_work_end_str, $post_tz);
-        $post_eod_cutoff->modify('+3 hours');
+        $post_eod_cutoff->modify("+{$post_eod_grace_hours} hours");
 
         if ($action === 'time_in') {
             if ($post_now_dt < $post_work_start_dt) {
                 $messages[] = "Time In is not allowed yet. Work starts at " . $post_work_start_dt->format('H:i') . ".";
             } elseif ($post_now_dt > $post_time_in_cutoff) {
-                $messages[] = "Time In is no longer allowed. The 10-minute grace period ended at " . $post_time_in_cutoff->format('H:i') . ".";
+                $messages[] = "Time In is no longer allowed. The {$post_late_grace_minutes}-minute grace period ended at " . $post_time_in_cutoff->format('H:i') . ".";
             }
         } else {
             if ($post_now_dt > $post_eod_cutoff) {
@@ -395,25 +435,19 @@ $stmt->execute([$student_id]);
 $student = $stmt->fetch(PDO::FETCH_ASSOC);
 
 // Fetch employer work schedule for time window enforcement
-$work_start_str = '08:00:00';
-$work_end_str   = '17:00:00';
-if (!empty($student['employer_id'])) {
-    $sched_stmt = $pdo->prepare("SELECT work_start, work_end FROM employers WHERE employer_id = ? LIMIT 1");
-    $sched_stmt->execute([$student['employer_id']]);
-    $sched = $sched_stmt->fetch(PDO::FETCH_ASSOC);
-    if ($sched) {
-        $work_start_str = $sched['work_start'];
-        $work_end_str   = $sched['work_end'];
-    }
-}
+$schedule = get_student_schedule_settings($pdo, $student_id);
+$work_start_str = $schedule['work_start'];
+$work_end_str   = $schedule['work_end'];
+$late_grace_minutes = $schedule['late_grace_minutes'];
+$eod_grace_hours    = $schedule['eod_grace_hours'];
 
 $tz               = new DateTimeZone('Asia/Manila');
 $now_dt           = new DateTime('now', $tz);
 $work_start_dt    = new DateTime($today . ' ' . $work_start_str, $tz);
 $time_in_cutoff   = clone $work_start_dt;
-$time_in_cutoff->modify('+10 minutes');          // time_in allowed: work_start → work_start+10min
+$time_in_cutoff->modify("+{$late_grace_minutes} minutes");
 $eod_cutoff_dt    = new DateTime($today . ' ' . $work_end_str, $tz);
-$eod_cutoff_dt->modify('+3 hours');              // all other actions allowed until work_end+3hr
+$eod_cutoff_dt->modify("+{$eod_grace_hours} hours");
 
 // Boolean flags used by both POST handler and attendance_tab.php
 $before_work_start      = $now_dt < $work_start_dt;
