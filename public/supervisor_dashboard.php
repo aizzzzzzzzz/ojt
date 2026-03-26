@@ -16,13 +16,11 @@ $timezone = new DateTimeZone('Asia/Manila');
 $now = new DateTime('now', $timezone);
 $today = $now->format('Y-m-d');
 
-// Dynamic cutoffs based on employer's work schedule
 $work_start_raw = $employer['work_start'] ?? '08:00:00';
 $work_end_raw   = $employer['work_end']   ?? '17:00:00';
 
 $late_grace_minutes = (int)($employer['late_grace_minutes'] ?? 10);
 $eod_grace_hours    = (int)($employer['eod_grace_hours']    ?? 3);
-// Clamp: late grace 1–30 min, eod grace 1–6 hours
 $late_grace_minutes = max(1, min(30, $late_grace_minutes));
 $eod_grace_hours    = max(1, min(6,  $eod_grace_hours));
 
@@ -32,7 +30,6 @@ $late_cutoff_dt->modify("+{$late_grace_minutes} minutes");
 $eod_cutoff_dt  = new DateTime($today . ' ' . $work_end_raw, $timezone);
 $eod_cutoff_dt->modify("+{$eod_grace_hours} hours");
 
-// Human-readable versions for display
 $late_cutoff = $late_cutoff_dt->format('H:i');
 $eod_cutoff  = $eod_cutoff_dt->format('H:i');
 
@@ -311,7 +308,6 @@ if (!empty($student_ids)) {
 
         .dashboard-inner h3:first-child { margin-top: 0; }
 
-        /* Quick Actions */
         .actions-section {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -347,7 +343,6 @@ if (!empty($student_ids)) {
 
         .action-card a:hover { background: var(--accent-dk); transform: translateY(-1px); }
 
-        /* Attendance / branding card */
         .attendance-actions {
             background: var(--surface2);
             border: 1px solid var(--border);
@@ -369,7 +364,6 @@ if (!empty($student_ids)) {
         .status-late    { background: var(--amber-lt); color: var(--amber); border: 1px solid #fde68a; }
         .status-pending { background: var(--accent-lt); color: var(--accent); border: 1px solid #c7d2fe; }
 
-        /* Table */
         .table-section { overflow-x: auto; margin-top: 16px; border-radius: var(--radius); border: 1px solid var(--border); }
 
         table { width: 100%; border-collapse: collapse; background: var(--surface); }
@@ -393,7 +387,6 @@ if (!empty($student_ids)) {
         tr:last-child td { border-bottom: none; }
         tr:hover td { background: var(--accent-lt); transition: background 0.15s; }
 
-        /* Buttons */
         .btn, button.btn { font-family: inherit; font-size: 13px; font-weight: 600; border-radius: 9px; padding: 7px 14px; transition: all 0.18s; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; border: none; }
 
         .btn-primary    { background: var(--accent) !important; color: #fff !important; border: none !important; }
@@ -411,7 +404,6 @@ if (!empty($student_ids)) {
         .btn-outline-secondary { background: transparent !important; color: var(--text-muted) !important; border: 1.5px solid var(--border) !important; }
         .btn-outline-secondary:hover { background: var(--surface2) !important; color: var(--text) !important; transform: translateY(-1px) !important; }
 
-        /* Detail rows */
         .details-row { display: none !important; }
         .details-row.show { display: table-row !important; }
 
@@ -423,7 +415,6 @@ if (!empty($student_ids)) {
             text-align: left;
         }
 
-        /* Form controls */
         .form-control, .form-select {
             border-radius: 9px !important;
             border: 1px solid var(--border) !important;
@@ -754,7 +745,7 @@ if (!empty($student_ids)) {
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     
-        </div><!-- /.dashboard-inner -->
-    </div><!-- /.dashboard-container -->
+        </div>
+    </div>
 </body>
 </html>

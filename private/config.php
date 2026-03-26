@@ -5,6 +5,10 @@ if (defined('CONFIG_LOADED')) {
 }
 define('CONFIG_LOADED', true);
 
+if (!defined('DEMO_DISABLE_ATTENDANCE_GRACE_PERIOD')) {
+    define('DEMO_DISABLE_ATTENDANCE_GRACE_PERIOD', true);
+}
+
 
 $is_local = in_array($_SERVER['HTTP_HOST'] ?? '', ['localhost', '127.0.0.1', 'localhost:8080', '127.0.0.1:8080']);
 
@@ -182,13 +186,6 @@ $email_config = [
     'debug_mode' => getenv('EMAIL_DEBUG') ?: false,
 ];
 
-
-// ---------------------------------------------------------------------------
-// DB-based login attempt tracking
-// Thresholds:  5 attempts → 30-second lockout (keeps counting)
-//             10 attempts → account locked, must reset password via email
-// ---------------------------------------------------------------------------
-
 if (!function_exists('get_login_attempt_row')) {
     function get_login_attempt_row($pdo, $username, $ip) {
         $stmt = $pdo->prepare(
@@ -200,12 +197,6 @@ if (!function_exists('get_login_attempt_row')) {
 }
 
 if (!function_exists('check_login_attempts')) {
-    /**
-     * Returns one of:
-     *   'ok'       – allowed to attempt
-     *   'cooldown' – 30-second cooldown active (5–9 attempts)
-     *   'locked'   – hard-locked at 10+ attempts, must reset via email
-     */
     function check_login_attempts($pdo, $username) {
         $ip           = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
         $cooldown_sec = 30;
@@ -217,10 +208,8 @@ if (!function_exists('check_login_attempts')) {
 
         $count = (int)$row['attempt_count'];
 
-        // Hard lock — must reset password
         if ($count >= $hard_limit) return 'locked';
 
-        // Soft cooldown
         if ($count >= $soft_limit && $row['locked_at'] !== null) {
             $elapsed = time() - strtotime($row['locked_at']);
             if ($elapsed < $cooldown_sec) return 'cooldown';
@@ -231,7 +220,6 @@ if (!function_exists('check_login_attempts')) {
 }
 
 if (!function_exists('get_lockout_remaining')) {
-    /** Seconds left in the 30-second cooldown, or 0 if not in cooldown. */
     function get_lockout_remaining($pdo, $username) {
         $ip           = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
         $cooldown_sec = 30;
@@ -263,7 +251,6 @@ if (!function_exists('record_login_attempt')) {
         }
 
         $new_count = (int)$row['attempt_count'] + 1;
-        // Set / refresh locked_at every time we hit or exceed the soft limit
         $locked_at = ($new_count >= $soft_limit) ? date('Y-m-d H:i:s') : null;
 
         $stmt = $pdo->prepare(
@@ -286,15 +273,11 @@ if (!function_exists('clear_login_attempts')) {
 }
 
 if (!function_exists('generate_reset_token')) {
-    /**
-     * Creates a secure reset token for the given username.
-     * Returns the plain token (to be emailed) or false on failure.
-     */
     function generate_reset_token($pdo, $username) {
         $ip     = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-        $token  = bin2hex(random_bytes(32));           // 64-char hex string
+        $token  = bin2hex(random_bytes(32));
         $hashed = hash('sha256', $token);
-        $expires = date('Y-m-d H:i:s', time() + 3600); // 1-hour window
+        $expires = date('Y-m-d H:i:s', time() + 3600);
 
         $stmt = $pdo->prepare(
             "UPDATE login_attempts
@@ -308,9 +291,6 @@ if (!function_exists('generate_reset_token')) {
 }
 
 if (!function_exists('validate_reset_token')) {
-    /**
-     * Returns the username the token belongs to, or false if invalid/expired.
-     */
     function validate_reset_token($pdo, $token) {
         $hashed = hash('sha256', $token);
         $stmt   = $pdo->prepare(

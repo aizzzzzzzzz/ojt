@@ -10,7 +10,6 @@ $lockout_remaining = 0;
 $show_reset_btn    = false;
 $reset_sent        = false;
 
-// ── Handle "send reset email" button ────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_reset'])) {
     $username = sanitize_input($_POST['username'] ?? '');
 
@@ -59,7 +58,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_reset'])) {
     }
 }
 
-// ── Handle normal login ──────────────────────────────────────────────────────
 elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = sanitize_input($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
@@ -76,7 +74,6 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $lockout_remaining = get_lockout_remaining($pdo, $username);
             $error = "Too many failed attempts. Please wait {$lockout_remaining} second(s) before trying again.";
         } else {
-            // Admin
             $stmt = $pdo->prepare("SELECT * FROM admins WHERE username = ? LIMIT 1");
             $stmt->execute([$username]);
             $admin = $stmt->fetch();
@@ -91,7 +88,6 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header("Location: admin_dashboard.php"); exit;
             }
 
-            // Employer
             $stmt = $pdo->prepare("SELECT * FROM employers WHERE username = ? LIMIT 1");
             $stmt->execute([$username]);
             $employer = $stmt->fetch();
@@ -109,7 +105,6 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header("Location: supervisor_dashboard.php"); exit;
             }
 
-            // Student
             $stmt = $pdo->prepare("SELECT * FROM students WHERE username = ? LIMIT 1");
             $stmt->execute([$username]);
             $student = $stmt->fetch();
@@ -126,7 +121,6 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header("Location: student_dashboard.php"); exit;
             }
 
-            // All failed — record attempt
             record_login_attempt($pdo, $username);
             $status_after = check_login_attempts($pdo, $username);
 

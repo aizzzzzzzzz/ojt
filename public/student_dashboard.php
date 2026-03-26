@@ -18,6 +18,7 @@ include_once __DIR__ . '/../includes/export.php';
 $student_id = authenticate_student();
 $today = date('Y-m-d');
 $messages = [];
+$attendance_time_limits_disabled = defined('DEMO_DISABLE_ATTENDANCE_GRACE_PERIOD') && DEMO_DISABLE_ATTENDANCE_GRACE_PERIOD;
 
 function get_student_schedule_settings($pdo, $student_id) {
     $defaults = [
@@ -335,7 +336,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attendance_action']))
         $messages[] = "Invalid action.";
     } else {
 
-        // --- Server-side time window enforcement ---
         $post_schedule = get_student_schedule_settings($pdo, $student_id);
         $post_work_start_str = $post_schedule['work_start'];
         $post_work_end_str   = $post_schedule['work_end'];
@@ -349,18 +349,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attendance_action']))
         $post_eod_cutoff     = new DateTime($today . ' ' . $post_work_end_str, $post_tz);
         $post_eod_cutoff->modify("+{$post_eod_grace_hours} hours");
 
-        if ($action === 'time_in') {
-            if ($post_now_dt < $post_work_start_dt) {
-                $messages[] = "Time In is not allowed yet. Work starts at " . $post_work_start_dt->format('H:i') . ".";
-            } elseif ($post_now_dt > $post_time_in_cutoff) {
-                $messages[] = "Time In is no longer allowed. The {$post_late_grace_minutes}-minute grace period ended at " . $post_time_in_cutoff->format('H:i') . ".";
-            }
-        } else {
-            if ($post_now_dt > $post_eod_cutoff) {
-                $messages[] = "Attendance actions are no longer available for today. Cutoff was " . $post_eod_cutoff->format('H:i') . ".";
+        if (!$attendance_time_limits_disabled) {
+            if ($action === 'time_in') {
+                if ($post_now_dt < $post_work_start_dt) {
+                    $messages[] = "Time In is not allowed yet. Work starts at " . $post_work_start_dt->format('H:i') . ".";
+                } elseif ($post_now_dt > $post_time_in_cutoff) {
+                    $messages[] = "Time In is no longer allowed. The {$post_late_grace_minutes}-minute grace period ended at " . $post_time_in_cutoff->format('H:i') . ".";
+                }
+            } else {
+                if ($post_now_dt > $post_eod_cutoff) {
+                    $messages[] = "Attendance actions are no longer available for today. Cutoff was " . $post_eod_cutoff->format('H:i') . ".";
+                }
             }
         }
-        // --- End time window enforcement ---
 
         if (empty($messages)) try {
             $pdo->beginTransaction();
@@ -434,7 +435,6 @@ $stmt = $pdo->prepare("SELECT * FROM students WHERE student_id = ? LIMIT 1");
 $stmt->execute([$student_id]);
 $student = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// Fetch employer work schedule for time window enforcement
 $schedule = get_student_schedule_settings($pdo, $student_id);
 $work_start_str = $schedule['work_start'];
 $work_end_str   = $schedule['work_end'];
@@ -449,11 +449,17 @@ $time_in_cutoff->modify("+{$late_grace_minutes} minutes");
 $eod_cutoff_dt    = new DateTime($today . ' ' . $work_end_str, $tz);
 $eod_cutoff_dt->modify("+{$eod_grace_hours} hours");
 
-// Boolean flags used by both POST handler and attendance_tab.php
 $before_work_start      = $now_dt < $work_start_dt;
 $time_in_window_open    = $now_dt >= $work_start_dt && $now_dt <= $time_in_cutoff;
 $time_in_window_closed  = $now_dt > $time_in_cutoff;
 $eod_window_open        = $now_dt <= $eod_cutoff_dt;
+
+if ($attendance_time_limits_disabled) {
+    $before_work_start = false;
+    $time_in_window_open = true;
+    $time_in_window_closed = false;
+    $eod_window_open = true;
+}
 
 $attendance_stmt = $pdo->prepare("SELECT * FROM attendance WHERE student_id = ? ORDER BY log_date DESC");
 $attendance_stmt->execute([$student_id]);
@@ -685,7 +691,6 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
         overflow: hidden;
     }
 
-    /* Topbar */
     .topbar {
         display: flex;
         align-items: center;
@@ -721,11 +726,9 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
 
     .dashboard-inner { padding: 24px 32px 36px; }
 
-    /* Messages */
     .success-msg { background: var(--green-lt); color: #15803d; padding: 12px 16px; border-radius: 10px; border: 1px solid #bbf7d0; font-size: 14px; font-weight: 500; margin-bottom: 16px; }
     .error-msg   { background: var(--red-lt);   color: #b91c1c; padding: 12px 16px; border-radius: 10px; border: 1px solid #fecaca; font-size: 14px; font-weight: 500; margin-bottom: 16px; }
 
-    /* Summary strip */
     .summary {
         display: flex;
         gap: 24px;
@@ -744,7 +747,6 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
     .status.completed { color: var(--green); font-weight: 700; }
     .status.in-progress { color: var(--amber); font-weight: 700; }
 
-    /* Tabs */
     .tab-switcher {
         display: flex;
         gap: 4px;
@@ -775,7 +777,6 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
-    /* Buttons */
     .action-btn, .btn-primary, .btn-export {
         padding: 9px 16px;
         border-radius: 9px;
@@ -801,10 +802,8 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
     .btn-export-all { background: var(--accent); color: #fff; }
     .btn-export-all:hover { background: var(--accent-dk); transform: translateY(-1px); }
 
-    /* Attendance actions */
     .attendance-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-start; margin-bottom: 16px; }
 
-    /* Cards / sections */
     .task-section, .attendance-section {
         margin-bottom: 16px;
         padding: 18px 20px;
@@ -815,7 +814,6 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
 
     .task-section h3, .attendance-section h3 { margin: 0 0 12px; font-size: 15px; font-weight: 700; color: var(--text); }
 
-    /* Export panel */
     .export-panel {
         background: var(--surface2);
         border: 1px solid var(--border);
@@ -833,7 +831,6 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
     .export-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
     .export-buttons .btn-export { height: 38px; min-width: 140px; }
 
-    /* Form controls */
     .form-control, textarea {
         border-radius: 9px;
         border: 1px solid var(--border);
@@ -852,7 +849,6 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
         outline: none;
     }
 
-    /* Table */
     .table-section { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); margin-top: 16px; }
     .desktop-view table { width: 100%; border-collapse: collapse; background: var(--surface); }
 
@@ -872,7 +868,6 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: var(--accent-lt); transition: background 0.15s; }
 
-    /* Mobile cards */
     .mobile-view { display: none; }
 
     .attendance-card {
@@ -911,7 +906,6 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
     .task-info { font-size: 13px; color: var(--text-muted); border-top: 1px solid var(--border); padding-top: 10px; margin-top: 8px; }
     .task-info p { margin: 4px 0 0; color: var(--text); }
 
-    /* Projects */
     .projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; margin-top: 16px; }
 
     .project-card {
@@ -924,7 +918,6 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
 
     .project-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
 
-    /* Sidebar buttons for student_attendance_content */
     .student-sidebar-buttons { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
 
     .sidebar-btn {
@@ -942,12 +935,10 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
 
     .sidebar-btn.active, .sidebar-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
 
-    /* Modal */
     .modal-content { border-radius: 16px !important; border: 1px solid var(--border) !important; }
     .modal-header  { border-bottom: 1px solid var(--border) !important; }
     .modal-footer  { border-top: 1px solid var(--border) !important; }
 
-    /* Full screen IDE */
     #fullscreenIDE { border-radius: 0; }
 
     @media (max-width: 768px) {
@@ -1292,7 +1283,6 @@ function runCodePreview(event) {
         alert('No code to preview. Please write some code first.');
         return;
     }
-    // Open fullscreen overlay
     let overlay = document.getElementById('previewOverlay');
     if (!overlay) {
         overlay = document.createElement('div');
@@ -1496,7 +1486,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });a
 </script>
 
-    </div><!-- /.dashboard-inner -->
-</div><!-- /.dashboard-container -->
+    </div>
+</div>
 </body>
 </html>

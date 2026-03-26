@@ -95,7 +95,6 @@ function selectProjectForSubmission(projectId, projectName) {
             initCodeEditor();
         }
 
-        // runCodeBtn has onclick="runCodePreview(event)" set directly in HTML
     }, 100);
 }
 
@@ -138,17 +137,14 @@ function switchSubmissionTab(tabType) {
 function runCodePreview(event) {
     if (event) event.preventDefault();
     let code = '';
-    // Always try to save CodeMirror first if available
     if (window.codeEditor && typeof window.codeEditor.getValue === 'function') {
         window.codeEditor.save();
         code = window.codeEditor.getValue();
     }
-    // Always fallback to textarea (CodeMirror syncs to it on save)
     if (!code) {
         const ta = document.getElementById('codeEditor');
         if (ta) code = ta.value;
     }
-    // Last resort: check all textareas named code_content
     if (!code) {
         const ta = document.querySelector('textarea[name="code_content"]');
         if (ta) code = ta.value;

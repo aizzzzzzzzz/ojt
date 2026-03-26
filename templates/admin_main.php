@@ -131,5 +131,5 @@
                 </div>
             </div>
         </div>
-    </div>    </div> <!-- /.dashboard-inner -->
-</div> <!-- /.dashboard-container -->
+    </div>    </div>
+</div>

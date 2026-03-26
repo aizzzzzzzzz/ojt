@@ -232,11 +232,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $certificatePath, $total_hours
         ]);
 
-        // Insert certificate hash for verification (or update if already exists)
         $hashStmt = $pdo->prepare("INSERT INTO certificate_hashes (student_id, certificate_hash, generated_at) VALUES (?, ?, NOW()) ON DUPLICATE KEY UPDATE certificate_hash = VALUES(certificate_hash), generated_at = NOW()");
         $hashStmt->execute([$student_id, $certificate_no]);
 
-        // Add certificate to blockchain
         $blockchain = new Blockchain();
         $blockchainResult = $blockchain->addCertificate(
             $student_id,
@@ -294,7 +292,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
         
-        // Log blockchain result for debugging
         error_log("Blockchain addCertificate result: " . json_encode($blockchainResult));
 
         if (!empty($student['email'])) {

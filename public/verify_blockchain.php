@@ -5,11 +5,9 @@ require_once __DIR__ . '/../includes/Blockchain.php';
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['hash'])) {
     $certificateNo = sanitize_input($_GET['hash']);
 
-    // Use Blockchain class for verification
     $blockchain = new Blockchain();
     $result = $blockchain->verifyCertificate($certificateNo);
     
-    // Also check database for additional info
     $stmt = $pdo->prepare("SELECT * FROM certificate_hashes WHERE certificate_hash = ? LIMIT 1");
     $stmt->execute([$certificateNo]);
     $record = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -53,7 +51,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['hash'])) {
         echo "<p><strong>Blockchain Mode:</strong> " . htmlspecialchars($mode) . "</p>";
     }
 } else {
-    // Show blockchain info
     $blockchain = new Blockchain();
     $info = $blockchain->getBlockchainInfo();
     

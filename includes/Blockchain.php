@@ -1,13 +1,4 @@
 <?php
-/**
- * Blockchain Certificate Verification System
- * 
- * This module provides true blockchain-based certificate verification.
- * It can work in two modes:
- * 1. Local Blockchain - Simulated blockchain with proper block structure
- * 2. Ethereum Integration - Connect to Ethereum testnet (requires wallet setup)
- */
-
 $autoloadPath = __DIR__ . '/../vendor/autoload.php';
 if (is_file($autoloadPath)) {
     require_once $autoloadPath;
@@ -18,14 +9,13 @@ if (is_file($autoloadPath)) {
 class Blockchain {
     private $chain = [];
     private $pendingCertificates = [];
-    private $ethEndpoint; // Ethereum node endpoint
+    private $ethEndpoint;
     private $walletAddress;
     private $privateKey;
     private $contractAddress;
     private $useEthereum;
     private $network;
     
-    // Genesis block for the local blockchain
     const GENESIS_PREV_HASH = '0000000000000000000000000000000000000000000000000000000000000000';
     
     public function __construct() {
@@ -38,7 +28,6 @@ class Blockchain {
         $legacyAutoEnable = !empty($this->walletAddress) && !empty($this->privateKey);
         $this->useEthereum = $this->readEnvBool('BLOCKCHAIN_ENABLED', $legacyAutoEnable);
         
-        // Initialize with genesis block if local mode
         if (!$this->useEthereum && empty($this->chain)) {
             $this->initializeChain();
         }
@@ -65,9 +54,6 @@ class Blockchain {
         return hash('sha256', json_encode($canonicalPayload, JSON_UNESCAPED_SLASHES));
     }
     
-    /**
-     * Initialize the local blockchain with genesis block
-     */
     private function initializeChain() {
         $genesisBlock = [
             'index' => 0,
@@ -89,23 +75,14 @@ class Blockchain {
         $this->chain[] = $genesisBlock;
     }
     
-    /**
-     * Calculate hash for a block using SHA-256
-     */
     public function calculateHash($index, $timestamp, $certificateHash, $previousHash, $nonce) {
         return hash('sha256', $index . $timestamp . $certificateHash . $previousHash . $nonce);
     }
     
-    /**
-     * Get the last block in the chain
-     */
     public function getLastBlock() {
         return end($this->chain);
     }
-    
-    /**
-     * Add a new certificate to the blockchain (local mode)
-     */
+
     public function addCertificate($studentId, $certificateNo, $studentName, $employerName, $hoursCompleted) {
         $certificateData = [
             'student_id' => $studentId,
@@ -127,7 +104,6 @@ class Blockchain {
             return $this->addCertificateToEthereum($certificateNo, $certificateHash, $certificateData);
         }
         
-        // Local blockchain mode
         $lastBlock = $this->getLastBlock();
         
         $newBlock = [
@@ -140,7 +116,6 @@ class Blockchain {
             'anchored_at' => time()
         ];
         
-        // Proof of Work - find nonce that produces hash starting with '0000'
         $nonce = 0;
         while (true) {
             $hash = $this->calculateHash(
@@ -170,9 +145,6 @@ class Blockchain {
         ];
     }
     
-    /**
-     * Add certificate to Ethereum testnet
-     */
     private function addCertificateToEthereum($certificateNo, $certificateHash, $data) {
         try {
             if (empty($this->ethEndpoint) || empty($this->contractAddress)) {
@@ -215,7 +187,6 @@ class Blockchain {
             // 2. Sign it with the private key
             // 3. Send it to the network
 
-            // Safe fallback: keep app flow stable until contract write is implemented.
             return [
                 'success' => true,
                 'tx_hash' => null,
@@ -237,15 +208,11 @@ class Blockchain {
         }
     }
     
-    /**
-     * Verify a certificate on the blockchain
-     */
     public function verifyCertificate($certificateNo) {
         if ($this->useEthereum) {
             return $this->verifyCertificateOnEthereum($certificateNo);
         }
         
-        // Local blockchain verification
         foreach ($this->chain as $block) {
             if (isset($block['data']['certificate_no']) && 
                 $block['data']['certificate_no'] === $certificateNo) {
@@ -265,9 +232,6 @@ class Blockchain {
         ];
     }
     
-    /**
-     * Verify certificate on Ethereum
-     */
     private function verifyCertificateOnEthereum($certificateNo) {
         try {
             if (empty($this->ethEndpoint) || empty($this->contractAddress)) {
@@ -290,7 +254,6 @@ class Blockchain {
                 ];
             }
 
-            // Real implementation should query smart contract by certificate number/hash.
             return [
                 'verified' => false,
                 'mode' => 'ethereum_testnet',
@@ -309,22 +272,15 @@ class Blockchain {
         }
     }
     
-    /**
-     * Get the entire blockchain (for debugging)
-     */
     public function getChain() {
         return $this->chain;
     }
     
-    /**
-     * Validate the integrity of the blockchain
-     */
     public function isChainValid() {
         for ($i = 1; $i < count($this->chain); $i++) {
             $currentBlock = $this->chain[$i];
             $previousBlock = $this->chain[$i - 1];
             
-            // Verify hash matches calculated hash
             $calculatedHash = $this->calculateHash(
                 $currentBlock['index'],
                 $currentBlock['timestamp'],
@@ -337,7 +293,6 @@ class Blockchain {
                 return false;
             }
             
-            // Verify previous hash matches
             if ($currentBlock['previous_hash'] !== $previousBlock['hash']) {
                 return false;
             }
@@ -346,16 +301,13 @@ class Blockchain {
         return true;
     }
     
-    /**
-     * Get blockchain info for display
-     */
     public function getBlockchainInfo() {
         return [
             'mode' => $this->useEthereum ? 'Ethereum Testnet' : 'Local Blockchain',
             'total_blocks' => count($this->chain),
             'is_valid' => $this->isChainValid(),
             'latest_block_hash' => $this->getLastBlock()['hash'] ?? null,
-            'difficulty' => 4, // Number of leading zeros required
+            'difficulty' => 4,
             'consensus' => $this->useEthereum ? 'Proof of Authority' : 'Proof of Work',
             'network' => $this->network,
             'ethereum_enabled' => $this->useEthereum

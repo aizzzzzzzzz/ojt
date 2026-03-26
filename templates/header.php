@@ -12,14 +12,12 @@ if (isset($_POST['code_editor'])) {
 <title>Student Dashboard</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<!-- Plain textarea editor — no CodeMirror -->
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
 <style>
     :root{--bg:#f1f4f9;--surface:#fff;--surface2:#f8fafc;--border:#e3e8f0;--text:#111827;--text-muted:#6b7280;--accent:#4361ee;--accent-dk:#3451d1;--accent-lt:#eef1fd;--green:#16a34a;--green-lt:#dcfce7;--red:#dc2626;--red-lt:#fee2e2;--amber:#d97706;--amber-lt:#fef3c7;--radius:14px;--shadow-sm:0 1px 2px rgba(0,0,0,.05);--shadow:0 1px 4px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.06);--shadow-md:0 2px 8px rgba(0,0,0,.07),0 8px 28px rgba(0,0,0,.07);}
     *,*::before,*::after{box-sizing:border-box;}
     body{font-family:'DM Sans','Segoe UI',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh;margin:0;padding:28px 20px 60px;}
     .dashboard-container{background:var(--surface);border-radius:20px;border:1px solid var(--border);box-shadow:var(--shadow-md);width:100%;max-width:1440px;margin:0 auto;overflow:hidden;}
-    /* Topbar */
     .topbar{display:flex;align-items:center;justify-content:space-between;padding:20px 32px;border-bottom:1px solid var(--border);gap:16px;flex-wrap:wrap;}
     .topbar-left h2{font-size:20px;font-weight:700;color:var(--text);margin:0;letter-spacing:-.3px;}
     .topbar-left p{font-size:13px;color:var(--text-muted);margin:2px 0 0;}
@@ -28,22 +26,18 @@ if (isset($_POST['code_editor'])) {
     .btn-logout{display:inline-flex;align-items:center;background:var(--red);color:#fff!important;padding:8px 16px;border-radius:9px;text-decoration:none!important;font-weight:600;font-size:13px;transition:background .2s,transform .15s;border:none;cursor:pointer;}
     .btn-logout:hover{background:#b91c1c;transform:translateY(-1px);}
     .dashboard-inner{padding:24px 32px 36px;}
-    /* Messages */
     .success-msg{background:var(--green-lt);color:#15803d;padding:12px 16px;border-radius:10px;border:1px solid #bbf7d0;font-size:14px;font-weight:500;margin-bottom:16px;}
     .error-msg{background:var(--red-lt);color:#b91c1c;padding:12px 16px;border-radius:10px;border:1px solid #fecaca;font-size:14px;font-weight:500;margin-bottom:16px;}
-    /* Summary */
     .summary{display:flex;gap:24px;flex-wrap:wrap;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 20px;margin-bottom:20px;font-size:14px;}
     .summary p{margin:0;}
     .status.completed{color:var(--green);font-weight:700;}
     .status.in-progress{color:var(--amber);font-weight:700;}
-    /* Tabs */
     .tab-switcher{display:flex;gap:4px;margin-bottom:20px;background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:4px;width:fit-content;}
     .tab-button{padding:9px 20px;border:none;background:transparent;font-size:13px;font-weight:600;cursor:pointer;border-radius:8px;color:var(--text-muted);transition:all .18s;font-family:inherit;}
     .tab-button.active{background:var(--surface);color:var(--accent);box-shadow:var(--shadow-sm);border:1px solid var(--border);}
     .tab-button:hover:not(.active){color:var(--text);background:var(--surface);}
     .tab-content{display:none;}
     .tab-content.active{display:block;}
-    /* Buttons */
     .action-btn,.btn-primary,.btn-export{padding:9px 16px;border-radius:9px;border:none;font-weight:600;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .18s;font-family:inherit;text-decoration:none;}
     .btn-primary,.action-btn.btn-primary{background:var(--accent);color:#fff!important;}
     .btn-primary:hover,.action-btn.btn-primary:hover{background:var(--accent-dk);transform:translateY(-1px);}
@@ -57,12 +51,9 @@ if (isset($_POST['code_editor'])) {
     .btn-outline-primary:hover{background:var(--accent-lt);}
     .btn-sm{padding:6px 12px!important;font-size:12px!important;}
     .btn-disabled{background:#e5e7eb;color:#9ca3af;cursor:not-allowed;padding:9px 16px;border-radius:9px;border:none;font-weight:600;font-size:13px;font-family:inherit;}
-    /* Attendance */
     .attendance-actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-start;margin-bottom:16px;}
-    /* Section cards */
     .section-card{margin-bottom:16px;padding:18px 20px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface2);}
     .section-card h3{margin:0 0 12px;font-size:15px;font-weight:700;color:var(--text);}
-    /* Export */
     .export-panel{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin:0 0 16px;}
     .export-panel h5{font-size:15px;font-weight:700;color:var(--text);margin:0 0 14px;}
     .export-form{display:flex;flex-direction:column;align-items:flex-start;gap:12px;}
@@ -74,17 +65,14 @@ if (isset($_POST['code_editor'])) {
     .btn-export-excel:hover{background:#15803d;transform:translateY(-1px);}
     .btn-export-all{background:var(--accent);color:#fff;}
     .btn-export-all:hover{background:var(--accent-dk);transform:translateY(-1px);}
-    /* Form controls */
     .form-control,textarea{border-radius:9px;border:1px solid var(--border);padding:9px 12px;font-size:14px;font-family:inherit;color:var(--text);background:var(--surface);transition:border-color .2s,box-shadow .2s;width:100%;}
     .form-control:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(67,97,238,.12);outline:none;}
-    /* Tables */
     .table-section{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border);margin-top:16px;}
     .desktop-view table{width:100%;border-collapse:collapse;background:var(--surface);}
     th{background:var(--surface2);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);padding:11px 14px;border-bottom:1px solid var(--border);white-space:nowrap;text-align:center;}
     td{padding:11px 14px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text);vertical-align:middle;text-align:center;}
     tr:last-child td{border-bottom:none;}
     tr:hover td{background:var(--accent-lt);transition:background .15s;}
-    /* Mobile */
     .mobile-view{display:none;}
     .attendance-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden;}
     .card-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--border);font-size:14px;font-weight:600;flex-wrap:wrap;gap:8px;}
@@ -99,7 +87,6 @@ if (isset($_POST['code_editor'])) {
     .time-row .value{font-size:14px;font-weight:500;color:var(--text);}
     .task-info{font-size:13px;color:var(--text-muted);border-top:1px solid var(--border);padding-top:10px;margin-top:8px;}
     .task-info p{margin:4px 0 0;color:var(--text);}
-    /* Projects */
     .projects-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:16px;}
     .project-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:18px;transition:transform .2s,box-shadow .2s;cursor:pointer;}
     .project-card:hover{transform:translateY(-2px);box-shadow:var(--shadow);}
@@ -109,7 +96,6 @@ if (isset($_POST['code_editor'])) {
     .submission-card{background:var(--surface2);border:1px solid var(--border);border-left:4px solid var(--green);border-radius:var(--radius);padding:16px;margin-bottom:12px;}
     .submission-card h6{margin:0 0 8px;font-size:14px;font-weight:700;color:var(--text);}
     .submission-meta{font-size:13px;color:var(--text-muted);}
-    /* IDE */
     #codeTab{display:flex;gap:15px;margin-bottom:15px;height:calc(100vh - 320px);min-height:400px;}
     .editor-half,.preview-half{flex:1;display:flex;flex-direction:column;min-height:0;}
     .editor-half h6,.preview-half h6{margin:0 0 10px;font-size:14px;color:var(--text);font-weight:700;}
@@ -126,7 +112,6 @@ if (isset($_POST['code_editor'])) {
     .panel-header{padding:10px 16px;background:var(--surface2);border-bottom:1px solid var(--border);font-weight:600;font-size:13px;color:var(--text);flex-shrink:0;}
     .panel-content{flex:1;padding:10px;overflow:hidden;position:relative;}
     .ide-controls{display:flex;gap:10px;padding:14px 20px;background:var(--surface2);border-top:1px solid var(--border);flex-shrink:0;}
-    /* Welcome header alias */
     .welcome-header{display:none;}
     @media(max-width:768px){
         body{padding:10px 10px 40px;}

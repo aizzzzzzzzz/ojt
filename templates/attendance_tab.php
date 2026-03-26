@@ -31,9 +31,6 @@
     $lunch_in_done   = !empty($today_row['lunch_in']);
     $time_out_done   = !empty($today_row['time_out']);
 
-    // $before_work_start, $time_in_window_open, $time_in_window_closed,
-    // $eod_window_open, $time_in_cutoff, $eod_cutoff_dt are set in student_dashboard.php
-
     $actions = [
         'time_in'   => '🟢 Time In',
         'lunch_out' => '🍽️ Lunch Out',
@@ -44,27 +41,27 @@
     foreach ($actions as $key => $label):
         $done = ${$key . '_done'};
 
-        // Sequence checks (unchanged)
         $seq_disabled = false;
         if ($key === 'lunch_out' && (!$time_in_done || $done)) $seq_disabled = true;
         if ($key === 'lunch_in'  && (!$lunch_out_done || $done)) $seq_disabled = true;
         if ($key === 'time_out'  && (!$time_in_done || $done))   $seq_disabled = true;
 
-        // Time window checks
         $window_disabled = false;
         $window_hint     = '';
-        if ($key === 'time_in' && !$done) {
-            if ($before_work_start) {
-                $window_disabled = true;
-                $window_hint = 'Opens at ' . $work_start_dt->format('H:i');
-            } elseif ($time_in_window_closed) {
-                $window_disabled = true;
-                $window_hint = 'Grace period ended at ' . $time_in_cutoff->format('H:i');
-            }
-        } elseif ($key !== 'time_in' && !$done && !$seq_disabled) {
-            if (!$eod_window_open) {
-                $window_disabled = true;
-                $window_hint = 'Closed at ' . $eod_cutoff_dt->format('H:i');
+        if (!$attendance_time_limits_disabled) {
+            if ($key === 'time_in' && !$done) {
+                if ($before_work_start) {
+                    $window_disabled = true;
+                    $window_hint = 'Opens at ' . $work_start_dt->format('H:i');
+                } elseif ($time_in_window_closed) {
+                    $window_disabled = true;
+                    $window_hint = 'Grace period ended at ' . $time_in_cutoff->format('H:i');
+                }
+            } elseif ($key !== 'time_in' && !$done && !$seq_disabled) {
+                if (!$eod_window_open) {
+                    $window_disabled = true;
+                    $window_hint = 'Closed at ' . $eod_cutoff_dt->format('H:i');
+                }
             }
         }
 
@@ -87,7 +84,11 @@
     <?php endforeach; ?>
     </div>
     <p style="margin-top:10px;color:var(--text-muted);font-size:13px;">
-        Time In: within <?= htmlspecialchars((string)$late_grace_minutes) ?> minutes of work start &nbsp;·&nbsp; Other actions: until <?= htmlspecialchars((string)$eod_grace_hours) ?> hours after work end.
+        <?php if ($attendance_time_limits_disabled): ?>
+            Demo mode: attendance time limits are temporarily disabled.
+        <?php else: ?>
+            Time In: within <?= htmlspecialchars((string)$late_grace_minutes) ?> minutes of work start &nbsp;·&nbsp; Other actions: until <?= htmlspecialchars((string)$eod_grace_hours) ?> hours after work end.
+        <?php endif; ?>
     </p>
     </div>
 

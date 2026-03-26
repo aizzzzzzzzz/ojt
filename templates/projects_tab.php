@@ -59,7 +59,6 @@
 
             <small style="color:var(--text-muted,#6b7280); display:block; margin-bottom:10px;">💡 Supports: PHP, HTML, CSS, Java, JavaScript, and more</small>
             <div id="codeTab" style="display:none; flex-direction:column; gap:12px;">
-                <!-- Full-width editor -->
                 <div>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                         <h6 style="margin:0; font-size:13px; font-weight:700;">Code Editor</h6>
@@ -69,7 +68,6 @@
                         <textarea id="codeEditor" name="code_content"><?php echo htmlspecialchars($defaultCode); ?></textarea>
                     </div>
                 </div>
-                <!-- Collapsible preview — hidden until Run is clicked -->
                 <div id="previewPanel" style="display:none;">
                     <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:#f8fafc; border:1px solid #e3e8f0; border-bottom:none; border-radius:9px 9px 0 0;">
                         <span style="font-size:13px; font-weight:700;">Preview Output</span>
