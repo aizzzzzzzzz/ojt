@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/middleware.php';
 
 function get_students_count($pdo) {
     $stmt = $pdo->query("SELECT COUNT(*) AS count FROM students");

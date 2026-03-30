@@ -2,6 +2,7 @@
 session_start();
 require_once __DIR__ . '/../vendor/autoload.php';
 include_once __DIR__ . '/../private/config.php';
+require_once __DIR__ . '/../includes/audit.php';
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -10,6 +11,9 @@ if (!isset($_SESSION['student_id']) || $_SESSION['role'] !== "student") {
     header("Location: student_login.php");
     exit;
 }
+
+// Log student export activity
+log_activity('Export Attendance', "Exported attendance history to Excel");
 
 $student_id = (int)$_SESSION['student_id'];
 

@@ -1,6 +1,7 @@
 <?php
 session_start();
 require '../private/config.php';
+require_once __DIR__ . '/../includes/audit.php';
 
 if (!isset($_SESSION['role']) || ($_SESSION['role'] !== 'admin' && $_SESSION['role'] !== 'employer')) {
     header('Location: ../index.php');
@@ -53,19 +54,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             $created_by = null;
             $company_id = null;
-            
+
             error_log("DEBUG add_student.php - Session role: " . $_SESSION['role']);
             error_log("DEBUG add_student.php - Session employer_id: " . ($_SESSION['employer_id'] ?? 'NOT SET'));
-            
+
             if ($_SESSION['role'] === 'employer') {
                 $created_by = $_SESSION['employer_id'];
-                
+
                 if ($created_by) {
                     error_log("DEBUG add_student.php - Looking for employer_id: " . $created_by);
                     $companyStmt = $pdo->prepare("SELECT company_id FROM employers WHERE employer_id = ?");
                     $companyStmt->execute([$created_by]);
                     $companyData = $companyStmt->fetch();
-                    
+
                     if ($companyData) {
                         $company_id = $companyData['company_id'];
                         error_log("DEBUG add_student.php - Found company_id: " . $company_id);
@@ -74,16 +75,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     }
                 }
             }
-            
+
             if ($_SESSION['role'] === 'admin') {
                 error_log("DEBUG add_student.php - Admin adding student, company_id will be NULL");
             }
 
             error_log("DEBUG add_student.php - Final values - created_by: " . $created_by . ", company_id: " . $company_id);
-            
+
             $stmt = $pdo->prepare("INSERT INTO students (username, password, first_name, middle_name, last_name, email, required_hours, course, school, created_by, company_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            
+
             if ($stmt->execute([$username, $hashed_password, $first_name, $middle_name, $last_name, $email, $required_hours, $course, $school, $created_by, $company_id])) {
+                // Log add student action based on user role
+                if ($_SESSION['role'] === 'admin') {
+                    audit_log($pdo, 'Add Student', "Admin added student: $username");
+                } else {
+                    audit_log($pdo, 'Add Student', "Employer added student: $username");
+                }
+                
                 $success = "Student added successfully!";
                 error_log("DEBUG add_student.php - Student added successfully with company_id: " . $company_id);
             } else {

@@ -122,7 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['project_file'])) {
         }
 
         if (function_exists('log_activity')) {
-            log_activity($pdo, $student_id, 'student', "Submitted project: {$project['project_name']} ($submission_status)");
+            log_activity('Project Submission', "Submitted project: {$project['project_name']} ($submission_status)");
         }
 
         $_SESSION['success'] = $message;

@@ -87,7 +87,11 @@
         <?php if ($attendance_time_limits_disabled): ?>
             Demo mode: attendance time limits are temporarily disabled.
         <?php else: ?>
-            Time In: within <?= htmlspecialchars((string)$late_grace_minutes) ?> minutes of work start &nbsp;·&nbsp; Other actions: until <?= htmlspecialchars((string)$eod_grace_hours) ?> hours after work end.
+            Time In: within <?= htmlspecialchars((string)$late_grace_minutes) ?> minutes of work start 
+            <?php if (!empty($is_afternoon_shift) && $is_afternoon_shift): ?>
+                (Afternoon shift detected - work starts at <?= htmlspecialchars($work_start_str) ?>)
+            <?php endif; ?>
+            &nbsp;·&nbsp; Other actions: until <?= htmlspecialchars((string)$eod_grace_hours) ?> hours after work end.
         <?php endif; ?>
     </p>
     </div>
@@ -103,7 +107,7 @@
     <th>Lunch Out</th>
     <th>Lunch In</th>
     <th>Time Out</th>
-    <th>Status</th>
+    <th>Shift Status</th>
     <th>Verified</th>
     <th>Hours (Daily)</th>
     <th>Task</th>
@@ -117,15 +121,27 @@
     <td data-label="Lunch Out"><?= (strpos($row['lunch_out'], '0000') === false && !empty($row['lunch_out'])) ? date('H:i:s', strtotime($row['lunch_out'])) : '-' ?></td>
     <td data-label="Lunch In"><?= (strpos($row['lunch_in'], '0000') === false && !empty($row['lunch_in'])) ? date('H:i:s', strtotime($row['lunch_in'])) : '-' ?></td>
     <td data-label="Time Out"><?= (strpos($row['time_out'], '0000') === false && !empty($row['time_out'])) ? date('H:i:s', strtotime($row['time_out'])) : '-' ?></td>
-    <td data-label="Status">
+    <td data-label="Shift Status">
         <?php
-        $status = $row['status'] ?: '---';
-        $status_class = '';
-        if (strtolower($status) === 'present') $status_class = "style='color:var(--green);font-weight:700;'";
-        if (strtolower($status) === 'absent')  $status_class = "style='color:var(--red);font-weight:700;'";
-        if (strtolower($status) === 'excused') $status_class = "style='color:var(--amber);font-weight:700;'";
+        $shift_status = $row['shift_status'] ?? 'on_time';
+        $late_minutes = (int)($row['late_minutes'] ?? 0);
+        
+        $shift_badge = '';
+        if ($shift_status === 'on_time') {
+            $shift_badge = '<span class="shift-badge shift-on-time">🟢 On Time</span>';
+        } elseif ($shift_status === 'late_grace') {
+            $shift_badge = '<span class="shift-badge shift-late-grace">🟡 Late (Grace)</span>';
+        } elseif ($shift_status === 'adjusted_shift') {
+            $effective = !empty($row['effective_start_time']) ? date('H:i', strtotime($row['effective_start_time'])) : '-';
+            $shift_badge = '<span class="shift-badge shift-adjusted">🟠 Adjusted</span><br><small style="color:var(--text-muted)">Start: ' . $effective . '</small>';
+        }
+        
+        if ($late_minutes > 0) {
+            $shift_badge .= '<br><small style="color:var(--text-muted)">+' . $late_minutes . ' min late</small>';
+        }
         ?>
-        <span <?= $status_class ?>><?= htmlspecialchars($status) ?></span>
+        <?= $shift_badge ?>
+    </td>
     <td data-label="Verified">
         <?php if ($row['verified'] == 1): ?>
             <span class="verified-badge">✓ Verified</span>
@@ -137,10 +153,16 @@
     <?php
     $minutesWorked = 0;
 
-    if (!empty($row['time_in']) && !empty($row['time_out']) && strpos($row['time_in'], '0000') === false && strpos($row['time_out'], '0000') === false) {
-        $minutesWorked = max(0, (strtotime($row['time_out']) - strtotime($row['time_in'])) / 60);
+    // Use effective_start_time for adjusted shifts, otherwise use time_in
+    $startTime = !empty($row['effective_start_time']) ? $row['effective_start_time'] : $row['time_in'];
+    
+    if (!empty($startTime) && !empty($row['time_out']) && 
+        strpos($startTime, '0000') === false && strpos($row['time_out'], '0000') === false) {
+        
+        $minutesWorked = max(0, (strtotime($row['time_out']) - strtotime($startTime)) / 60);
 
-        if (!empty($row['lunch_in']) && !empty($row['lunch_out']) && strpos($row['lunch_in'], '0000') === false && strpos($row['lunch_out'], '0000') === false) {
+        if (!empty($row['lunch_in']) && !empty($row['lunch_out']) && 
+            strpos($row['lunch_in'], '0000') === false && strpos($row['lunch_out'], '0000') === false) {
             $minutesWorked -= max(0, (strtotime($row['lunch_in']) - strtotime($row['lunch_out'])) / 60);
         }
 
@@ -167,17 +189,29 @@
             <strong>Date: <?= htmlspecialchars($row['log_date']) ?></strong>
             <span class="status-badge">
                 <?php
-                $status = $row['status'] ?: '---';
-                $status_class = '';
-                if (strtolower($status) === 'present') $status_class = "style='background: #d4edda; color: #155724;'";
-                if (strtolower($status) === 'absent')  $status_class = "style='background: #f8d7da; color: #721c24;'";
-                if (strtolower($status) === 'excused') $status_class = "style='background: #fff3cd; color: #856404;'";
+                // Shift Status Badge
+                $shift_status = $row['shift_status'] ?? 'on_time';
+                $late_minutes = (int)($row['late_minutes'] ?? 0);
+                
+                $shift_badge = '';
+                if ($shift_status === 'on_time') {
+                    $shift_badge = '<span class="shift-badge shift-on-time">🟢 On Time</span>';
+                } elseif ($shift_status === 'late_grace') {
+                    $shift_badge = '<span class="shift-badge shift-late-grace">🟡 Late</span>';
+                } elseif ($shift_status === 'adjusted_shift') {
+                    $effective = !empty($row['effective_start_time']) ? date('H:i', strtotime($row['effective_start_time'])) : '-';
+                    $shift_badge = '<span class="shift-badge shift-adjusted">🟠 Adj</span>';
+                }
+                
+                if ($late_minutes > 0) {
+                    $shift_badge .= ' <small style="color:var(--text-muted)">+' . $late_minutes . 'm</small>';
+                }
                 ?>
-                <span class="status-text" <?= $status_class ?>><?= htmlspecialchars($status) ?></span>
+                <?= $shift_badge ?>
                 <?php if ($row['verified'] == 1): ?>
-                    <span class="verified-badge">✓ Verified</span>
+                    <span class="verified-badge">✓</span>
                 <?php else: ?>
-                    <span class="unverified-badge">✗ Not Verified</span>
+                    <span class="unverified-badge">⏳</span>
                 <?php endif; ?>
                 </span>
         </div>
@@ -204,9 +238,14 @@
                     <span class="value">
                     <?php
                     $minutesWorked = 0;
-                    if (!empty($row['time_in']) && !empty($row['time_out']) && strpos($row['time_in'], '0000') === false && strpos($row['time_out'], '0000') === false) {
-                        $minutesWorked = max(0, (strtotime($row['time_out']) - strtotime($row['time_in'])) / 60);
-                        if (!empty($row['lunch_in']) && !empty($row['lunch_out']) && strpos($row['lunch_in'], '0000') === false && strpos($row['lunch_out'], '0000') === false) {
+                    // Use effective_start_time for adjusted shifts
+                    $startTime = !empty($row['effective_start_time']) ? $row['effective_start_time'] : $row['time_in'];
+                    
+                    if (!empty($startTime) && !empty($row['time_out']) && 
+                        strpos($startTime, '0000') === false && strpos($row['time_out'], '0000') === false) {
+                        $minutesWorked = max(0, (strtotime($row['time_out']) - strtotime($startTime)) / 60);
+                        if (!empty($row['lunch_in']) && !empty($row['lunch_out']) && 
+                            strpos($row['lunch_in'], '0000') === false && strpos($row['lunch_out'], '0000') === false) {
                             $minutesWorked -= max(0, (strtotime($row['lunch_in']) - strtotime($row['lunch_out'])) / 60);
                         }
                         echo floor($minutesWorked / 60) . " hr " . ($minutesWorked % 60) . " min";

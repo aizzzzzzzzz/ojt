@@ -1,13 +1,14 @@
 <?php
 session_start();
 require "../private/config.php";
+require_once __DIR__ . '/../includes/audit.php';
 
 ob_start();
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     error_log("=== DEBUG START: add_employer.php POST ===");
     error_log("POST data: " . print_r($_POST, true));
-    
+
     $name = trim($_POST["name"]);
     $company_input = trim($_POST["company"]);
     $username = trim($_POST["username"]);
@@ -16,18 +17,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (!empty($name) && !empty($company_input) && !empty($username) && !empty($password)) {
         $stmt = $pdo->prepare("SELECT 1 FROM employers WHERE LOWER(username) = LOWER(?)");
         $stmt->execute([$username]);
-        
+
         if ($stmt->fetch()) {
             $_SESSION['error'] = "Username already exists.";
             header("Location: add_employer.php");
             exit;
         } else {
             error_log("DEBUG: Checking company: '{$company_input}'");
-            
+
             $companyStmt = $pdo->prepare("SELECT company_id FROM companies WHERE LOWER(company_name) = LOWER(?)");
             $companyStmt->execute([$company_input]);
             $existingCompany = $companyStmt->fetch();
-            
+
             error_log("DEBUG: Company check result: " . print_r($existingCompany, true));
 
             if ($existingCompany) {
@@ -35,14 +36,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 error_log("DEBUG: Company exists with ID: {$company_id}");
             } else {
                 error_log("DEBUG: Creating new company: '{$company_input}'");
-                
+
                 try {
                     $insertCompanyStmt = $pdo->prepare("INSERT INTO companies (company_name) VALUES (?)");
-                    
+
                     if ($insertCompanyStmt->execute([$company_input])) {
                         $company_id = $pdo->lastInsertId();
                         error_log("DEBUG: Company created successfully! ID: {$company_id}");
-                        
+
                         $verifyStmt = $pdo->prepare("SELECT * FROM companies WHERE company_id = ?");
                         $verifyStmt->execute([$company_id]);
                         $verified = $verifyStmt->fetch();
@@ -66,20 +67,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $work_end   = $_POST['work_end']   ?? '17:00';
                 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
             error_log("DEBUG: Hashed password created");
-            
+
             try {
                 $stmt = $pdo->prepare("INSERT INTO employers (name, company_id, username, password, work_start, work_end) VALUES (?, ?, ?, ?, ?, ?)");
                 error_log("DEBUG: Inserting employer with values: name={$name}, company_id={$company_id}, username={$username}");
-                
+
                 if ($stmt->execute([$name, $company_id, $username, $hashed_password, $work_start, $work_end])) {
                     $employer_id = $pdo->lastInsertId();
                     error_log("DEBUG: Employer created successfully! ID: {$employer_id}");
-                    
+
                     $verifyEmpStmt = $pdo->prepare("SELECT * FROM employers WHERE employer_id = ?");
                     $verifyEmpStmt->execute([$employer_id]);
                     $empData = $verifyEmpStmt->fetch();
                     error_log("DEBUG: Employer verification: " . print_r($empData, true));
-                    
+
+                    // Log admin add employer action
+                    audit_log($pdo, 'Add Employer', "Added employer: $username (Company: $company_input)");
+
                     $_SESSION['success'] = "Employer account created successfully! Company ID: {$company_id}, Employer ID: {$employer_id}";
                 } else {
                     $errorInfo = $stmt->errorInfo();
@@ -94,7 +98,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     } else {
         $_SESSION['error'] = "All fields are required!";
     }
-    
+
     error_log("=== DEBUG END: add_employer.php POST ===");
     header("Location: add_employer.php");
     exit;

@@ -2,6 +2,7 @@
 ob_start();
 session_start();
 include_once __DIR__ . '/../private/config.php';
+require_once __DIR__ . '/../includes/audit.php';
 require_once __DIR__ . '/../lib/fpdf.php';
 require_once __DIR__ . '/../includes/email.php';
 
@@ -9,6 +10,9 @@ if (!isset($_SESSION['student_id']) || $_SESSION['role'] !== "student") {
     header("Location: student_login.php");
     exit;
 }
+
+// Log student download activity
+log_activity('Download Certificate', "Downloaded OJT certificate");
 
 $student_id = (int)$_SESSION['student_id'];
 

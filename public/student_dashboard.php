@@ -348,6 +348,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attendance_action']))
         $post_time_in_cutoff->modify("+{$post_late_grace_minutes} minutes");
         $post_eod_cutoff     = new DateTime($today . ' ' . $post_work_end_str, $post_tz);
         $post_eod_cutoff->modify("+{$post_eod_grace_hours} hours");
+        
+        // Check if this is an afternoon shift (work starts at or after 12:00 PM)
+        $is_afternoon_shift = $post_work_start_dt->format('H') >= 12;
 
         if (!$attendance_time_limits_disabled) {
             if ($action === 'time_in') {
@@ -448,6 +451,9 @@ $time_in_cutoff   = clone $work_start_dt;
 $time_in_cutoff->modify("+{$late_grace_minutes} minutes");
 $eod_cutoff_dt    = new DateTime($today . ' ' . $work_end_str, $tz);
 $eod_cutoff_dt->modify("+{$eod_grace_hours} hours");
+
+// Check if this is an afternoon shift (work starts at or after 12:00 PM)
+$is_afternoon_shift = $work_start_dt->format('H') >= 12;
 
 $before_work_start      = $now_dt < $work_start_dt;
 $time_in_window_open    = $now_dt >= $work_start_dt && $now_dt <= $time_in_cutoff;
@@ -896,6 +902,21 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
     .status-text { padding: 3px 8px; border-radius: 20px; font-size: 12px; font-weight: 600; }
     .verified-badge   { background: var(--green-lt); color: var(--green); font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 20px; }
     .unverified-badge { background: var(--red-lt); color: var(--red); font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 20px; }
+    
+    /* Shift Status Badges */
+    .shift-badge { 
+        display: inline-flex; 
+        align-items: center; 
+        gap: 4px; 
+        padding: 3px 8px; 
+        border-radius: 20px; 
+        font-size: 11px; 
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .shift-on-time { background: var(--green-lt); color: var(--green); }
+    .shift-late-grace { background: var(--amber-lt); color: var(--amber); }
+    .shift-adjusted { background: #fee2e2; color: #dc2626; }
 
     .card-body { padding: 14px 16px; }
     .time-info { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }

@@ -6,6 +6,7 @@ if (!isset($_SESSION['employer_id'])) {
 }
 
 include __DIR__ . '/../private/config.php';
+require_once __DIR__ . '/../includes/audit.php';
 
 $employer_id = $_SESSION['employer_id'];
 $success_message = '';
@@ -19,6 +20,10 @@ if (isset($_POST['submit'])) {
 
     $stmt = $pdo->prepare("INSERT INTO projects (project_name, description, start_date, due_date, status, created_by) VALUES (?, ?, ?, ?, ?, ?)");
     if ($stmt->execute([$project_name, $description, $start_date, $due_date, $status, $employer_id])) {
+        
+        // Log supervisor create project action
+        audit_log($pdo, 'Create Project', "Created project: $project_name");
+        
         $success_message = "Project created successfully!";
     } else {
         $success_message = "Error creating project.";

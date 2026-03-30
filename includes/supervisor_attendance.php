@@ -10,7 +10,9 @@ function handle_mark_absent($pdo, $student_id, $date, $reason) {
         $pdo->beginTransaction();
         $message = mark_student_absent($pdo, $student_id, $date, $reason);
         $pdo->commit();
-        write_audit_log('Mark Absent', "Student ID: $student_id, Date: $date");
+        
+        // Log to audit_logs
+        audit_log($pdo, 'Mark Absent', "Student ID: $student_id, Date: $date");
 
         $student_stmt = $pdo->prepare("SELECT first_name, last_name, email FROM students WHERE student_id = ?");
         $student_stmt->execute([$student_id]);
@@ -52,10 +54,11 @@ function handle_verify_attendance($pdo, $student_id, $date) {
             }
         }
 
-        write_audit_log('Verify Attendance', "Student ID: $student_id, Date: $date");
+        // Log to audit_logs
+        audit_log($pdo, 'Verify Attendance', "Student ID: $student_id, Date: $date");
         return "Attendance verified successfully!";
-} catch (PDOException $e) {
-    return "Database error: " . $e->getMessage();
-}
+    } catch (PDOException $e) {
+        return "Database error: " . $e->getMessage();
+    }
 }
 ?>

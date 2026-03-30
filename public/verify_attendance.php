@@ -1,6 +1,7 @@
 <?php
 session_start();
 include __DIR__ . '/../private/config.php';
+require_once __DIR__ . '/../includes/audit.php';
 
 if (!isset($_SESSION['employer_id']) || $_SESSION['role'] !== "employer") {
     header("Location: employer_login.php");
@@ -23,6 +24,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             WHERE student_id = ? AND log_date = ?
         ");
         $stmt->execute([$student_id, $log_date]);
+
+        // Log supervisor verification action
+        audit_log($pdo, 'Verify Attendance', "Verified attendance for student ID: $student_id, Date: $log_date");
 
         $_SESSION['verified_student'] = $student;
     }

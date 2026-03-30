@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/../private/config.php';
+require_once __DIR__ . '/../includes/audit.php';
 
 if (!isset($_SESSION['employer_id']) || $_SESSION['role'] !== "employer") {
     header("Location: employer_login.php");
@@ -27,6 +28,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if (!$result) {
             $stmt = $pdo->prepare("INSERT INTO attendance (student_id, log_date, status, reason) VALUES (?, ?, 'Absent', ?)");
             $stmt->execute([$student_id, $date, $reason]);
+            
+            // Log supervisor mark absent action
+            audit_log($pdo, 'Mark Absent', "Marked student ID: $student_id absent, Reason: $reason");
+            
             $msg = "Absent recorded!";
         } else {
             $msg = "Attendance already exists for today!";

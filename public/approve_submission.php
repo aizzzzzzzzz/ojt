@@ -40,8 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $updateProjectStmt->execute([$project_id]);
     }
 
-    log_activity($pdo, $_SESSION['employer_id'], 'employer', "Approved submission $submission_id and disabled project $project_id");
-    
+    // Log supervisor approval action to audit_logs
     audit_log($pdo, 'Approve Submission', "Submission ID: $submission_id, Project ID: $project_id");
 
     error_log("DEBUG: Attempting to send approval email for submission_id: $submission_id");
