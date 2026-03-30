@@ -3,5 +3,6 @@
     "allow": [
       "Bash(php *)"
     ]
-  }
+  },
+  "$version": 3
 }
