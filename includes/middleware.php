@@ -2,6 +2,7 @@
 
 if (session_status() === PHP_SESSION_NONE) session_start();
 require_once __DIR__ . '/../private/config.php';
+require_once __DIR__ . '/audit.php';
 
 function require_admin() {
     if (empty($_SESSION['admin_id'])) {

@@ -4,6 +4,7 @@ include __DIR__ . '/../includes/auth_check.php';
 require_role('employer');
 
 include __DIR__ . '/../private/config.php';
+require_once __DIR__ . '/../includes/audit.php';
 require_once __DIR__ . '/../includes/email.php';
 
 $submission_id = (int)($_GET['id'] ?? 0);
@@ -40,6 +41,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     log_activity($pdo, $_SESSION['employer_id'], 'employer', "Approved submission $submission_id and disabled project $project_id");
+    
+    audit_log($pdo, 'Approve Submission', "Submission ID: $submission_id, Project ID: $project_id");
 
     error_log("DEBUG: Attempting to send approval email for submission_id: $submission_id");
     $student_stmt = $pdo->prepare("SELECT first_name, last_name, email FROM students WHERE student_id = (SELECT student_id FROM project_submissions WHERE submission_id = ?)");

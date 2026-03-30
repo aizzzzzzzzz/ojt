@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/audit.php';
 
 function handle_attendance_action($pdo, $student_id, $today, $action) {
     $allowed = ['time_in','lunch_out','lunch_in','time_out'];
@@ -22,8 +23,9 @@ function handle_attendance_action($pdo, $student_id, $today, $action) {
                 $insert->execute([$student_id, $today, $now]);
                 $pdo->commit();
                 
-                
-                
+                // Log student attendance activity
+                log_activity('Time In', "Student recorded time in at " . date('H:i:s', strtotime($now)));
+
                 return "Time In recorded at " . date('H:i:s', strtotime($now)) . ".";
             }
         } else {
@@ -84,8 +86,9 @@ function handle_attendance_action($pdo, $student_id, $today, $action) {
                 $upd->execute($params);
                 $pdo->commit();
                 
-                
-                
+                // Log student attendance activity
+                log_activity(ucfirst(str_replace('_',' ', $action)), "Student recorded " . strtolower(str_replace('_',' ', $action)) . " at " . date('H:i:s', strtotime($now)));
+
                 return ucfirst(str_replace('_',' ', $action)) . " recorded at " . date('H:i:s', strtotime($now)) . ".";
             }
         }

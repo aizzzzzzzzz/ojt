@@ -6,6 +6,7 @@ if (!isset($_SESSION['employer_id'])) {
 }
 
 include __DIR__ . '/../private/config.php';
+require_once __DIR__ . '/../includes/audit.php';
 require_once __DIR__ . '/../includes/email.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -52,6 +53,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($result > 0) {
             $_SESSION['success'] = 'Submission graded successfully.';
+            
+            audit_log($pdo, 'Grade Submission', "Submission ID: $submission_id, Status: $status");
 
             error_log("DEBUG: Attempting to send " . strtolower($status) . " email for submission_id: $submission_id");
             $student_stmt = $pdo->prepare("SELECT first_name, last_name, email FROM students WHERE student_id = (SELECT student_id FROM project_submissions WHERE submission_id = ?)");

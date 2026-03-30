@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/../private/config.php';
+require_once __DIR__ . '/../includes/audit.php';
 require_once __DIR__ . '/../includes/email.php';
 
 if (!isset($_SESSION['employer_id']) || $_SESSION['role'] !== 'employer') {
@@ -194,6 +195,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             }
 
             $success = "Evaluation submitted successfully!" . $email_notice;
+            
+            // Log supervisor evaluation action to audit_logs
+            $student_stmt = $pdo->prepare("SELECT username FROM students WHERE student_id = ? LIMIT 1");
+            $student_stmt->execute([$student_id]);
+            $student_data = $student_stmt->fetch(PDO::FETCH_ASSOC);
+            audit_log($pdo, 'Submit Evaluation', "Evaluation submitted for student: " . ($student_data['username'] ?? $student_id));
             }
         }
     }

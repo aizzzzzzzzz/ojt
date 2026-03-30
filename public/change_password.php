@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once('../private/config.php');
+require_once __DIR__ . '/../includes/audit.php';
 
 if (!isset($_SESSION['change_password']) || $_SESSION['change_password'] !== true) {
     if (isset($_SESSION['role'])) {
@@ -46,6 +47,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         unset($_SESSION['change_password']);
         unset($_SESSION['first_time_login']);
         $success = "Password changed successfully! Redirecting to dashboard...";
+        
+        if ($_SESSION['role'] === 'student') {
+            log_activity('Change Password', "Student changed password after first login");
+        } elseif ($_SESSION['role'] === 'employer') {
+            audit_log($pdo, 'Change Password', "Supervisor changed password after first login");
+        }
 
         echo "<script>
             setTimeout(function() {

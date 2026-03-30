@@ -113,6 +113,10 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['student_id'] = $student['student_id'];
                 $_SESSION['role']       = 'student';
                 $_SESSION['success']    = "Login successful!";
+                
+                require_once __DIR__ . '/../includes/audit.php';
+                log_activity('Student Login', "Student {$student['username']} logged in");
+                
                 if ((int)($student['password_changed'] ?? 0) === 0) {
                     $_SESSION['change_password']  = true;
                     $_SESSION['first_time_login'] = true;

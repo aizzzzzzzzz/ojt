@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/audit.php';
 
 function handle_mark_absent($pdo, $student_id, $date, $reason) {
     if (!$student_id || !$reason) {

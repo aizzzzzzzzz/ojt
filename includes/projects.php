@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/audit.php';
 
 function handle_project_submission($pdo, $student_id, $project_id, $submission_type, $code_content, $uploaded_file, $remarks) {
     $uploadDir = __DIR__ . '/../storage/uploads/';
@@ -20,6 +21,8 @@ function handle_project_submission($pdo, $student_id, $project_id, $submission_t
             }
 
             submit_project($pdo, $project_id, $student_id, $fileName, $remarks);
+
+            log_activity('Project Submission', "Student submitted code for project ID: $project_id");
 
             $student_stmt = $pdo->prepare("SELECT first_name, last_name, email FROM students WHERE student_id = ?");
             $student_stmt->execute([$student_id]);
@@ -112,6 +115,8 @@ function handle_project_submission($pdo, $student_id, $project_id, $submission_t
             }
 
             submit_project($pdo, $project_id, $student_id, $uniqueFileName, $remarks);
+
+            log_activity('Project Submission', "Student submitted file '$originalName' for project ID: $project_id");
 
             $student_stmt = $pdo->prepare("SELECT first_name, last_name, email FROM students WHERE student_id = ?");
             $student_stmt->execute([$student_id]);

@@ -6,6 +6,7 @@ if (!isset($_SESSION['employer_id'])) {
 }
 
 include __DIR__ . '/../private/config.php';
+require_once __DIR__ . '/../includes/audit.php';
 require_once __DIR__ . '/../includes/email.php';
 
 $submission_id = (int)($_GET['id'] ?? 0);
@@ -31,6 +32,8 @@ if (!$authorized_submission) {
 
 $stmt = $pdo->prepare("UPDATE project_submissions SET status = 'rejected' WHERE submission_id = ?");
 $stmt->execute([$submission_id]);
+
+audit_log($pdo, 'Reject Submission', "Submission ID: $submission_id");
 
 $student_stmt = $pdo->prepare("SELECT first_name, last_name, email FROM students WHERE student_id = (SELECT student_id FROM project_submissions WHERE submission_id = ?)");
 $student_stmt->execute([$submission_id]);

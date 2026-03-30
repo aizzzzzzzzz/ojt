@@ -2,6 +2,7 @@
 ob_start();
 session_start();
 include_once __DIR__ . '/../private/config.php';
+require_once __DIR__ . '/../includes/audit.php';
 require_once __DIR__ . '/../lib/fpdf.php';
 require_once __DIR__ . '/../includes/email.php';
 require_once __DIR__ . '/../includes/Blockchain.php';
@@ -304,8 +305,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         
         $_SESSION['success_message'] = "Certificate generated successfully and notification email sent to student!";
-        
-        
+
+        // Log supervisor certificate generation to audit_logs
+        audit_log($pdo, 'Generate Certificate', "Certificate generated for student ID: $student_id, Certificate No: $certificate_no");
+
         header("Location: supervisor_dashboard.php");
         exit;
     }
