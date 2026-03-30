@@ -152,16 +152,14 @@
     <td data-label="Hours (Daily)">
     <?php
     $minutesWorked = 0;
-
-    // Use effective_start_time for adjusted shifts, otherwise use time_in
     $startTime = !empty($row['effective_start_time']) ? $row['effective_start_time'] : $row['time_in'];
-    
-    if (!empty($startTime) && !empty($row['time_out']) && 
+
+    if (!empty($startTime) && !empty($row['time_out']) &&
         strpos($startTime, '0000') === false && strpos($row['time_out'], '0000') === false) {
-        
+
         $minutesWorked = max(0, (strtotime($row['time_out']) - strtotime($startTime)) / 60);
 
-        if (!empty($row['lunch_in']) && !empty($row['lunch_out']) && 
+        if (!empty($row['lunch_in']) && !empty($row['lunch_out']) &&
             strpos($row['lunch_in'], '0000') === false && strpos($row['lunch_out'], '0000') === false) {
             $minutesWorked -= max(0, (strtotime($row['lunch_in']) - strtotime($row['lunch_out'])) / 60);
         }
@@ -189,10 +187,9 @@
             <strong>Date: <?= htmlspecialchars($row['log_date']) ?></strong>
             <span class="status-badge">
                 <?php
-                // Shift Status Badge
                 $shift_status = $row['shift_status'] ?? 'on_time';
                 $late_minutes = (int)($row['late_minutes'] ?? 0);
-                
+
                 $shift_badge = '';
                 if ($shift_status === 'on_time') {
                     $shift_badge = '<span class="shift-badge shift-on-time">🟢 On Time</span>';
@@ -202,7 +199,7 @@
                     $effective = !empty($row['effective_start_time']) ? date('H:i', strtotime($row['effective_start_time'])) : '-';
                     $shift_badge = '<span class="shift-badge shift-adjusted">🟠 Adj</span>';
                 }
-                
+
                 if ($late_minutes > 0) {
                     $shift_badge .= ' <small style="color:var(--text-muted)">+' . $late_minutes . 'm</small>';
                 }
@@ -238,13 +235,12 @@
                     <span class="value">
                     <?php
                     $minutesWorked = 0;
-                    // Use effective_start_time for adjusted shifts
                     $startTime = !empty($row['effective_start_time']) ? $row['effective_start_time'] : $row['time_in'];
-                    
-                    if (!empty($startTime) && !empty($row['time_out']) && 
+
+                    if (!empty($startTime) && !empty($row['time_out']) &&
                         strpos($startTime, '0000') === false && strpos($row['time_out'], '0000') === false) {
                         $minutesWorked = max(0, (strtotime($row['time_out']) - strtotime($startTime)) / 60);
-                        if (!empty($row['lunch_in']) && !empty($row['lunch_out']) && 
+                        if (!empty($row['lunch_in']) && !empty($row['lunch_out']) &&
                             strpos($row['lunch_in'], '0000') === false && strpos($row['lunch_out'], '0000') === false) {
                             $minutesWorked -= max(0, (strtotime($row['lunch_in']) - strtotime($row['lunch_out'])) / 60);
                         }

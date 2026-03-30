@@ -902,15 +902,14 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
     .status-text { padding: 3px 8px; border-radius: 20px; font-size: 12px; font-weight: 600; }
     .verified-badge   { background: var(--green-lt); color: var(--green); font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 20px; }
     .unverified-badge { background: var(--red-lt); color: var(--red); font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 20px; }
-    
-    /* Shift Status Badges */
-    .shift-badge { 
-        display: inline-flex; 
-        align-items: center; 
-        gap: 4px; 
-        padding: 3px 8px; 
-        border-radius: 20px; 
-        font-size: 11px; 
+
+    .shift-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 8px;
+        border-radius: 20px;
+        font-size: 11px;
         font-weight: 600;
         white-space: nowrap;
     }

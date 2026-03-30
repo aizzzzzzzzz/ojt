@@ -1,13 +1,8 @@
 <?php
 require_once __DIR__ . '/audit.php';
 
-/**
- * Calculate shift status based on time_in and work schedule
- * Returns: ['shift_status' => string, 'late_minutes' => int, 'effective_start_time' => string|null]
- */
 function calculate_shift_status($pdo, $student_id, $today, $time_in) {
     try {
-        // Get student's work schedule
         $stmt = $pdo->prepare("
             SELECT e.work_start, e.late_grace_minutes
             FROM students s
@@ -17,8 +12,7 @@ function calculate_shift_status($pdo, $student_id, $today, $time_in) {
         ");
         $stmt->execute([$student_id]);
         $schedule = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        // Fallback to company-level schedule if no direct employer
+
         if (!$schedule || empty($schedule['work_start'])) {
             $stmt = $pdo->prepare("
                 SELECT e.work_start, e.late_grace_minutes
@@ -30,51 +24,43 @@ function calculate_shift_status($pdo, $student_id, $today, $time_in) {
             $stmt->execute([$student_id]);
             $schedule = $stmt->fetch(PDO::FETCH_ASSOC);
         }
-        
-        // Default values if no schedule found
+
         $work_start = $schedule['work_start'] ?? '08:00:00';
         $late_grace_minutes = (int)($schedule['late_grace_minutes'] ?? 10);
-        
-        // Parse times
+
         $tz = new DateTimeZone('Asia/Manila');
         $time_in_dt = new DateTime($time_in, $tz);
         $work_start_dt = new DateTime($today . ' ' . $work_start, $tz);
         $grace_cutoff = clone $work_start_dt;
         $grace_cutoff->modify("+{$late_grace_minutes} minutes");
-        
-        // Calculate late minutes
+
         $late_minutes = 0;
         if ($time_in_dt > $work_start_dt) {
             $diff = $work_start_dt->diff($time_in_dt);
             $late_minutes = ($diff->h * 60) + $diff->i;
         }
-        
-        // Determine shift status
+
         $shift_status = 'on_time';
         $effective_start_time = null;
-        
+
         if ($time_in_dt <= $work_start_dt) {
-            // Arrived on time or early
             $shift_status = 'on_time';
             $late_minutes = 0;
         } elseif ($time_in_dt <= $grace_cutoff) {
-            // Within grace period
             $shift_status = 'late_grace';
         } else {
-            // Beyond grace period - adjusted shift
             $shift_status = 'adjusted_shift';
-            $effective_start_time = $time_in; // Use actual time-in as start
+            $effective_start_time = $time_in;
         }
-        
+
         return [
             'shift_status' => $shift_status,
             'late_minutes' => $late_minutes,
             'effective_start_time' => $effective_start_time
         ];
-        
+
     } catch (Exception $e) {
         error_log("Shift status calculation error: " . $e->getMessage());
-        // Return defaults on error
         return [
             'shift_status' => 'on_time',
             'late_minutes' => 0,
@@ -101,9 +87,8 @@ function handle_attendance_action($pdo, $student_id, $today, $action) {
                 $pdo->rollBack();
                 return "You must Time In first.";
             } else {
-                // Calculate shift status for first time-in
                 $shift_info = calculate_shift_status($pdo, $student_id, $today, $now);
-                
+
                 $insert = $pdo->prepare("
                     INSERT INTO attendance (
                         student_id, employer_id, log_date, time_in, status,
@@ -111,8 +96,8 @@ function handle_attendance_action($pdo, $student_id, $today, $action) {
                     ) VALUES (?, NULL, ?, ?, 'present', ?, ?, ?)
                 ");
                 $insert->execute([
-                    $student_id, 
-                    $today, 
+                    $student_id,
+                    $today,
                     $now,
                     $shift_info['shift_status'],
                     $shift_info['late_minutes'],
@@ -120,14 +105,13 @@ function handle_attendance_action($pdo, $student_id, $today, $action) {
                 ]);
                 $pdo->commit();
 
-                // Log student attendance activity
-                $status_msg = $shift_info['shift_status'] === 'adjusted_shift' 
+                $status_msg = $shift_info['shift_status'] === 'adjusted_shift'
                     ? " (Adjusted shift - started at " . date('H:i', strtotime($now)) . ")"
                     : "";
                 log_activity('Time In', "Student recorded time in at " . date('H:i:s', strtotime($now)) . $status_msg);
 
-                return "Time In recorded at " . date('H:i:s', strtotime($now)) . ". " . 
-                       ucfirst(str_replace('_', ' ', $shift_info['shift_status'])) . 
+                return "Time In recorded at " . date('H:i:s', strtotime($now)) . ". " .
+                       ucfirst(str_replace('_', ' ', $shift_info['shift_status'])) .
                        ($shift_info['late_minutes'] > 0 ? " ({$shift_info['late_minutes']} min late)" : "") . ".";
             }
         } else {
@@ -141,8 +125,7 @@ function handle_attendance_action($pdo, $student_id, $today, $action) {
                     }
                     $updates[] = "time_in = ?";
                     $params[] = $now;
-                    
-                    // Calculate and add shift status
+
                     $shift_info = calculate_shift_status($pdo, $student_id, $today, $now);
                     $updates[] = "shift_status = ?";
                     $params[] = $shift_info['shift_status'];
@@ -199,7 +182,6 @@ function handle_attendance_action($pdo, $student_id, $today, $action) {
                 $upd->execute($params);
                 $pdo->commit();
 
-                // Log student attendance activity
                 log_activity(ucfirst(str_replace('_',' ', $action)), "Student recorded " . strtolower(str_replace('_',' ', $action)) . " at " . date('H:i:s', strtotime($now)));
 
                 return ucfirst(str_replace('_',' ', $action)) . " recorded at " . date('H:i:s', strtotime($now)) . ".";
