@@ -1,4 +1,21 @@
 <div id="attendance-tab" class="tab-content active">
+    <?php if (!empty($has_approved_shift) && $approved_shift): ?>
+    <div class="section-card" style="background: var(--green-lt); border-color: var(--green); margin-bottom: 16px;">
+        <h4 style="margin-top:0; color: var(--green); font-size: 14px;">✅ Approved Shift Change Active Today</h4>
+        <p style="margin: 8px 0 0; color: #15803d; font-size: 13px;">
+            <strong>Your shift today:</strong> 
+            <?= date('g:i A', strtotime($approved_shift['requested_shift_start'])) ?> - 
+            <?= date('g:i A', strtotime($approved_shift['requested_shift_end'])) ?>
+            <?php if ($approved_shift['requested_shift_start'] > $approved_shift['requested_shift_end']): ?>
+                <span style="color: #a16207;">(Overnight shift - ends next day)</span>
+            <?php endif; ?>
+        </p>
+        <p style="margin: 4px 0 0; color: #15803d; font-size: 12px;">
+            <em>Normal schedule: <?= date('g:i A', strtotime($original_work_start_str)) ?> - <?= date('g:i A', strtotime($original_work_end_str)) ?></em>
+        </p>
+    </div>
+    <?php endif; ?>
+
     <div class="section-card">
         <h3 style="margin-top:0;">End of Day Task</h3>
         <form method="POST">
@@ -25,6 +42,12 @@
     <div class="section-card">
     <h3 style="margin-top:0;">Attendance Actions</h3>
     <div class="attendance-actions">
+    
+    <!-- Shift Change Request Button -->
+    <a href="request_shift_change.php" class="action-btn btn-outline-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 10px;">
+        📅 Request Shift Change
+    </a>
+    
     <?php
     $time_in_done    = !empty($today_row['time_in']);
     $lunch_out_done  = !empty($today_row['lunch_out']);
@@ -33,8 +56,6 @@
 
     $actions = [
         'time_in'   => '🟢 Time In',
-        'lunch_out' => '🍽️ Lunch Out',
-        'lunch_in'  => '🍽️ Lunch In',
         'time_out'  => '🔴 Time Out',
     ];
 
@@ -42,9 +63,7 @@
         $done = ${$key . '_done'};
 
         $seq_disabled = false;
-        if ($key === 'lunch_out' && (!$time_in_done || $done)) $seq_disabled = true;
-        if ($key === 'lunch_in'  && (!$lunch_out_done || $done)) $seq_disabled = true;
-        if ($key === 'time_out'  && (!$time_in_done || $done))   $seq_disabled = true;
+        if ($key === 'time_out' && (!$time_in_done || $done)) $seq_disabled = true;
 
         $window_disabled = false;
         $window_hint     = '';
@@ -87,11 +106,12 @@
         <?php if ($attendance_time_limits_disabled): ?>
             Demo mode: attendance time limits are temporarily disabled.
         <?php else: ?>
-            Time In: within <?= htmlspecialchars((string)$late_grace_minutes) ?> minutes of work start 
+            Time In: within <?= htmlspecialchars((string)$late_grace_minutes) ?> minutes of work start
             <?php if (!empty($is_afternoon_shift) && $is_afternoon_shift): ?>
                 (Afternoon shift detected - work starts at <?= htmlspecialchars($work_start_str) ?>)
             <?php endif; ?>
-            &nbsp;·&nbsp; Other actions: until <?= htmlspecialchars((string)$eod_grace_hours) ?> hours after work end.
+            &nbsp;·&nbsp; Time Out: until <?= htmlspecialchars((string)$eod_grace_hours) ?> hours after work end.
+            <br>💡 1 hour lunch is automatically deducted for shifts 4 hours or longer.
         <?php endif; ?>
     </p>
     </div>

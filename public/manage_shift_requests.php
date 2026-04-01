@@ -32,17 +32,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             
             if ($request && ($request['created_by'] == $employer_id || $request['company_id'] == $employer_id)) {
                 $status = $action === 'approve' ? 'approved' : 'rejected';
-                
+
                 $update_stmt = $pdo->prepare("
-                    UPDATE shift_change_requests 
-                    SET status = ?, reviewed_by = ?, reviewed_at = NOW(), review_notes = ?
+                    UPDATE shift_change_requests
+                    SET status = ?, reviewed_by = ?, reviewed_at = NOW(), approved_at = ?, review_notes = ?
                     WHERE id = ?
                 ");
-                $update_stmt->execute([$status, $employer_id, $review_notes, $request_id]);
                 
+                $approved_at = ($action === 'approve') ? 'NOW()' : 'NULL';
+                $update_stmt->execute([$status, $employer_id, $approved_at, $review_notes, $request_id]);
+
                 // Log action
                 audit_log($pdo, ucfirst($action) . ' Shift Request', "Shift request #$request_id {$status}d for student ID: {$request['student_id']}");
-                
+
                 $success = "Request " . ($action === 'approve' ? 'approved' : 'rejected') . " successfully!";
             } else {
                 $error = "Invalid request or already processed.";

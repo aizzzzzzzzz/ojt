@@ -79,7 +79,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
         } catch (PDOException $e) {
             error_log("Shift request error: " . $e->getMessage());
-            $error = "Failed to submit request. Please try again.";
+            error_log("Stack trace: " . $e->getTraceAsString());
+            $error = "Failed to submit request. Error: " . $e->getMessage();
         }
     }
 }

@@ -6,7 +6,7 @@ if (defined('CONFIG_LOADED')) {
 define('CONFIG_LOADED', true);
 
 if (!defined('DEMO_DISABLE_ATTENDANCE_GRACE_PERIOD')) {
-    define('DEMO_DISABLE_ATTENDANCE_GRACE_PERIOD', true);
+    define('DEMO_DISABLE_ATTENDANCE_GRACE_PERIOD', false);
 }
 
 
@@ -19,6 +19,8 @@ $db   = getenv('DB_NAME') ?: "if0_41121145_student_db";
 $user = getenv('DB_USER') ?: "if0_41121145";
 $pass = getenv('DB_PASS') ?: "6fvGRVlsh9";
 $backup_cron_token = getenv('BACKUP_CRON_TOKEN') ?: "";
+$auto_absent_cron_token = getenv('AUTO_ABSENT_CRON_TOKEN') ?: "";
+
 if (empty($backup_cron_token)) {
     $tokenFile = __DIR__ . '/backup_token.php';
     if (is_file($tokenFile)) {
@@ -29,12 +31,23 @@ if (empty($backup_cron_token)) {
     }
 }
 
+if (empty($auto_absent_cron_token)) {
+    $autoAbsentTokenFile = __DIR__ . '/auto_absent_token.php';
+    if (is_file($autoAbsentTokenFile)) {
+        $loaded = include $autoAbsentTokenFile;
+        if (is_string($loaded) && $loaded !== '') {
+            $auto_absent_cron_token = $loaded;
+        }
+    }
+}
+
 
 if ($is_local) {
     $host = "localhost";
     $db   = "student_db";
     $user = "root";
     $pass = "";
+    $auto_absent_cron_token = 'auto_absent_a7f3c9e2b1d4f8a6';
 }
 
 

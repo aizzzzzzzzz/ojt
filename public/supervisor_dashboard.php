@@ -474,10 +474,6 @@ if (!empty($student_ids)) {
                 <a href="add_student.php">Add New Student</a>
             </div>
             <div class="action-card">
-                <div class="icon">✅</div>
-                <a href="manage_projects.php">Manage Projects</a>
-            </div>
-            <div class="action-card">
                 <div class="icon">📁</div>
                 <a href="upload_documents.php">Upload Documents</a>
             </div>
@@ -547,6 +543,27 @@ if (!empty($student_ids)) {
         <?php endif; ?>
 
         <h3>Attendance Records</h3>
+
+        <div class="card p-3 mb-3" style="background: #fef3c7; border-color: #fcd34d;">
+            <div class="card-body">
+                <h5 style="margin-top:0; color: #92400e;">⚠️ Auto-Mark Absent</h5>
+                <p class="text-muted mb-2" style="font-size:13px; color: #78350f !important;">
+                    Automatically marks students as absent if no attendance by 7:00 PM or if attendance is unverified.
+                    This runs daily at 7 PM automatically.
+                </p>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <a href="auto_mark_absent.php" class="btn btn-outline-danger" target="_blank" style="font-size:13px;">
+                        Run Auto-Mark Now
+                    </a>
+                    <a href="mark_absent.php" class="btn btn-outline-secondary" style="font-size:13px;">
+                        Manually Mark Absent
+                    </a>
+                    <a href="manage_shift_requests.php" class="btn btn-outline-primary" style="font-size:13px;">
+                        📅 Manage Shift Change Requests
+                    </a>
+                </div>
+            </div>
+        </div>
 
         <div class="table-section">
             <table class="table table-bordered align-middle">

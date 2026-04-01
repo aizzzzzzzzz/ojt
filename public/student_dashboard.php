@@ -12,7 +12,6 @@ date_default_timezone_set('Asia/Manila');
 include_once __DIR__ . '/../includes/auth.php';
 include_once __DIR__ . '/../includes/db.php';
 include_once __DIR__ . '/../includes/attendance.php';
-include_once __DIR__ . '/../includes/projects.php';
 include_once __DIR__ . '/../includes/export.php';
 
 $student_id = authenticate_student();
@@ -67,6 +66,26 @@ function get_student_schedule_settings($pdo, $student_id) {
         'late_grace_minutes' => max(1, min(30, (int)($schedule['late_grace_minutes'] ?? $defaults['late_grace_minutes']))),
         'eod_grace_hours' => max(1, min(6, (int)($schedule['eod_grace_hours'] ?? $defaults['eod_grace_hours']))),
     ];
+}
+
+/**
+ * Check if student has an approved shift change for today
+ * Returns the approved shift times if exists and not yet used
+ */
+function get_approved_shift_change($pdo, $student_id, $date) {
+    $stmt = $pdo->prepare("
+        SELECT * FROM shift_change_requests
+        WHERE student_id = ?
+          AND request_date = ?
+          AND status = 'approved'
+          AND used = 0
+        ORDER BY approved_at DESC
+        LIMIT 1
+    ");
+    $stmt->execute([$student_id, $date]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    return $result ?: null;
 }
 
 if (isset($_GET['export']) && $_GET['export'] == 'excel') {
@@ -179,18 +198,17 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
                 $hours = '-';
                 $minutesWorked = 0;
                 
-                if (!empty($record['time_in']) && !empty($record['time_out']) && 
-                    strpos($record['time_in'], '0000') === false && 
+                if (!empty($record['time_in']) && !empty($record['time_out']) &&
+                    strpos($record['time_in'], '0000') === false &&
                     strpos($record['time_out'], '0000') === false) {
-                    
+
                     $minutesWorked = max(0, (strtotime($record['time_out']) - strtotime($record['time_in'])) / 60);
-                    
-                    if (!empty($record['lunch_in']) && !empty($record['lunch_out']) && 
-                        strpos($record['lunch_in'], '0000') === false && 
-                        strpos($record['lunch_out'], '0000') === false) {
-                        $minutesWorked -= max(0, (strtotime($record['lunch_in']) - strtotime($record['lunch_out'])) / 60);
+
+                    // Deduct 1 hour lunch only if worked 4+ hours (240 minutes)
+                    if ($minutesWorked >= 240) {
+                        $minutesWorked -= 60;
                     }
-                    
+
                     $hours = floor($minutesWorked / 60) . "h " . ($minutesWorked % 60) . "m";
                     $totalMinutes += $minutesWorked;
                 }
@@ -341,6 +359,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attendance_action']))
         $post_work_end_str   = $post_schedule['work_end'];
         $post_late_grace_minutes = $post_schedule['late_grace_minutes'];
         $post_eod_grace_hours    = $post_schedule['eod_grace_hours'];
+        
+        // Check for approved shift change for today (same as dashboard load)
+        $post_approved_shift = get_approved_shift_change($pdo, $student_id, $today);
+        if ($post_approved_shift) {
+            // Use approved shift times if they exist
+            $post_work_start_str = $post_approved_shift['requested_shift_start'];
+            $post_work_end_str = $post_approved_shift['requested_shift_end'];
+        }
+        
         $post_tz             = new DateTimeZone('Asia/Manila');
         $post_now_dt         = new DateTime('now', $post_tz);
         $post_work_start_dt  = new DateTime($today . ' ' . $post_work_start_str, $post_tz);
@@ -380,6 +407,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attendance_action']))
                 } else {
                     $insert = $pdo->prepare("INSERT INTO attendance (student_id, employer_id, log_date, time_in, status) VALUES (?, NULL, ?, ?, 'present')");
                     $insert->execute([$student_id, $today, $now]);
+                    
+                    // Mark approved shift change as used
+                    if ($has_approved_shift && $approved_shift) {
+                        $mark_used = $pdo->prepare("UPDATE shift_change_requests SET used = 1 WHERE id = ?");
+                        $mark_used->execute([$approved_shift['id']]);
+                    }
+                    
                     $pdo->commit();
 
                     if (function_exists('notify_attendance_update')) {
@@ -397,16 +431,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attendance_action']))
                     case 'time_in':
                         if ($row['time_in']) { $messages[] = "Time In already recorded ({$row['time_in']})."; $pdo->rollBack(); break; }
                         $updates[] = "time_in = ?"; $params[] = $now;
-                        break;
-                    case 'lunch_out':
-                        if (!$row['time_in']) { $messages[] = "You need to Time In first."; $pdo->rollBack(); break; }
-                        if ($row['lunch_out']) { $messages[] = "Lunch Out already recorded ({$row['lunch_out']})."; $pdo->rollBack(); break; }
-                        $updates[] = "lunch_out = ?"; $params[] = $now;
-                        break;
-                    case 'lunch_in':
-                        if (!$row['lunch_out']) { $messages[] = "You need to Lunch Out first."; $pdo->rollBack(); break; }
-                        if ($row['lunch_in']) { $messages[] = "Lunch In already recorded ({$row['lunch_in']})."; $pdo->rollBack(); break; }
-                        $updates[] = "lunch_in = ?"; $params[] = $now;
                         break;
                     case 'time_out':
                         if (!$row['time_in']) { $messages[] = "You need to Time In first."; $pdo->rollBack(); break; }
@@ -443,6 +467,31 @@ $work_start_str = $schedule['work_start'];
 $work_end_str   = $schedule['work_end'];
 $late_grace_minutes = $schedule['late_grace_minutes'];
 $eod_grace_hours    = $schedule['eod_grace_hours'];
+
+// Check for approved shift change for today
+$approved_shift = get_approved_shift_change($pdo, $student_id, $today);
+$has_approved_shift = false;
+$original_work_start_str = $work_start_str;
+$original_work_end_str = $work_end_str;
+
+if ($approved_shift) {
+    // Check if shift spans midnight (overnight shift)
+    $shift_start = $approved_shift['requested_shift_start'];
+    $shift_end = $approved_shift['requested_shift_end'];
+    
+    // Handle overnight shifts (e.g., 22:00 → 07:00 means next day)
+    if ($shift_start > $shift_end) {
+        // Overnight shift - use the approved times as-is
+        $work_start_str = $shift_start;
+        $work_end_str = $shift_end;
+        $has_approved_shift = true;
+    } else {
+        // Normal same-day shift
+        $work_start_str = $shift_start;
+        $work_end_str = $shift_end;
+        $has_approved_shift = true;
+    }
+}
 
 $tz               = new DateTimeZone('Asia/Manila');
 $now_dt           = new DateTime('now', $tz);
@@ -483,10 +532,9 @@ foreach ($attendance as $row) {
         $time_out = strtotime($row['time_out']);
         $minutesWorked = max(0, ($time_out - $time_in) / 60);
 
-        if (!empty($row['lunch_out']) && !empty($row['lunch_in'])) {
-            $lunch_out = strtotime($row['lunch_out']);
-            $lunch_in = strtotime($row['lunch_in']);
-            $minutesWorked -= max(0, ($lunch_in - $lunch_out) / 60);
+        // Deduct 1 hour lunch only if worked 4+ hours (240 minutes)
+        if ($minutesWorked >= 240) {
+            $minutesWorked -= 60;
         }
 
         $total_minutes += max(0, $minutesWorked);
@@ -506,130 +554,7 @@ $certificate_check_stmt = $pdo->prepare("SELECT certificate_id FROM certificates
 $certificate_check_stmt->execute([$student_id]);
 $has_generated_certificate = (bool) $certificate_check_stmt->fetch(PDO::FETCH_ASSOC);
 
-$projects_stmt = $pdo->prepare("SELECT * FROM projects ORDER BY created_at DESC");
-$projects_stmt->execute();
-$projects = $projects_stmt->fetchAll(PDO::FETCH_ASSOC);
-
 $submitError = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_file'])) {
-    $project_id = (int)$_POST['project_id'];
-    $remarks = trim($_POST['remarks'] ?? '');
-    $submission_type = $_POST['submission_type'] ?? 'code'; 
-    
-    $uploadDir = __DIR__ . '/../storage/uploads/';
-    if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
-    
-    try {
-        if ($submission_type === 'code') {
-            $code = trim($_POST['code_content'] ?? '');
-
-            if (empty($code)) {
-                $submitError = "Code cannot be empty.";
-            } else {
-                $fileName = $student_id . '_project_' . $project_id . '_' . time() . '.txt';
-                $filePath = $uploadDir . $fileName;
-
-                if (!is_writable($uploadDir)) {
-                    $submitError = "Upload directory is not writable.";
-                } elseif (file_put_contents($filePath, $code) === false) {
-                    $submitError = "Error saving code file. Please try again.";
-                } else {
-                    $checkStmt = $pdo->prepare("SELECT submission_id FROM project_submissions WHERE project_id = ? AND student_id = ? AND status = 'Rejected' ORDER BY submission_date DESC LIMIT 1");
-                    $checkStmt->execute([$project_id, $student_id]);
-                    $existingRejected = $checkStmt->fetch(PDO::FETCH_ASSOC);
-
-                    if ($existingRejected) {
-                        $updateStmt = $pdo->prepare("UPDATE project_submissions SET file_path = ?, status = 'Pending', submission_date = NOW(), submission_status = 'On Time', remarks = '', graded_at = NULL WHERE submission_id = ?");
-                        $updateStmt->execute([$fileName, $existingRejected['submission_id']]);
-                        $message = 'Project resubmitted successfully!';
-                    } else {
-                        $insertStmt = $pdo->prepare("INSERT INTO project_submissions (project_id, student_id, file_path, submission_status, status, remarks) VALUES (?, ?, ?, 'On Time', 'Pending', ?)");
-                        $insertStmt->execute([$project_id, $student_id, $fileName, $remarks]);
-                        $message = 'Project submitted successfully!';
-                    }
-
-                    $_SESSION['success'] = $message;
-                    header("Location: " . $_SERVER['PHP_SELF']);
-                    exit;
-                }
-            }
-        } else {
-            $uploadedFile = $_FILES['submission_file'];
-
-            if (empty($uploadedFile['tmp_name']) || $uploadedFile['error'] !== UPLOAD_ERR_OK) {
-                $submitError = "Please select a valid file to upload.";
-            } else {
-                $originalName = basename($uploadedFile['name']);
-                $fileExt = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
-                $allowedExts = ['pdf', 'doc', 'docx', 'txt', 'zip', 'rar', 'php', 'html', 'css', 'java', 'js', 'py', 'cpp', 'c', 'sql'];
-
-                if (!in_array($fileExt, $allowedExts)) {
-                    $submitError = "File type not allowed. Allowed: " . implode(', ', $allowedExts);
-                } elseif ($uploadedFile['size'] > 10 * 1024 * 1024) {
-                    $submitError = "File too large (maximum 10MB).";
-                } else {
-                    $uniqueFileName = $student_id . '_project_' . $project_id . '_' . time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $originalName);
-                    $filePath = $uploadDir . $uniqueFileName;
-
-                    $finfo = finfo_open(FILEINFO_MIME_TYPE);
-                    $mimeType = finfo_file($finfo, $uploadedFile['tmp_name']);
-                    finfo_close($finfo);
-
-                    $allowedMimes = [
-                        'text/plain', 'application/pdf', 'application/msword',
-                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                        'application/zip', 'application/x-rar-compressed',
-                        'text/html', 'text/css', 'text/javascript', 'application/javascript',
-                        'text/x-php', 'text/x-java-source', 'text/x-python',
-                        'text/x-c', 'text/x-c++'
-                    ];
-
-                    if (!in_array($mimeType, $allowedMimes)) {
-                        $submitError = "File type verification failed. Please upload a valid file.";
-                    } elseif (!move_uploaded_file($uploadedFile['tmp_name'], $filePath)) {
-                        $submitError = "Error uploading file. Please try again.";
-                    } else {
-                        $checkStmt = $pdo->prepare("SELECT submission_id FROM project_submissions WHERE project_id = ? AND student_id = ? AND status = 'Rejected' ORDER BY submission_date DESC LIMIT 1");
-                        $checkStmt->execute([$project_id, $student_id]);
-                        $existingRejected = $checkStmt->fetch(PDO::FETCH_ASSOC);
-
-                        if ($existingRejected) {
-                            $updateStmt = $pdo->prepare("UPDATE project_submissions SET file_path = ?, status = 'Pending', submission_date = NOW(), submission_status = 'On Time', remarks = '', graded_at = NULL WHERE submission_id = ?");
-                            $updateStmt->execute([$uniqueFileName, $existingRejected['submission_id']]);
-                            $message = 'Project resubmitted successfully!';
-                        } else {
-                            $insertStmt = $pdo->prepare("INSERT INTO project_submissions (project_id, student_id, file_path, submission_status, status) VALUES (?, ?, ?, 'On Time', 'Pending')");
-                            $insertStmt->execute([$project_id, $student_id, $uniqueFileName]);
-                            $message = 'Project submitted successfully! (Attempt #' . $attempt_number . ')';
-                        }
-
-                        $_SESSION['success'] = $message;
-                        header("Location: " . $_SERVER['PHP_SELF']);
-                        exit;
-                    }
-                }
-            }
-        }
-    } catch (PDOException $e) {
-        error_log("Database Error: " . $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine());
-        
-        if ($e->getCode() == 'HY093') {
-            $submitError = "Database error: Parameter mismatch. Please contact administrator.";
-        } else {
-            $submitError = "Database error occurred. Please try again.";
-        }
-    } catch (Exception $e) {
-        error_log("General Error: " . $e->getMessage());
-        $submitError = "An error occurred. Please try again.";
-    }
-}
-
-$submissions_stmt = $pdo->prepare("SELECT ps.*, p.project_name FROM project_submissions ps JOIN projects p ON ps.project_id = p.project_id WHERE ps.student_id = ? ORDER BY ps.submission_date DESC");
-$submissions_stmt->execute([$student_id]);
-$submissions = $submissions_stmt->fetchAll(PDO::FETCH_ASSOC);
-
-$defaultCode = "<?php\necho 'Hello PHP!';\n?>\n<h1>Hello HTML + CSS + JS!</h1>\n<style>h1{color:#0b3d91;}</style>\n<script>console.log('Hello JS');</script>";
-$safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -639,17 +564,6 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
-    <?php if (!empty($is_local)): ?>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/xml/xml.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/css/css.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/htmlmixed/htmlmixed.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/php/php.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/clike/clike.min.js"></script>
-    <?php endif; ?>
 <style>
     :root {
         --bg:         #f1f4f9;
@@ -753,6 +667,21 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
     .status.completed { color: var(--green); font-weight: 700; }
     .status.in-progress { color: var(--amber); font-weight: 700; }
 
+    /* Live Clock Styling */
+    #liveClock {
+        background: var(--accent-lt);
+        border: 1px solid var(--accent);
+        padding: 6px 14px;
+        border-radius: 9px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--accent);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+    }
+
     .tab-switcher {
         display: flex;
         gap: 4px;
@@ -800,6 +729,16 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
 
     .btn-primary, .action-btn.btn-primary { background: var(--accent); color: #fff !important; }
     .btn-primary:hover, .action-btn.btn-primary:hover { background: var(--accent-dk); transform: translateY(-1px); }
+
+    .btn-outline-primary { 
+        background: transparent; 
+        color: var(--accent) !important; 
+        border: 1.5px solid var(--accent); 
+    }
+    .btn-outline-primary:hover { 
+        background: var(--accent-lt); 
+        transform: translateY(-1px); 
+    }
 
     .btn-disabled { background: #e5e7eb; color: #9ca3af; cursor: not-allowed; padding: 9px 16px; border-radius: 9px; border: none; font-weight: 600; font-size: 13px; font-family: inherit; }
 
@@ -926,18 +865,6 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
     .task-info { font-size: 13px; color: var(--text-muted); border-top: 1px solid var(--border); padding-top: 10px; margin-top: 8px; }
     .task-info p { margin: 4px 0 0; color: var(--text); }
 
-    .projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; margin-top: 16px; }
-
-    .project-card {
-        background: var(--surface2);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        padding: 18px;
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .project-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
-
     .student-sidebar-buttons { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
 
     .sidebar-btn {
@@ -986,6 +913,9 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
             <p>OJT Student Portal</p>
         </div>
         <div class="topbar-right">
+            <div id="liveClock" style="background: var(--surface2); border: 1px solid var(--border); padding: 6px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--text); margin-right: 8px;">
+                🕐 <span id="clockTime">--:--:--</span>
+            </div>
             <span class="badge-role">Student</span>
             <?php if ($has_generated_certificate): ?>
                 <a href="download_certificate.php" class="action-btn btn-primary" style="text-decoration:none;">📄 Certificate</a>
@@ -1020,14 +950,11 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
 <div class="tab-switcher">
     <button class="tab-button active" onclick="switchTab('attendance', this)">Attendance</button>
     <button class="tab-button" onclick="switchTab('export', this)">Export History</button>
-    <button class="tab-button" onclick="switchTab('projects', this)">Projects</button>
 </div>
 
 <?php include_once __DIR__ . '/../templates/attendance_tab.php'; ?>
 
 <?php include_once __DIR__ . '/../templates/export_tab.php'; ?>
-
-<?php include_once __DIR__ . '/../templates/projects_tab.php'; ?>
 
 <div class="modal fade" id="verifiedModal" tabindex="-1" aria-labelledby="verifiedModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -1047,39 +974,11 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
 </div>
 
 </div>
-
-<div id="fullscreenIDE" class="fullscreen-ide" style="display: none;">
-    <div class="ide-header">
-        <h4 id="ideProjectName">Project IDE</h4>
-        <button onclick="closeFullScreenIDE()" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;">✕</button>
-    </div>
-    <div class="ide-content">
-        <div class="code-panel">
-            <div class="panel-header">Code Editor</div>
-            <div class="panel-content">
-                <textarea id="fullscreenEditor"></textarea>
-            </div>
-        </div>
-        <div class="output-panel">
-            <div class="panel-header">Output Preview</div>
-            <div class="panel-content">
-                <iframe id="fullscreenPreview" style="width: 100%; height: 100%; border: none;"></iframe>
-            </div>
-        </div>
-    </div>
-    <div class="ide-controls">
-        <button onclick="runCode()" class="btn btn-primary">▶️ Run Code</button>
-        <button onclick="generatePDF()" class="btn btn-success">📄 Generate PDF & Submit</button>
-        <button onclick="closeFullScreenIDE()" class="btn btn-secondary">❌ Close</button>
-    </div>
-</div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     let lastAttendanceCheck = null;
-    let lastProjectCheck = null;
     let lastCertificateCheck = null;
     let hasAttendanceBaseline = false;
-    let hasProjectBaseline = false;
     let hasCertificateBaseline = false;
     let hasAutoRefreshed = false;
     const POLL_INTERVAL = 15000;
@@ -1113,34 +1012,6 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
             }
         } catch (err) {
             console.error('Error checking attendance updates:', err);
-        }
-    }
-
-    async function checkProjectUpdates() {
-        try {
-            const url = 'api/check_updates.php?since=' + encodeURIComponent(lastProjectCheck || '') + '&type=project&student_id=<?= htmlspecialchars($student_id) ?>';
-            const response = await fetch(url);
-            const data = await response.json();
-
-            if (data.success && data.projects?.latest_timestamp) {
-                const latestProjectTime = data.projects.latest_timestamp;
-
-                if (!hasProjectBaseline) {
-                    lastProjectCheck = latestProjectTime;
-                    hasProjectBaseline = true;
-                    return;
-                }
-
-                if (lastProjectCheck && latestProjectTime > lastProjectCheck && data.projects.has_updates) {
-                    triggerSingleRefresh('Your project submission has been graded!', 'info');
-                }
-
-                lastProjectCheck = latestProjectTime;
-            } else if (data.success && !hasProjectBaseline) {
-                hasProjectBaseline = true;
-            }
-        } catch (err) {
-            console.error('Error checking project updates:', err);
         }
     }
 
@@ -1194,11 +1065,9 @@ $safeDefaultCode = str_replace('</script>', '</scr"+"ipt>', $defaultCode);
     
     document.addEventListener('DOMContentLoaded', function() {
         checkAttendanceUpdates();
-        checkProjectUpdates();
         checkCertificateUpdates();
-        
+
         setInterval(checkAttendanceUpdates, POLL_INTERVAL);
-        setInterval(checkProjectUpdates, POLL_INTERVAL);
         setInterval(checkCertificateUpdates, POLL_INTERVAL);
     });
 </script>
@@ -1212,280 +1081,37 @@ function switchTab(tabName, button) {
     tabButtons.forEach(btn => btn.classList.remove('active'));
 
     document.getElementById(tabName + '-tab').classList.add('active');
-
     button.classList.add('active');
 
     const welcomeHeader = document.getElementById('welcomeHeader');
     const summarySection = document.getElementById('summarySection');
 
-    if (tabName === 'projects') {
-        if (welcomeHeader) welcomeHeader.style.display = 'none';
-        if (summarySection) summarySection.style.display = 'none';
-
-        document.getElementById('submissionSection').style.display = 'none';
-        document.getElementById('projects-section').style.display = 'block';
-
-        if (!window.codeEditor) {
-            setTimeout(initCodeEditor, 100);
-        }
-    } else {
-        if (welcomeHeader) welcomeHeader.style.display = 'flex';
-        if (summarySection) summarySection.style.display = 'block';
-    }
-}
-
-function selectProjectForSubmission(projectId, projectName) {
-    document.getElementById('projects-section').style.display = 'none';
-    document.getElementById('submissionSection').style.display = 'block';
-
-    document.getElementById('selectedProjectName').textContent = projectName;
-    document.getElementById('projectId').value = projectId;
-
-    document.getElementById('submissionForm').reset();
-    closeFullscreenPreview();
-    document.getElementById('submissionFile').value = '';
-
-    switchSubmissionTab('code');
-
-    setTimeout(() => {
-        if (window.codeEditor && typeof window.codeEditor.setValue === 'function') {
-            window.codeEditor.setValue(`<?php echo htmlspecialchars($defaultCode); ?>`);
-        } else {
-            const ta = document.getElementById('codeEditor');
-            if (ta) ta.value = `<?php echo htmlspecialchars($defaultCode); ?>`;
-        }
-    }, 100);
-}
-
-function cancelSubmission() {
-    document.getElementById('submissionSection').style.display = 'none';
-    document.getElementById('projects-section').style.display = 'block';
-}
-
-function switchSubmissionTab(tabType) {
-    const submissionType = document.getElementById('submissionType');
-
-    if (tabType === 'code') {
-        submissionType.value = 'code';
-        document.getElementById('codeTab').style.display = 'flex';
-        document.getElementById('fileTab').style.display = 'none';
-        document.getElementById('codeTabBtn').style.borderBottom = '3px solid #28a745';
-        document.getElementById('codeTabBtn').style.color = '#28a745';
-        document.getElementById('fileTabBtn').style.borderBottom = 'none';
-        document.getElementById('fileTabBtn').style.color = '#999';
-
-        if (!window.codeEditor) {
-            setTimeout(initCodeEditor, 50);
-        }
-    } else {
-        submissionType.value = 'file';
-        document.getElementById('codeTab').style.display = 'none';
-        document.getElementById('fileTab').style.display = 'block';
-        document.getElementById('codeTabBtn').style.borderBottom = 'none';
-        document.getElementById('codeTabBtn').style.color = '#999';
-        document.getElementById('fileTabBtn').style.borderBottom = '3px solid #28a745';
-        document.getElementById('fileTabBtn').style.color = '#28a745';
-    }
-}
-
-function runCodePreview(event) {
-    if (event) event.preventDefault();
-    let code = '';
-    if (window.codeEditor && typeof window.codeEditor.getValue === 'function') {
-        window.codeEditor.save();
-        code = window.codeEditor.getValue();
-    }
-    if (!code) {
-        const ta = document.getElementById('codeEditor') || document.querySelector('textarea[name="code_content"]');
-        if (ta) code = ta.value;
-    }
-    if (!code.trim()) {
-        alert('No code to preview. Please write some code first.');
-        return;
-    }
-    let overlay = document.getElementById('previewOverlay');
-    if (!overlay) {
-        overlay = document.createElement('div');
-        overlay.id = 'previewOverlay';
-        overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#fff;display:flex;flex-direction:column;';
-        const header = document.createElement('div');
-        header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:#111827;color:#fff;flex-shrink:0;';
-        header.innerHTML = '<span style="font-size:14px;font-weight:700;">&#9654; Preview Output</span>'
-            + '<div style="display:flex;gap:10px;">'
-            + '<button onclick="refreshPreview()" style="background:#374151;border:none;color:#d1d5db;padding:6px 14px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">&#8635; Refresh</button>'
-            + '<button onclick="closeFullscreenPreview()" style="background:#dc2626;border:none;color:#fff;padding:6px 14px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">&#x2715; Close</button>'
-            + '</div>';
-        const iframe = document.createElement('iframe');
-        iframe.id = 'previewOverlayFrame';
-        iframe.style.cssText = 'flex:1;border:none;width:100%;';
-        overlay.appendChild(header);
-        overlay.appendChild(iframe);
-        document.body.appendChild(overlay);
-    }
-    overlay.style.display = 'flex';
-    overlay._lastCode = code;
-    document.getElementById('previewOverlayFrame').srcdoc = code;
-    document.body.style.overflow = 'hidden';
-}
-
-function refreshPreview() {
-    const overlay = document.getElementById('previewOverlay');
-    if (!overlay) return;
-    let code = '';
-    if (window.codeEditor && typeof window.codeEditor.getValue === 'function') {
-        window.codeEditor.save();
-        code = window.codeEditor.getValue();
-    }
-    if (!code) {
-        const ta = document.getElementById('codeEditor') || document.querySelector('textarea[name="code_content"]');
-        if (ta) code = ta.value;
-    }
-    overlay._lastCode = code;
-    document.getElementById('previewOverlayFrame').srcdoc = code || overlay._lastCode || '';
-}
-
-function closeFullscreenPreview() {
-    const overlay = document.getElementById('previewOverlay');
-    if (overlay) overlay.style.display = 'none';
-    document.body.style.overflow = '';
-}
-
-function createPlainEditor(textarea) {
-    return {
-        getValue: () => textarea.value,
-        setValue: (value) => { textarea.value = value ?? ''; },
-        save: () => {},
-        refresh: () => {},
-        focus: () => textarea.focus(),
-        toTextArea: () => {}
-    };
-}
-
-function initCodeEditor() {
-    const textarea = document.getElementById('codeEditor');
-    if (!textarea) {
-        console.error('codeEditor textarea not found!');
-        return;
-    }
-    
-    if (window.codeEditor && window.codeEditor.toTextArea) {
-        try {
-            window.codeEditor.toTextArea();
-        } catch (e) {
-            console.log('Error cleaning up editor:', e);
-        }
-    }
-
-    if (window.CodeMirror) {
-        window.codeEditor = CodeMirror.fromTextArea(textarea, {
-            lineNumbers: true,
-            theme: "monokai",
-            tabSize: 4,
-            lineWrapping: true,
-            matchBrackets: true,
-            autoCloseBrackets: true,
-            mode: "application/x-httpd-php",
-            value: `<?php echo htmlspecialchars($defaultCode); ?>`,
-            viewportMargin: Infinity,
-            indentUnit: 4,
-            extraKeys: {
-                "Ctrl-Space": "autocomplete"
-            }
-        });
-    } else {
-        window.codeEditor = createPlainEditor(textarea);
-    }
-    
-    setTimeout(() => {
-        if (window.codeEditor) {
-            window.codeEditor.refresh();
-            window.codeEditor.focus();
-        }
-    }, 150);
-    
-    return window.codeEditor;
-}
-
-function openFullScreenIDE(projectId, projectName) {
-    currentProjectId = projectId;
-    document.getElementById('ideProjectName').textContent = 'Project: ' + projectName;
-    document.getElementById('fullscreenIDE').style.display = 'flex';
-
-    if (!window.fullscreenEditor) {
-        const fullscreenTextarea = document.getElementById('fullscreenEditor');
-        if (!fullscreenTextarea) {
-            return;
-        }
-
-        if (window.CodeMirror) {
-            window.fullscreenEditor = CodeMirror.fromTextArea(fullscreenTextarea, {
-                lineNumbers: true,
-                theme: 'default',
-                tabSize: 4,
-                lineWrapping: true,
-                matchBrackets: true,
-                autoCloseBrackets: true,
-                mode: 'htmlmixed',
-                value: `<?php echo htmlspecialchars($defaultCode); ?>`
-            });
-        } else {
-            if (!fullscreenTextarea.value.trim()) {
-                fullscreenTextarea.value = `<?php echo htmlspecialchars($defaultCode); ?>`;
-            }
-            window.fullscreenEditor = createPlainEditor(fullscreenTextarea);
-        }
-    }
-}
-
-function closeFullScreenIDE() {
-    document.getElementById('fullscreenIDE').style.display = 'none';
-}
-
-function runCode() {
-    if (window.fullscreenEditor) {
-        const code = window.fullscreenEditor.getValue();
-        const iframe = document.getElementById('fullscreenPreview');
-        iframe.srcdoc = code;
-    }
+    if (welcomeHeader) welcomeHeader.style.display = 'flex';
+    if (summarySection) summarySection.style.display = 'block';
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('submissionForm');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            const submissionType = document.getElementById('submissionType').value;
-            
-            if (submissionType === 'code') {
-                if (window.codeEditor) {
-                    window.codeEditor.save();
-                }
-                
-                const codeTextarea = document.getElementById('codeEditor');
-                if (!codeTextarea || codeTextarea.value.trim() === '') {
-                    e.preventDefault();
-                    alert('Please write some code before submitting');
-                    return false;
-                }
-            } else {
-                const fileInput = document.getElementById('submissionFile');
-                if (!fileInput.files.length) {
-                    e.preventDefault();
-                    alert('Please select a file to submit');
-                    return false;
-                }
-            }
-            return true;
+    // Live Clock Update
+    function updateClock() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('en-US', { 
+            hour12: true,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            timeZone: 'Asia/Manila'
         });
+        document.getElementById('clockTime').textContent = timeString;
     }
-
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeFullscreenPreview(); });
-
+    updateClock();
+    setInterval(updateClock, 1000);
+    
     const today = new Date().toISOString().split('T')[0];
     const firstDay = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
-    
+
     const startDateInput = document.querySelector('input[name="start_date"]');
     const endDateInput = document.querySelector('input[name="end_date"]');
-    
+
     if (startDateInput && !startDateInput.value) {
         startDateInput.value = firstDay;
     }
@@ -1503,7 +1129,7 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem(modalShownKey, 'true');
     }
     <?php endif; ?>
-});a
+});
 </script>
 
     </div>

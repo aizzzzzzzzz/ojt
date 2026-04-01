@@ -354,14 +354,6 @@
                 <a href="add_student.php">Add New Student</a>
             </div>
             <div class="action-card">
-                <div class="icon">📋</div>
-                <a href="create_project.php">Create Project</a>
-            </div>
-            <div class="action-card">
-                <div class="icon">✅</div>
-                <a href="manage_projects.php">Manage Projects</a>
-            </div>
-            <div class="action-card">
                 <div class="icon">📁</div>
                 <a href="upload_documents.php">Upload Documents</a>
             </div>

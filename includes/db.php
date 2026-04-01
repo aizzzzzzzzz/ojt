@@ -38,18 +38,6 @@ function calculate_total_minutes($attendance) {
     return $total_minutes;
 }
 
-function get_projects($pdo) {
-    $stmt = $pdo->prepare("SELECT * FROM projects ORDER BY created_at DESC");
-    $stmt->execute();
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
-}
-
-function get_student_submissions($pdo, $student_id) {
-    $stmt = $pdo->prepare("SELECT ps.*, p.project_name FROM project_submissions ps JOIN projects p ON ps.project_id = p.project_id WHERE ps.student_id = ? ORDER BY ps.submission_date DESC");
-    $stmt->execute([$student_id]);
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
-}
-
 function save_daily_task($pdo, $student_id, $today, $task) {
     $check = $pdo->prepare("SELECT id FROM attendance WHERE student_id = ? AND log_date = ? LIMIT 1");
     $check->execute([$student_id, $today]);
@@ -62,21 +50,5 @@ function save_daily_task($pdo, $student_id, $today, $task) {
         $ins = $pdo->prepare("INSERT INTO attendance (student_id, employer_id, log_date, daily_task, status) VALUES (?, NULL, ?, ?, 'present')");
         $ins->execute([$student_id, $today, $task]);
     }
-}
-
-function submit_project($pdo, $project_id, $student_id, $file_path, $remarks) {
-    $stmt = $pdo->prepare("
-        INSERT INTO project_submissions
-        (project_id, student_id, file_path, status, submission_date, remarks, submission_status)
-        VALUES (?, ?, ?, 'Pending', NOW(), ?, 'On Time')
-        ON DUPLICATE KEY UPDATE
-        file_path = VALUES(file_path),
-        status = 'Pending',
-        submission_date = NOW(),
-        remarks = VALUES(remarks),
-        submission_status = 'On Time',
-        graded_at = NULL
-    ");
-    $stmt->execute([$project_id, $student_id, $file_path, $remarks]);
 }
 ?>
