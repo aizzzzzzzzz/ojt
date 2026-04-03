@@ -2,8 +2,10 @@
 session_start();
 require "../private/config.php";
 require_once __DIR__ . '/../includes/audit.php';
+require_once __DIR__ . '/../includes/evaluation_security.php';
 
 ob_start();
+ensure_supervisor_email_support($pdo);
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     error_log("=== DEBUG START: add_employer.php POST ===");
@@ -12,9 +14,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $name = trim($_POST["name"]);
     $company_input = trim($_POST["company"]);
     $username = trim($_POST["username"]);
+    $email = trim($_POST["email"] ?? '');
     $password = trim($_POST["password"]);
 
-    if (!empty($name) && !empty($company_input) && !empty($username) && !empty($password)) {
+    if (!empty($name) && !empty($company_input) && !empty($username) && !empty($password) && !empty($email)) {
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $_SESSION['error'] = "Please enter a valid supervisor email address.";
+            header("Location: add_employer.php");
+            exit;
+        }
+
         $stmt = $pdo->prepare("SELECT 1 FROM employers WHERE LOWER(username) = LOWER(?)");
         $stmt->execute([$username]);
 
@@ -69,10 +78,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             error_log("DEBUG: Hashed password created");
 
             try {
-                $stmt = $pdo->prepare("INSERT INTO employers (name, company_id, username, password, work_start, work_end) VALUES (?, ?, ?, ?, ?, ?)");
-                error_log("DEBUG: Inserting employer with values: name={$name}, company_id={$company_id}, username={$username}");
+                $stmt = $pdo->prepare("INSERT INTO employers (name, company, company_id, username, email, password, work_start, work_end) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                error_log("DEBUG: Inserting employer with values: name={$name}, company_id={$company_id}, username={$username}, email={$email}");
 
-                if ($stmt->execute([$name, $company_id, $username, $hashed_password, $work_start, $work_end])) {
+                if ($stmt->execute([$name, $company_input, $company_id, $username, $email, $hashed_password, $work_start, $work_end])) {
                     $employer_id = $pdo->lastInsertId();
                     error_log("DEBUG: Employer created successfully! ID: {$employer_id}");
 
@@ -192,6 +201,10 @@ try {
                 <div class="mb-3">
                     <label class="form-label" for="employer_username">Username</label>
                     <input id="employer_username" type="text" name="username" placeholder="Login username" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="employer_email">Email</label>
+                    <input id="employer_email" type="email" name="email" placeholder="Supervisor email" required>
                 </div>
                 <div class="mb-3">
                     <label class="form-label" for="employer_password">Password</label>

@@ -177,6 +177,61 @@ function send_evaluation_notification($student_email, $student_name, $supervisor
     return send_email($student_email, $subject, $body, $altBody);
 }
 
+function send_evaluation_verification_code($supervisor_email, $supervisor_name, $student_name, $code, $expires_minutes = 10) {
+    $subject = "OJT Evaluation Verification Code";
+    $safe_supervisor_name = htmlspecialchars($supervisor_name, ENT_QUOTES, 'UTF-8');
+    $safe_student_name = htmlspecialchars($student_name, ENT_QUOTES, 'UTF-8');
+    $safe_code = htmlspecialchars($code, ENT_QUOTES, 'UTF-8');
+
+    $body = "
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: #4361ee; color: white; padding: 20px; text-align: center; }
+                .content { padding: 20px; background: #f8f9fa; }
+                .code-box {
+                    font-size: 30px;
+                    font-weight: 700;
+                    letter-spacing: 6px;
+                    text-align: center;
+                    padding: 16px;
+                    margin: 18px 0;
+                    background: #ffffff;
+                    border: 1px dashed #4361ee;
+                    border-radius: 10px;
+                    color: #111827;
+                }
+                .footer { text-align: center; padding: 10px; color: #666; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <h2>Evaluation Verification Required</h2>
+                </div>
+                <div class='content'>
+                    <p>Dear <strong>{$safe_supervisor_name}</strong>,</p>
+                    <p>You requested to evaluate <strong>{$safe_student_name}</strong> in the OJT System.</p>
+                    <p>Use the one-time verification code below to continue to the signature and evaluation form:</p>
+                    <div class='code-box'>{$safe_code}</div>
+                    <p>This code will expire in <strong>{$expires_minutes} minutes</strong>.</p>
+                    <p>If you did not start this evaluation, you may ignore this message.</p>
+                </div>
+                <div class='footer'>
+                    <p>This is an automated message from the OJT System.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+    ";
+
+    $altBody = "Dear {$supervisor_name},\n\nYou requested to evaluate {$student_name} in the OJT System.\n\nYour one-time verification code is: {$code}\n\nThis code will expire in {$expires_minutes} minutes.\n\nIf you did not start this evaluation, you may ignore this message.\n\nThis is an automated message from the OJT System.";
+
+    return send_email($supervisor_email, $subject, $body, $altBody);
+}
+
 function send_certificate_notification($student_email, $student_name, $supervisor_name, $certificate_no = null) {
     $subject = "OJT Certificate Generated - " . $student_name;
     $header_title = "Certificate Generated";

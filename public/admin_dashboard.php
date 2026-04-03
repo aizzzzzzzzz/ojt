@@ -1,9 +1,11 @@
 <?php
 require_once __DIR__ . '/../private/config.php';
 require_once __DIR__ . '/../includes/middleware.php';
+require_once __DIR__ . '/../includes/evaluation_security.php';
 
 require_admin();
 $csrf_token = generate_csrf_token();
+ensure_supervisor_email_support($pdo);
 
 $stmt = $pdo->prepare("SELECT username, full_name FROM admins WHERE admin_id=?");
 $stmt->execute([$_SESSION['admin_id']]);
@@ -51,7 +53,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_employer'])) {
 
     $username = sanitize_input($_POST['username']);
     $name = sanitize_input($_POST['name']);
+    $email = trim($_POST['email'] ?? '');
     $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+
+    if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $_SESSION['addEmployerError'] = "A valid supervisor email is required.";
+        header("Location: admin_dashboard.php");
+        exit;
+    }
 
     $stmt = $pdo->prepare("SELECT 1 FROM employers WHERE LOWER(username)=LOWER(?)");
     $stmt->execute([$username]);
@@ -65,8 +74,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_employer'])) {
     $company = sanitize_input($_POST['company']);
     $work_start = sanitize_input($_POST['work_start'] ?? '08:00');
     $work_end   = sanitize_input($_POST['work_end']   ?? '17:00');
-    $stmt = $pdo->prepare("INSERT INTO employers (username,name,company,password,work_start,work_end,created_at) VALUES (?,?,?,?,?,?,NOW())");
-    $stmt->execute([$username,$name,$company,$password,$work_start,$work_end]);
+    $stmt = $pdo->prepare("INSERT INTO employers (username,email,name,company,password,work_start,work_end,created_at) VALUES (?,?,?,?,?,?,?,NOW())");
+    $stmt->execute([$username,$email,$name,$company,$password,$work_start,$work_end]);
     write_audit_log('Add Employer', $username);
     $_SESSION['employer_added_success'] = true;
     header("Location: admin_dashboard.php");
@@ -88,7 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_employer'])) {
 
 $students_count = $pdo->query("SELECT COUNT(*) AS count FROM students")->fetch(PDO::FETCH_ASSOC)['count'];
 $evaluations_count = $pdo->query("SELECT COUNT(*) AS count FROM evaluations")->fetch(PDO::FETCH_ASSOC)['count'];
-$employers = $pdo->query("SELECT employer_id, username, name, company, work_start, work_end FROM employers ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+$employers = $pdo->query("SELECT employer_id, username, email, name, company, work_start, work_end FROM employers ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 
 include_once __DIR__ . '/../templates/admin_header.php';
 include_once __DIR__ . '/../templates/admin_main.php';

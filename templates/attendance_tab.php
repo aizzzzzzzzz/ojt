@@ -50,8 +50,6 @@
     
     <?php
     $time_in_done    = !empty($today_row['time_in']);
-    $lunch_out_done  = !empty($today_row['lunch_out']);
-    $lunch_in_done   = !empty($today_row['lunch_in']);
     $time_out_done   = !empty($today_row['time_out']);
 
     $actions = [

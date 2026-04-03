@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 03, 2026 at 12:37 PM
+-- Generation Time: Apr 03, 2026 at 06:06 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -59,7 +59,17 @@ INSERT INTO `activity_logs` (`id`, `user_id`, `role`, `action`, `target`, `ip_ad
 (15, 3, 'student', 'Shift Change Request', 'Requested shift change for 2026-04-02: 13:00 - 17:00:00', '::1', '2026-04-01 06:24:41'),
 (16, 3, 'student', 'Student Login', 'Student aiz logged in', '::1', '2026-04-01 06:25:12'),
 (17, 3, 'student', 'Shift Change Request', 'Requested shift change for 2026-04-01: 14:30 - 17:00:00', '::1', '2026-04-01 06:25:46'),
-(18, 3, 'student', 'Student Login', 'Student aiz logged in', '::1', '2026-04-01 06:26:05');
+(18, 3, 'student', 'Student Login', 'Student aiz logged in', '::1', '2026-04-01 06:26:05'),
+(19, 5, 'student', 'Student Login', 'Student raffy logged in', '::1', '2026-04-03 14:32:58'),
+(20, 5, 'student', 'Change Password', 'Student changed password after first login', '::1', '2026-04-03 14:33:25'),
+(21, 5, 'student', 'Student Login', 'Student raffy logged in', '::1', '2026-04-03 14:36:05'),
+(22, 5, 'student', 'Student Login', 'Student raffy logged in', '::1', '2026-04-03 14:42:54'),
+(23, 5, 'student', 'Shift Change Request', 'Requested shift change for 2026-04-03: 08:00:00 - 17:00:00', '::1', '2026-04-03 14:43:47'),
+(24, 5, 'student', 'Student Login', 'Student raffy logged in', '::1', '2026-04-03 14:44:11'),
+(25, 5, 'student', 'Student Login', 'Student raffy logged in', '::1', '2026-04-03 15:02:37'),
+(26, 5, 'student', 'Student Login', 'Student raffy logged in', '::1', '2026-04-03 15:03:05'),
+(27, 5, 'student', 'Student Login', 'Student raffy logged in', '::1', '2026-04-03 15:03:24'),
+(28, 5, 'student', 'Download Evaluation', 'Downloaded evaluation report', '::1', '2026-04-03 15:03:25');
 
 -- --------------------------------------------------------
 
@@ -111,7 +121,9 @@ CREATE TABLE `attendance` (
 --
 
 INSERT INTO `attendance` (`id`, `student_id`, `employer_id`, `log_date`, `time_in`, `effective_start_time`, `lunch_out`, `lunch_in`, `time_out`, `status`, `shift_status`, `late_minutes`, `verified`, `reason`, `daily_task`) VALUES
-(6, 3, NULL, '2026-04-01', '2026-04-01 14:48:19', NULL, '2026-04-01 14:52:09', '2026-04-01 14:52:11', '2026-04-01 14:52:13', 'Present', 'on_time', 0, 0, NULL, NULL);
+(8, 3, NULL, '2026-04-03', NULL, NULL, NULL, NULL, NULL, 'Absent', 'on_time', 0, 0, 'Auto-marked: No attendance recorded by 7:00 PM', NULL),
+(9, 4, NULL, '2026-04-03', NULL, NULL, NULL, NULL, NULL, 'Absent', 'on_time', 0, 0, 'Auto-marked: No attendance recorded by 7:00 PM', NULL),
+(10, 5, NULL, '2026-04-03', NULL, NULL, NULL, NULL, NULL, 'Absent', 'on_time', 0, 0, 'Auto-marked: No attendance recorded by 7:00 PM', NULL);
 
 -- --------------------------------------------------------
 
@@ -157,7 +169,22 @@ INSERT INTO `audit_logs` (`id`, `user_type`, `user_id`, `action`, `target`, `ip_
 (21, 'admin', 1, 'Admin Login', 'Admin Sir Raf logged in.', '::1', '2026-04-01 03:47:34'),
 (22, 'admin', 1, 'Admin Login', 'Admin Sir Raf logged in.', '::1', '2026-04-01 05:43:36'),
 (23, 'employer', 1, 'Approve Shift Request', 'Shift request #1 approvedd for student ID: 3', '::1', '2026-04-01 06:24:59'),
-(24, 'employer', 1, 'Approve Shift Request', 'Shift request #2 approvedd for student ID: 3', '::1', '2026-04-01 06:25:55');
+(24, 'employer', 1, 'Approve Shift Request', 'Shift request #2 approvedd for student ID: 3', '::1', '2026-04-01 06:25:55'),
+(25, 'admin', 1, 'Admin Login', 'Admin Sir Raf logged in.', '::1', '2026-04-03 10:45:12'),
+(26, 'employer', 1, 'Verify Attendance', 'Verified attendance for student ID: 3, Date: 2026-04-01', '::1', '2026-04-03 13:01:27'),
+(27, 'employer', 1, 'Auto Mark Absent', 'Student ID 3 (jedlian aiz) marked as absent - no attendance by 7PM', '::1', '2026-04-03 13:02:59'),
+(28, 'employer', 1, 'Add Student', 'Employer added student: aizzz', '::1', '2026-04-03 14:32:10'),
+(29, 'employer', 1, 'Add Student', 'Employer added student: raffy', '::1', '2026-04-03 14:32:52'),
+(30, 'employer', 1, 'Auto Mark Absent', 'Student ID 3 (jedlian aiz) marked as absent - no attendance by 7PM', '::1', '2026-04-03 14:44:24'),
+(31, 'employer', 1, 'Auto Mark Absent', 'Student ID 4 (jerome domingo) marked as absent - no attendance by 7PM', '::1', '2026-04-03 14:44:24'),
+(32, 'employer', 1, 'Auto Mark Absent', 'Student ID 5 (jerome domingo) marked as absent - no attendance by 7PM', '::1', '2026-04-03 14:44:24'),
+(33, 'admin', 1, 'Admin Login', 'Admin Sir Raf logged in.', '::1', '2026-04-03 14:45:36'),
+(34, 'employer', 1, 'Reject Shift Request', 'Shift request #3 rejectedd for student ID: 5', '::1', '2026-04-03 14:51:26'),
+(35, 'employer', 1, 'Submit Evaluation', 'Evaluation submitted for student: aiz', '::1', '2026-04-03 15:02:18'),
+(36, 'employer', 1, 'Generate Certificate', 'Certificate generated for student ID: 3, Certificate No: CERT-2026-3-001', '::1', '2026-04-03 15:02:33'),
+(37, 'employer', 1, 'Submit Evaluation', 'Evaluation submitted for student: raffy', '::1', '2026-04-03 15:02:59'),
+(38, 'employer', 1, 'Generate Certificate', 'Certificate generated for student ID: 5, Certificate No: CERT-2026-5-001', '::1', '2026-04-03 15:03:19'),
+(39, 'admin', 1, 'Admin Login', 'Admin Sir Raf logged in.', '::1', '2026-04-03 15:12:47');
 
 -- --------------------------------------------------------
 
@@ -175,6 +202,14 @@ CREATE TABLE `certificates` (
   `generated_at` datetime NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `certificates`
+--
+
+INSERT INTO `certificates` (`certificate_id`, `student_id`, `employer_id`, `certificate_no`, `file_path`, `hours_completed`, `generated_at`) VALUES
+(5, 3, 1, 'CERT-2026-3-001', 'certificates/certificate_3_1775228547.pdf', 0.00, '2026-04-03 23:02:27'),
+(6, 5, 1, 'CERT-2026-5-001', 'certificates/certificate_5_1775228594.pdf', 0.00, '2026-04-03 23:03:14');
+
 -- --------------------------------------------------------
 
 --
@@ -187,6 +222,14 @@ CREATE TABLE `certificate_hashes` (
   `certificate_hash` varchar(255) NOT NULL,
   `generated_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `certificate_hashes`
+--
+
+INSERT INTO `certificate_hashes` (`id`, `student_id`, `certificate_hash`, `generated_at`) VALUES
+(5, 3, 'CERT-2026-3-001', '2026-04-03 15:02:27'),
+(6, 5, 'CERT-2026-5-001', '2026-04-03 15:03:14');
 
 -- --------------------------------------------------------
 
@@ -212,6 +255,7 @@ CREATE TABLE `employers` (
   `name` varchar(100) NOT NULL,
   `company` varchar(255) NOT NULL DEFAULT '',
   `username` varchar(50) NOT NULL,
+  `email` varchar(255) DEFAULT NULL,
   `password` varchar(255) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `password_changed` tinyint(1) DEFAULT 0,
@@ -226,8 +270,8 @@ CREATE TABLE `employers` (
 -- Dumping data for table `employers`
 --
 
-INSERT INTO `employers` (`employer_id`, `name`, `company`, `username`, `password`, `created_at`, `password_changed`, `company_id`, `work_start`, `work_end`, `late_grace_minutes`, `eod_grace_hours`) VALUES
-(1, 'Gerard Busuego', 'CRT', 'Sir Ge', '$2y$10$XQBwthckgzATcmYg6TDv8.87GImxIorH1VzQ/FatNj3DEUYGJ./qq', '2026-03-15 08:59:00', 1, NULL, '08:00:00', '17:00:00', 20, 3);
+INSERT INTO `employers` (`employer_id`, `name`, `company`, `username`, `email`, `password`, `created_at`, `password_changed`, `company_id`, `work_start`, `work_end`, `late_grace_minutes`, `eod_grace_hours`) VALUES
+(1, 'Gerard Busuego', 'CRT', 'Sir Ge', 'domingojerome34@gmail.com', '$2y$10$XQBwthckgzATcmYg6TDv8.87GImxIorH1VzQ/FatNj3DEUYGJ./qq', '2026-03-15 08:59:00', 1, NULL, '08:00:00', '17:00:00', 20, 3);
 
 -- --------------------------------------------------------
 
@@ -254,6 +298,43 @@ CREATE TABLE `evaluations` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `evaluations`
+--
+
+INSERT INTO `evaluations` (`evaluation_id`, `student_id`, `employer_id`, `evaluation_date`, `attendance_rating`, `work_quality_rating`, `initiative_rating`, `communication_rating`, `teamwork_rating`, `adaptability_rating`, `professionalism_rating`, `problem_solving_rating`, `technical_skills_rating`, `comments`, `signature_path`, `created_at`) VALUES
+(3, 3, 1, '2026-04-03', 3, 4, 4, 5, 5, 5, 4, 5, 5, '', 'assets/signature_1_3.png', '2026-04-03 15:02:12'),
+(4, 5, 1, '2026-04-03', 4, 5, 5, 5, 4, 5, 3, 5, 5, '', 'assets/signature_1_5.png', '2026-04-03 15:02:55');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `evaluation_verification_codes`
+--
+
+CREATE TABLE `evaluation_verification_codes` (
+  `verification_id` int(11) NOT NULL,
+  `verification_key` varchar(64) NOT NULL,
+  `employer_id` int(11) NOT NULL,
+  `student_id` int(11) NOT NULL,
+  `sent_to_email` varchar(255) NOT NULL,
+  `code_hash` varchar(255) NOT NULL,
+  `attempts` tinyint(4) NOT NULL DEFAULT 0,
+  `max_attempts` tinyint(4) NOT NULL DEFAULT 5,
+  `expires_at` datetime NOT NULL,
+  `verified_at` datetime DEFAULT NULL,
+  `used_at` datetime DEFAULT NULL,
+  `evaluation_id` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `evaluation_verification_codes`
+--
+
+INSERT INTO `evaluation_verification_codes` (`verification_id`, `verification_key`, `employer_id`, `student_id`, `sent_to_email`, `code_hash`, `attempts`, `max_attempts`, `expires_at`, `verified_at`, `used_at`, `evaluation_id`, `created_at`) VALUES
+(1, '7ca6da759d6b4abbb6378eacfcc144ff', 1, 4, 'domingojerome34@gmail.com', '$2y$10$sUDNpRMaiZhdYJbU0PFv7.g.1WNiOp5Og7NTa4jEfHVJd5YmMOBkK', 0, 5, '2026-04-03 23:23:38', '2026-04-03 23:13:59', NULL, NULL, '2026-04-03 15:13:38');
+
 -- --------------------------------------------------------
 
 --
@@ -271,6 +352,14 @@ CREATE TABLE `login_attempts` (
   `reset_used` tinyint(1) NOT NULL DEFAULT 0,
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `login_attempts`
+--
+
+INSERT INTO `login_attempts` (`id`, `username`, `ip_address`, `attempt_count`, `locked_at`, `reset_token`, `reset_expires`, `reset_used`, `updated_at`) VALUES
+(7, 'aiz', '::1', 3, '2026-04-03 22:31:50', NULL, NULL, 0, '2026-04-03 14:31:50'),
+(8, 'aizzz', '::1', 3, '2026-04-03 22:32:25', NULL, NULL, 0, '2026-04-03 14:32:25');
 
 -- --------------------------------------------------------
 
@@ -336,14 +425,6 @@ CREATE TABLE `shift_change_requests` (
   `review_notes` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `shift_change_requests`
---
-
-INSERT INTO `shift_change_requests` (`id`, `student_id`, `request_date`, `requested_shift_start`, `requested_shift_end`, `reason`, `status`, `used`, `requested_at`, `reviewed_by`, `reviewed_at`, `approved_at`, `review_notes`) VALUES
-(1, 3, '2026-04-02', '13:00:00', '17:00:00', 'aweas1', 'approved', 0, '2026-04-01 06:24:41', 1, '2026-04-01 06:24:59', '2026-04-01 06:24:59', ''),
-(2, 3, '2026-04-01', '14:30:00', '17:00:00', 'asde21', 'approved', 0, '2026-04-01 06:25:46', 1, '2026-04-01 06:25:55', '2026-04-01 06:25:55', '');
-
 -- --------------------------------------------------------
 
 --
@@ -372,7 +453,9 @@ CREATE TABLE `students` (
 --
 
 INSERT INTO `students` (`student_id`, `username`, `password`, `first_name`, `middle_name`, `last_name`, `required_hours`, `course`, `school`, `created_at`, `password_changed`, `email`, `created_by`, `company_id`) VALUES
-(3, 'aiz', '$2y$10$mqSzAy9CX2B/cxhdP/8sq.4Jmddw0XwrJvfaCIOaKEKFHwPeqhnrS', 'jedlian', 'manubay', 'aiz', 200, 'bsit', 'CRT', '2026-04-01 01:12:27', 1, 'aizjedlian@gmail.com', 1, NULL);
+(3, 'aiz', '$2y$10$mqSzAy9CX2B/cxhdP/8sq.4Jmddw0XwrJvfaCIOaKEKFHwPeqhnrS', 'jedlian', 'manubay', 'aiz', 200, 'bsit', 'CRT', '2026-04-01 01:12:27', 1, 'aizjedlian@gmail.com', 1, NULL),
+(4, 'aizzz', '$2y$10$7C8haRQhIVzTfdkztYaSLe.2hBu.gQ2kEBZQseg.ZA8Hw4df/ZwiK', 'jerome', 'Manubay', 'domingo', 200, 'BSIT', 'CRT', '2026-04-03 14:32:10', 0, 'domingojerome34@gmail.com', 1, NULL),
+(5, 'raffy', '$2y$10$64UX8HDbyrb5TgTKiaOwVec4z9mngqRac9x96/xNtaBaEkdRhnqYq', 'jerome', 'Manubay', 'domingo', 200, 'bacomm', 'CRT', '2026-04-03 14:32:52', 1, 'domingojerome34@gmail.com', 1, NULL);
 
 -- --------------------------------------------------------
 
@@ -463,6 +546,15 @@ ALTER TABLE `evaluations`
   ADD KEY `employer_id` (`employer_id`);
 
 --
+-- Indexes for table `evaluation_verification_codes`
+--
+ALTER TABLE `evaluation_verification_codes`
+  ADD PRIMARY KEY (`verification_id`),
+  ADD UNIQUE KEY `verification_key` (`verification_key`),
+  ADD KEY `idx_eval_verify_lookup` (`verification_key`),
+  ADD KEY `idx_eval_verify_owner` (`employer_id`,`student_id`);
+
+--
 -- Indexes for table `login_attempts`
 --
 ALTER TABLE `login_attempts`
@@ -516,7 +608,7 @@ ALTER TABLE `uploaded_files`
 -- AUTO_INCREMENT for table `activity_logs`
 --
 ALTER TABLE `activity_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
 
 --
 -- AUTO_INCREMENT for table `admins`
@@ -528,25 +620,25 @@ ALTER TABLE `admins`
 -- AUTO_INCREMENT for table `attendance`
 --
 ALTER TABLE `attendance`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=40;
 
 --
 -- AUTO_INCREMENT for table `certificates`
 --
 ALTER TABLE `certificates`
-  MODIFY `certificate_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `certificate_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `certificate_hashes`
 --
 ALTER TABLE `certificate_hashes`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `companies`
@@ -564,13 +656,19 @@ ALTER TABLE `employers`
 -- AUTO_INCREMENT for table `evaluations`
 --
 ALTER TABLE `evaluations`
-  MODIFY `evaluation_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `evaluation_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `evaluation_verification_codes`
+--
+ALTER TABLE `evaluation_verification_codes`
+  MODIFY `verification_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `login_attempts`
 --
 ALTER TABLE `login_attempts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `projects`
@@ -588,13 +686,13 @@ ALTER TABLE `project_submissions`
 -- AUTO_INCREMENT for table `shift_change_requests`
 --
 ALTER TABLE `shift_change_requests`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `students`
 --
 ALTER TABLE `students`
-  MODIFY `student_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `student_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `uploaded_files`

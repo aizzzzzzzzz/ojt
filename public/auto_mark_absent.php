@@ -11,6 +11,7 @@
 
 session_start();
 require_once __DIR__ . '/../private/config.php';
+require_once __DIR__ . '/../includes/middleware.php';
 require_once __DIR__ . '/../includes/audit.php';
 
 // Only allow admin or employer to run this
@@ -20,9 +21,14 @@ $is_employer = isset($_SESSION['employer_id']) && $_SESSION['role'] === 'employe
 // Also allow CLI execution for cron jobs
 $is_cli = php_sapi_name() === 'cli';
 
+// Redirect to appropriate login if not authenticated (unless CLI)
 if (!$is_admin && !$is_employer && !$is_cli) {
-    http_response_code(403);
-    die("Access denied. This script can only be run by admins, employers, or via CLI.");
+    if (isset($_SESSION['employer_id'])) {
+        header("Location: supervisor_login.php");
+    } else {
+        header("Location: admin_login.php");
+    }
+    exit;
 }
 
 $today = date('Y-m-d');
@@ -280,8 +286,8 @@ if ($is_cli) {
             <?php endif; ?>
 
             <div class="mt-4">
-                <a href="admin_dashboard.php" class="btn-back">← Back to Dashboard</a>
-                <?php if ($is_admin): ?>
+                <a href="<?= $is_employer ? 'supervisor_dashboard.php' : 'admin_dashboard.php' ?>" class="btn-back">← Back to Dashboard</a>
+                <?php if ($is_admin || $is_employer): ?>
                     <a href="auto_mark_absent.php?force=1" class="btn-back" style="background: #16a34a; margin-left: 10px;">
                         ↻ Run Again (Force)
                     </a>

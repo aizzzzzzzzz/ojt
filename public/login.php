@@ -162,11 +162,14 @@ $admin_count = $stmt->fetchColumn();
 <style>
     :root{--bg:#f1f4f9;--surface:#fff;--surface2:#f8fafc;--border:#e3e8f0;--text:#111827;--text-muted:#6b7280;--accent:#4361ee;--accent-dk:#3451d1;--accent-lt:#eef1fd;--green:#16a34a;--green-lt:#dcfce7;--red:#dc2626;--red-lt:#fee2e2;--amber:#d97706;--amber-lt:#fef3c7;--shadow-md:0 2px 8px rgba(0,0,0,.07),0 8px 28px rgba(0,0,0,.07);}
     *,*::before,*::after{box-sizing:border-box;}
-    body{font-family:'DM Sans','Segoe UI',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh;margin:0;padding:32px 20px 60px;display:flex;align-items:center;justify-content:center;}
+    body{font-family:'DM Sans','Segoe UI',sans-serif;background:linear-gradient(rgba(0,0,0,0.65),rgba(0,0,0,0.65)),url('../assets/crtbldg.jpg') center bottom/cover no-repeat fixed;color:var(--text);line-height:1.6;min-height:100vh;margin:0;padding:32px 20px 60px;display:flex;align-items:center;justify-content:center;flex-direction:column;}
     .login-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow-md);width:100%;max-width:400px;overflow:hidden;}
     .login-header{padding:28px 28px 20px;border-bottom:1px solid var(--border);text-align:center;}
     .login-header h1{font-size:22px;font-weight:700;margin:0 0 4px;letter-spacing:-.3px;}
     .login-header p{font-size:13px;color:var(--text-muted);margin:0;}
+    .page-title{text-align:center;color:#fff;margin-bottom:40px;text-shadow:0 2px 8px rgba(0,0,0,0.7), 0 0 20px rgba(0,0,0,0.5);}
+    .page-title h2{font-size:28px;font-weight:700;margin:0 0 6px;letter-spacing:-.5px;}
+    .page-title p{font-size:14px;color:#e0e0e0;margin:0;}
     .login-body{padding:24px 28px 28px;}
     .form-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;display:block;}
     input[type=text],input[type=password]{border-radius:9px;border:1px solid var(--border);padding:9px 12px;font-size:14px;font-family:inherit;color:var(--text);background:var(--surface);transition:border-color .2s,box-shadow .2s;width:100%;margin-bottom:14px;}
@@ -187,6 +190,10 @@ $admin_count = $stmt->fetchColumn();
 </style>
 </head>
 <body>
+<div class="page-title">
+    <h2>OJT Management System</h2>
+    <p>Sign in to access your dashboard</p>
+</div>
 <div class="login-card">
     <div class="login-header">
         <h1>Internship Monitoring System</h1>

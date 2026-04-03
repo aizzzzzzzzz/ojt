@@ -25,7 +25,7 @@ $admin_count = $stmt->fetchColumn();
 <style>
     :root{--bg:#f1f4f9;--surface:#fff;--surface2:#f8fafc;--border:#e3e8f0;--text:#111827;--text-muted:#6b7280;--accent:#4361ee;--accent-dk:#3451d1;--accent-lt:#eef1fd;--green:#16a34a;--green-lt:#dcfce7;--red:#dc2626;--red-lt:#fee2e2;--radius:14px;--shadow-md:0 2px 8px rgba(0,0,0,.07),0 8px 28px rgba(0,0,0,.07);}
     *,*::before,*::after{box-sizing:border-box;}
-    body{font-family:'DM Sans','Segoe UI',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh;margin:0;padding:32px 20px 60px;display:flex;align-items:center;justify-content:center;}
+    body{font-family:'DM Sans','Segoe UI',sans-serif;background:linear-gradient(rgba(0,0,0,0.65),rgba(0,0,0,0.65)),url('assets/crtbldg.jpg') center bottom/cover no-repeat fixed;color:var(--text);line-height:1.6;min-height:100vh;margin:0;padding:32px 20px 60px;display:flex;align-items:center;justify-content:center;}
     .page-card{background:var(--surface);border-radius:20px;border:1px solid var(--border);box-shadow:var(--shadow-md);width:100%;overflow:hidden;}
     .page-topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px;}
     .page-topbar h2{font-size:18px;font-weight:700;margin:0;letter-spacing:-.3px;}
@@ -45,8 +45,8 @@ $admin_count = $stmt->fetchColumn();
 
     body { flex-direction:column; gap:40px; padding:40px 20px; }
     .site-title { text-align:center; }
-    .site-title h1 { font-size:32px; font-weight:700; color:var(--text); margin:0 0 6px; letter-spacing:-.5px; }
-    .site-title p  { font-size:15px; color:var(--text-muted); margin:0; }
+    .site-title h1 { font-size:32px; font-weight:700; color:#fff; margin:0 0 6px; letter-spacing:-.5px; text-shadow:0 2px 8px rgba(0,0,0,0.7), 0 0 20px rgba(0,0,0,0.5); }
+    .site-title p  { font-size:15px; color:#e0e0e0; margin:0; text-shadow:0 1px 4px rgba(0,0,0,0.7); }
     .login-card { max-width:380px; }
     .login-header { padding:28px 28px 18px; border-bottom:1px solid var(--border); text-align:center; }
     .login-header h2 { font-size:20px; font-weight:700; margin:0 0 4px; }

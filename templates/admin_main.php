@@ -64,11 +64,15 @@
                     <input id="admin_company" type="text" name="company" required class="form-control">
                 </div>
                 <div class="col-md-3 mb-3">
-                    <label class="form-label" for="admin_password">Password</label>
-                    <input id="admin_password" type="password" name="password" required class="form-control">
+                    <label class="form-label" for="admin_email">Email</label>
+                    <input id="admin_email" type="email" name="email" required class="form-control">
                 </div>
             </div>
             <div class="row align-items-end">
+                <div class="col-md-3 mb-3">
+                    <label class="form-label" for="admin_password">Password</label>
+                    <input id="admin_password" type="password" name="password" required class="form-control">
+                </div>
                 <div class="col-md-3 mb-3">
                     <label class="form-label" for="admin_work_start">Work Start Time</label>
                     <input id="admin_work_start" type="time" name="work_start" value="08:00" required class="form-control">
@@ -92,6 +96,7 @@
         <thead>
             <tr>
                 <th>Username</th>
+                <th>Email</th>
                 <th>Name</th>
                 <th>Company</th>
                 <th>Working Hours</th>
@@ -102,6 +107,7 @@
             <?php foreach ($employers as $emp): ?>
             <tr>
                 <td><?= htmlspecialchars($emp['username']) ?></td>
+                <td><?= htmlspecialchars($emp['email'] ?? '') ?></td>
                 <td><?= htmlspecialchars($emp['name']) ?></td>
                 <td><?= htmlspecialchars($emp['company']) ?></td>
                 <td>

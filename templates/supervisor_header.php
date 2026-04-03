@@ -358,6 +358,10 @@
                 <a href="upload_documents.php">Upload Documents</a>
             </div>
             <div class="action-card">
+                <div class="icon">⚠️</div>
+                <a href="auto_mark_absent.php">Auto-Mark Absent</a>
+            </div>
+            <div class="action-card">
                 <div class="icon">🚪</div>
                 <a href="logout.php">Logout</a>
             </div>

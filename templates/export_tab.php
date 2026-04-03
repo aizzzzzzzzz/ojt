@@ -22,9 +22,6 @@
                     📋 Export All Records
                 </a>
             </div>
-            <small style="color:var(--text-muted);display:block;margin-top:10px;font-size:13px;">
-                💡 Export your attendance history to Excel with professional formatting, including time calculations and verification status.
-            </small>
         </form>
     </div>
 
