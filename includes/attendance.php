@@ -70,7 +70,7 @@ function calculate_shift_status($pdo, $student_id, $today, $time_in) {
 }
 
 function handle_attendance_action($pdo, $student_id, $today, $action) {
-    $allowed = ['time_in','lunch_out','lunch_in','time_out'];
+    $allowed = ['time_in','time_out'];
     if (!in_array($action, $allowed)) {
         return "Invalid action.";
     }
@@ -135,30 +135,6 @@ function handle_attendance_action($pdo, $student_id, $today, $action) {
                         $updates[] = "effective_start_time = ?";
                         $params[] = $shift_info['effective_start_time'];
                     }
-                    break;
-                case 'lunch_out':
-                    if (!$row['time_in']) {
-                        $pdo->rollBack();
-                        return "You need to Time In first.";
-                    }
-                    if ($row['lunch_out']) {
-                        $pdo->rollBack();
-                        return "Lunch Out already recorded ({$row['lunch_out']}).";
-                    }
-                    $updates[] = "lunch_out = ?";
-                    $params[] = $now;
-                    break;
-                case 'lunch_in':
-                    if (!$row['lunch_out']) {
-                        $pdo->rollBack();
-                        return "You need to Lunch Out first.";
-                    }
-                    if ($row['lunch_in']) {
-                        $pdo->rollBack();
-                        return "Lunch In already recorded ({$row['lunch_in']}).";
-                    }
-                    $updates[] = "lunch_in = ?";
-                    $params[] = $now;
                     break;
                 case 'time_out':
                     if (!$row['time_in']) {

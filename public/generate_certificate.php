@@ -57,10 +57,9 @@ foreach ($attendance as $row) {
         $time_in = strtotime($row['time_in']);
         $time_out = strtotime($row['time_out']);
         $minutesWorked = max(0, ($time_out - $time_in) / 60);
-        if (!empty($row['lunch_out']) && !empty($row['lunch_in'])) {
-            $lunch_out = strtotime($row['lunch_out']);
-            $lunch_in = strtotime($row['lunch_in']);
-            $minutesWorked -= max(0, ($lunch_in - $lunch_out) / 60);
+        // Auto-deduct 60 minutes if shift is greater than 4 hours (240 minutes)
+        if ($minutesWorked > 240) {
+            $minutesWorked -= 60;
         }
         $total_minutes += max(0, $minutesWorked);
     }

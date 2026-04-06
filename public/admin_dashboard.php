@@ -48,6 +48,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_file'])) {
 $addEmployerError = $_SESSION['addEmployerError'] ?? '';
 unset($_SESSION['addEmployerError']);
 
+$employerStatus = $_SESSION['employerStatus'] ?? null;
+unset($_SESSION['employerStatus']);
+
+$editEmployerId = isset($_SESSION['editEmployerId']) ? (int) $_SESSION['editEmployerId'] : 0;
+unset($_SESSION['editEmployerId']);
+
+$editEmployerForm = $_SESSION['editEmployerForm'] ?? [];
+unset($_SESSION['editEmployerForm']);
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_employer'])) {
     check_csrf($_POST['csrf_token'] ?? '');
 
@@ -92,6 +101,91 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_employer'])) {
     $stmt->execute([(int)$_POST['employer_id']]);
     write_audit_log('Delete Employer', $emp['username'] ?? 'Unknown');
     header("Location: admin_dashboard.php");
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_employer'])) {
+    check_csrf($_POST['csrf_token'] ?? '');
+
+    $employer_id = (int) ($_POST['employer_id'] ?? 0);
+    $editData = [
+        'username' => trim((string) ($_POST['username'] ?? '')),
+        'name' => trim((string) ($_POST['name'] ?? '')),
+        'company' => trim((string) ($_POST['company'] ?? '')),
+        'email' => trim((string) ($_POST['email'] ?? '')),
+        'work_start' => trim((string) ($_POST['work_start'] ?? '')),
+        'work_end' => trim((string) ($_POST['work_end'] ?? '')),
+    ];
+    $new_password = (string) ($_POST['new_password'] ?? '');
+    $updateError = '';
+
+    if ($employer_id <= 0) {
+        $updateError = 'Invalid supervisor account selected.';
+    } elseif ($editData['username'] === '' || $editData['name'] === '' || $editData['company'] === '' || $editData['email'] === '') {
+        $updateError = 'Username, name, company, and email are required.';
+    } elseif (!filter_var($editData['email'], FILTER_VALIDATE_EMAIL)) {
+        $updateError = 'Please enter a valid supervisor email address.';
+    } elseif (!preg_match('/^[A-Za-z0-9_.-]{3,50}$/', $editData['username'])) {
+        $updateError = 'Username must be 3-50 characters and may only contain letters, numbers, dots, underscores, or dashes.';
+    } elseif (!preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $editData['work_start']) || !preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $editData['work_end'])) {
+        $updateError = 'Please enter valid work start and end times.';
+    } else {
+        $stmt = $pdo->prepare("SELECT employer_id FROM employers WHERE LOWER(username) = LOWER(?) AND employer_id <> ? LIMIT 1");
+        $stmt->execute([$editData['username'], $employer_id]);
+        if ($stmt->fetch(PDO::FETCH_ASSOC)) {
+            $updateError = 'Username already exists.';
+        }
+    }
+
+    if ($updateError === '' && $new_password !== '' && !validate_password($new_password)) {
+        $updateError = 'New password must be at least 8 characters and include uppercase, lowercase, number, and special character.';
+    }
+
+    if ($updateError !== '') {
+        $_SESSION['employerStatus'] = ['type' => 'danger', 'message' => $updateError];
+        $_SESSION['editEmployerId'] = $employer_id;
+        $_SESSION['editEmployerForm'] = $editData;
+        header("Location: admin_dashboard.php#supervisor-list");
+        exit;
+    }
+
+    if ($new_password !== '') {
+        $password_hash = password_hash($new_password, PASSWORD_DEFAULT);
+        $stmt = $pdo->prepare("
+            UPDATE employers
+            SET username = ?, email = ?, name = ?, company = ?, work_start = ?, work_end = ?, password = ?, password_changed = 1
+            WHERE employer_id = ?
+        ");
+        $stmt->execute([
+            $editData['username'],
+            $editData['email'],
+            $editData['name'],
+            $editData['company'],
+            $editData['work_start'],
+            $editData['work_end'],
+            $password_hash,
+            $employer_id,
+        ]);
+    } else {
+        $stmt = $pdo->prepare("
+            UPDATE employers
+            SET username = ?, email = ?, name = ?, company = ?, work_start = ?, work_end = ?
+            WHERE employer_id = ?
+        ");
+        $stmt->execute([
+            $editData['username'],
+            $editData['email'],
+            $editData['name'],
+            $editData['company'],
+            $editData['work_start'],
+            $editData['work_end'],
+            $employer_id,
+        ]);
+    }
+
+    write_audit_log('Update Employer', $editData['username']);
+    $_SESSION['employerStatus'] = ['type' => 'success', 'message' => 'Supervisor account updated successfully.'];
+    header("Location: admin_dashboard.php#supervisor-list");
     exit;
 }
 

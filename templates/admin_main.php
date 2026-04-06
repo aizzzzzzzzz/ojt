@@ -90,7 +90,12 @@
     </div>
 </div>
 
-<h3>OJT Supervisors</h3>
+<h3 id="supervisor-list">OJT Supervisors</h3>
+<?php if (!empty($employerStatus) && is_array($employerStatus)): ?>
+    <div class="alert alert-<?= htmlspecialchars($employerStatus['type'] ?? 'info') ?> mb-3">
+        <?= htmlspecialchars($employerStatus['message'] ?? '') ?>
+    </div>
+<?php endif; ?>
 <div class="card mb-4" style="overflow:hidden;">
     <table class="table table-striped mb-0">
         <thead>
@@ -118,17 +123,86 @@
                     ?>
                 </td>
                 <td>
-                    <form method="post" style="display:inline;">
-                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                        <input type="hidden" name="employer_id" value="<?= $emp['employer_id'] ?>">
-                        <button type="submit" name="delete_employer" onclick="return confirm('Delete this employer?')" class="btn btn-outline-danger btn-sm">Delete</button>
-                    </form>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#editEmployerModal<?= (int) $emp['employer_id'] ?>">
+                            Update
+                        </button>
+                        <form method="post" style="display:inline;">
+                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                            <input type="hidden" name="employer_id" value="<?= $emp['employer_id'] ?>">
+                            <button type="submit" name="delete_employer" onclick="return confirm('Delete this employer?')" class="btn btn-outline-danger btn-sm">Delete</button>
+                        </form>
+                    </div>
                 </td>
             </tr>
             <?php endforeach; ?>
         </tbody>
     </table>
 </div>
+
+<?php foreach ($employers as $emp): ?>
+    <?php
+        $modalEmp = $emp;
+        if ($editEmployerId === (int) $emp['employer_id'] && !empty($editEmployerForm) && is_array($editEmployerForm)) {
+            $modalEmp = array_merge($modalEmp, $editEmployerForm);
+        }
+        $modalWorkStart = !empty($modalEmp['work_start']) ? substr((string) $modalEmp['work_start'], 0, 5) : '08:00';
+        $modalWorkEnd = !empty($modalEmp['work_end']) ? substr((string) $modalEmp['work_end'], 0, 5) : '17:00';
+    ?>
+    <div class="modal fade" id="editEmployerModal<?= (int) $emp['employer_id'] ?>" tabindex="-1" aria-labelledby="editEmployerModalLabel<?= (int) $emp['employer_id'] ?>" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <form method="post">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editEmployerModalLabel<?= (int) $emp['employer_id'] ?>">Update Supervisor Account</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                        <input type="hidden" name="employer_id" value="<?= (int) $emp['employer_id'] ?>">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="edit_username_<?= (int) $emp['employer_id'] ?>">Username</label>
+                                <input id="edit_username_<?= (int) $emp['employer_id'] ?>" type="text" name="username" value="<?= htmlspecialchars($modalEmp['username'] ?? '') ?>" required class="form-control">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="edit_name_<?= (int) $emp['employer_id'] ?>">Full Name</label>
+                                <input id="edit_name_<?= (int) $emp['employer_id'] ?>" type="text" name="name" value="<?= htmlspecialchars($modalEmp['name'] ?? '') ?>" required class="form-control">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="edit_company_<?= (int) $emp['employer_id'] ?>">Company</label>
+                                <input id="edit_company_<?= (int) $emp['employer_id'] ?>" type="text" name="company" value="<?= htmlspecialchars($modalEmp['company'] ?? '') ?>" required class="form-control">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="edit_email_<?= (int) $emp['employer_id'] ?>">Email</label>
+                                <input id="edit_email_<?= (int) $emp['employer_id'] ?>" type="email" name="email" value="<?= htmlspecialchars($modalEmp['email'] ?? '') ?>" required class="form-control">
+                            </div>
+                        </div>
+                        <div class="row align-items-end">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label" for="edit_work_start_<?= (int) $emp['employer_id'] ?>">Work Start Time</label>
+                                <input id="edit_work_start_<?= (int) $emp['employer_id'] ?>" type="time" name="work_start" value="<?= htmlspecialchars($modalWorkStart) ?>" required class="form-control">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label" for="edit_work_end_<?= (int) $emp['employer_id'] ?>">Work End Time</label>
+                                <input id="edit_work_end_<?= (int) $emp['employer_id'] ?>" type="time" name="work_end" value="<?= htmlspecialchars($modalWorkEnd) ?>" required class="form-control">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label" for="edit_password_<?= (int) $emp['employer_id'] ?>">New Password</label>
+                                <input id="edit_password_<?= (int) $emp['employer_id'] ?>" type="password" name="new_password" class="form-control">
+                                <div class="form-text">Leave blank to keep the current password.</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" name="update_employer" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+<?php endforeach; ?>
 
 <script>
     <?php if (isset($_SESSION['employer_added_success']) && $_SESSION['employer_added_success']): ?>
@@ -137,6 +211,16 @@
             successModal.show();
         });
         <?php unset($_SESSION['employer_added_success']); ?>
+    <?php endif; ?>
+
+    <?php if (!empty($editEmployerId)): ?>
+        document.addEventListener('DOMContentLoaded', function() {
+            var editModal = document.getElementById('editEmployerModal<?= (int) $editEmployerId ?>');
+            if (editModal) {
+                var modalInstance = new bootstrap.Modal(editModal);
+                modalInstance.show();
+            }
+        });
     <?php endif; ?>
 </script>
 

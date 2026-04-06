@@ -44,8 +44,6 @@ try {
             a.log_date,
             a.time_in,
             a.time_out,
-            a.lunch_out,
-            a.lunch_in,
             a.status,
             a.updated_at,
             a.created_at,
@@ -69,8 +67,6 @@ try {
         $conditions[] = "GREATEST(
             COALESCE(a.time_in, '0000-00-00 00:00:00'),
             COALESCE(a.time_out, '0000-00-00 00:00:00'),
-            COALESCE(a.lunch_out, '0000-00-00 00:00:00'),
-            COALESCE(a.lunch_in, '0000-00-00 00:00:00'),
             COALESCE(a.updated_at, '0000-00-00 00:00:00'),
             COALESCE(a.created_at, '0000-00-00 00:00:00'),
             a.log_date
@@ -85,8 +81,6 @@ try {
     $query .= " ORDER BY GREATEST(
         COALESCE(a.time_in, '0000-00-00 00:00:00'),
         COALESCE(a.time_out, '0000-00-00 00:00:00'),
-        COALESCE(a.lunch_out, '0000-00-00 00:00:00'),
-        COALESCE(a.lunch_in, '0000-00-00 00:00:00'),
         COALESCE(a.updated_at, '0000-00-00 00:00:00'),
         COALESCE(a.created_at, '0000-00-00 00:00:00'),
         a.log_date
@@ -113,14 +107,6 @@ try {
         if (!empty($latest['time_in']) && $latest['time_in'] !== '0000-00-00 00:00:00') {
             $latest_action = 'time_in';
             $latest_timestamp = $latest['time_in'];
-        }
-        if (!empty($latest['lunch_out']) && $latest['lunch_out'] !== '0000-00-00 00:00:00') {
-            $latest_action = 'lunch_out';
-            $latest_timestamp = $latest['lunch_out'];
-        }
-        if (!empty($latest['lunch_in']) && $latest['lunch_in'] !== '0000-00-00 00:00:00') {
-            $latest_action = 'lunch_in';
-            $latest_timestamp = $latest['lunch_in'];
         }
         if (!empty($latest['time_out']) && $latest['time_out'] !== '0000-00-00 00:00:00') {
             $latest_action = 'time_out';

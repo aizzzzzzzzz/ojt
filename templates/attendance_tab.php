@@ -122,8 +122,6 @@
     <tr>
     <th>Date</th>
     <th>Time In</th>
-    <th>Lunch Out</th>
-    <th>Lunch In</th>
     <th>Time Out</th>
     <th>Shift Status</th>
     <th>Verified</th>
@@ -136,8 +134,6 @@
     <tr>
     <td data-label="Date"><?= htmlspecialchars($row['log_date']) ?></td>
     <td data-label="Time In"><?= (strpos($row['time_in'], '0000') === false && !empty($row['time_in'])) ? date('H:i:s', strtotime($row['time_in'])) : '-' ?></td>
-    <td data-label="Lunch Out"><?= (strpos($row['lunch_out'], '0000') === false && !empty($row['lunch_out'])) ? date('H:i:s', strtotime($row['lunch_out'])) : '-' ?></td>
-    <td data-label="Lunch In"><?= (strpos($row['lunch_in'], '0000') === false && !empty($row['lunch_in'])) ? date('H:i:s', strtotime($row['lunch_in'])) : '-' ?></td>
     <td data-label="Time Out"><?= (strpos($row['time_out'], '0000') === false && !empty($row['time_out'])) ? date('H:i:s', strtotime($row['time_out'])) : '-' ?></td>
     <td data-label="Shift Status">
         <?php
@@ -177,9 +173,9 @@
 
         $minutesWorked = max(0, (strtotime($row['time_out']) - strtotime($startTime)) / 60);
 
-        if (!empty($row['lunch_in']) && !empty($row['lunch_out']) &&
-            strpos($row['lunch_in'], '0000') === false && strpos($row['lunch_out'], '0000') === false) {
-            $minutesWorked -= max(0, (strtotime($row['lunch_in']) - strtotime($row['lunch_out'])) / 60);
+        // Auto-deduct 60 minutes if shift is greater than 4 hours (240 minutes)
+        if ($minutesWorked > 240) {
+            $minutesWorked -= 60;
         }
 
         echo floor($minutesWorked / 60) . " hr " . ($minutesWorked % 60) . " min";
@@ -237,14 +233,6 @@
                     <span class="value"><?= (strpos($row['time_in'], '0000') === false && !empty($row['time_in'])) ? date('H:i:s', strtotime($row['time_in'])) : '-' ?></span>
                 </div>
                 <div class="time-row">
-                    <span class="label">Lunch Out:</span>
-                    <span class="value"><?= (strpos($row['lunch_out'], '0000') === false && !empty($row['lunch_out'])) ? date('H:i:s', strtotime($row['lunch_out'])) : '-' ?></span>
-                </div>
-                <div class="time-row">
-                    <span class="label">Lunch In:</span>
-                    <span class="value"><?= (strpos($row['lunch_in'], '0000') === false && !empty($row['lunch_in'])) ? date('H:i:s', strtotime($row['lunch_in'])) : '-' ?></span>
-                </div>
-                <div class="time-row">
                     <span class="label">Time Out:</span>
                     <span class="value"><?= (strpos($row['time_out'], '0000') === false && !empty($row['time_out'])) ? date('H:i:s', strtotime($row['time_out'])) : '-' ?></span>
                 </div>
@@ -258,9 +246,9 @@
                     if (!empty($startTime) && !empty($row['time_out']) &&
                         strpos($startTime, '0000') === false && strpos($row['time_out'], '0000') === false) {
                         $minutesWorked = max(0, (strtotime($row['time_out']) - strtotime($startTime)) / 60);
-                        if (!empty($row['lunch_in']) && !empty($row['lunch_out']) &&
-                            strpos($row['lunch_in'], '0000') === false && strpos($row['lunch_out'], '0000') === false) {
-                            $minutesWorked -= max(0, (strtotime($row['lunch_in']) - strtotime($row['lunch_out'])) / 60);
+                        // Auto-deduct 60 minutes if shift is greater than 4 hours (240 minutes)
+                        if ($minutesWorked > 240) {
+                            $minutesWorked -= 60;
                         }
                         echo floor($minutesWorked / 60) . " hr " . ($minutesWorked % 60) . " min";
                     } else {

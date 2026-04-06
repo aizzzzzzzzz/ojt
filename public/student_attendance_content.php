@@ -40,20 +40,14 @@
 <div class="attendance-actions">
 <?php
 $time_in_done    = !empty($today_row['time_in']);
-$lunch_out_done  = !empty($today_row['lunch_out']);
-$lunch_in_done   = !empty($today_row['lunch_in']);
 $time_out_done   = !empty($today_row['time_out']);
 $actions = [
     'time_in' => '🟢 Time In',
-    'lunch_out' => '🍽️ Lunch Out',
-    'lunch_in' => '🍽️ Lunch In',
     'time_out' => '🔴 Time Out'
 ];
 foreach($actions as $key=>$label):
     $done = ${$key.'_done'};
     $disabled = '';
-    if ($key=='lunch_out' && (!$time_in_done || $done)) $disabled=true;
-    if ($key=='lunch_in' && (!$lunch_out_done || $done)) $disabled=true;
     if ($key=='time_out' && (!$time_in_done || $done)) $disabled=true;
     $text = $done ? "({$today_row[$key]})" : '';
 ?>
@@ -76,8 +70,6 @@ foreach($actions as $key=>$label):
 <tr>
 <th>Date</th>
 <th>Time In</th>
-<th>Lunch Out</th>
-<th>Lunch In</th>
 <th>Time Out</th>
 <th>Status</th>
 <th>Verified</th>
@@ -90,8 +82,6 @@ foreach($actions as $key=>$label):
 <tr>
 <td data-label="Date"><?= htmlspecialchars($row['log_date']) ?></td>
 <td data-label="Time In"><?= ($row['time_in'] && $row['time_in'] != '0000-00-00 00:00:00') ? date('H:i:s', strtotime($row['time_in'])) : '-' ?></td>
-<td data-label="Lunch Out"><?= ($row['lunch_out'] && $row['lunch_out'] != '0000-00-00 00:00:00') ? date('H:i:s', strtotime($row['lunch_out'])) : '-' ?></td>
-<td data-label="Lunch In"><?= ($row['lunch_in'] && $row['lunch_in'] != '0000-00-00 00:00:00') ? date('H:i:s', strtotime($row['lunch_in'])) : '-' ?></td>
 <td data-label="Time Out"><?= ($row['time_out'] && $row['time_out'] != '0000-00-00 00:00:00') ? date('H:i:s', strtotime($row['time_out'])) : '-' ?></td>
 <td data-label="Status">
     <?php
@@ -116,8 +106,9 @@ $minutesWorked = 0;
 if (!empty($row['time_in']) && !empty($row['time_out'])) {
     $minutesWorked = max(0, (strtotime($row['time_out']) - strtotime($row['time_in'])) / 60);
 
-    if (!empty($row['lunch_in']) && !empty($row['lunch_out'])) {
-        $minutesWorked -= max(0, (strtotime($row['lunch_in']) - strtotime($row['lunch_out'])) / 60);
+    // Auto-deduct 60 minutes if shift is greater than 4 hours (240 minutes)
+    if ($minutesWorked > 240) {
+        $minutesWorked -= 60;
     }
 
     echo floor($minutesWorked / 60) . " hr " . ($minutesWorked % 60) . " min";
@@ -164,14 +155,6 @@ if (!empty($row['time_in']) && !empty($row['time_out'])) {
                 <span class="value"><?= ($row['time_in'] && $row['time_in'] != '0000-00-00 00:00:00') ? date('H:i:s', strtotime($row['time_in'])) : '-' ?></span>
             </div>
             <div class="time-row">
-                <span class="label">Lunch Out:</span>
-                <span class="value"><?= ($row['lunch_out'] && $row['lunch_out'] != '0000-00-00 00:00:00') ? date('H:i:s', strtotime($row['lunch_out'])) : '-' ?></span>
-            </div>
-            <div class="time-row">
-                <span class="label">Lunch In:</span>
-                <span class="value"><?= ($row['lunch_in'] && $row['lunch_in'] != '0000-00-00 00:00:00') ? date('H:i:s', strtotime($row['lunch_in'])) : '-' ?></span>
-            </div>
-            <div class="time-row">
                 <span class="label">Time Out:</span>
                 <span class="value"><?= ($row['time_out'] && $row['time_out'] != '0000-00-00 00:00:00') ? date('H:i:s', strtotime($row['time_out'])) : '-' ?></span>
             </div>
@@ -182,8 +165,9 @@ if (!empty($row['time_in']) && !empty($row['time_out'])) {
                 $minutesWorked = 0;
                 if (!empty($row['time_in']) && !empty($row['time_out'])) {
                     $minutesWorked = max(0, (strtotime($row['time_out']) - strtotime($row['time_in'])) / 60);
-                    if (!empty($row['lunch_in']) && !empty($row['lunch_out'])) {
-                        $minutesWorked -= max(0, (strtotime($row['lunch_in']) - strtotime($row['lunch_out'])) / 60);
+                    // Auto-deduct 60 minutes if shift is greater than 4 hours (240 minutes)
+                    if ($minutesWorked > 240) {
+                        $minutesWorked -= 60;
                     }
                     echo floor($minutesWorked / 60) . " hr " . ($minutesWorked % 60) . " min";
                 } else {

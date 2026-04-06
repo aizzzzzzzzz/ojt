@@ -137,23 +137,21 @@
                                     <div class="col-md-6">
                                         <p><strong>Date:</strong> <?= htmlspecialchars($latest['log_date'] ?? '---') ?></p>
                                         <p><strong>Time In:</strong> <?= htmlspecialchars($latest['time_in'] ?? '---') ?></p>
-                                        <p><strong>Lunch Out:</strong> <?= htmlspecialchars($latest['lunch_out'] ?? '---') ?></p>
-                                        <p><strong>Daily Task:</strong><br>
-                                            <span style="white-space:pre-line; color:#333;">
-                                                <?= !empty($latest['daily_task']) ? htmlspecialchars($latest['daily_task']) : '-' ?>
-                                            </span>
-                                        </p>
+                                        <p><strong>Time Out:</strong> <?= htmlspecialchars($latest['time_out'] ?? '---') ?></p>
                                     </div>
 
                                     <div class="col-md-6">
-                                        <p><strong>Lunch In:</strong> <?= htmlspecialchars($latest['lunch_in'] ?? '---') ?></p>
-                                        <p><strong>Time Out:</strong> <?= htmlspecialchars($latest['time_out'] ?? '---') ?></p>
                                         <p><strong>Verified:</strong>
                                             <?php if ($latest['verified'] == 1): ?>
                                                 <span style="color:green; font-weight:bold;">Yes</span>
                                             <?php else: ?>
                                                 <span style="color:red; font-weight:bold;">No</span>
                                             <?php endif; ?>
+                                        </p>
+                                        <p><strong>Daily Task:</strong><br>
+                                            <span style="white-space:pre-line; color:#333;">
+                                                <?= !empty($latest['daily_task']) ? htmlspecialchars($latest['daily_task']) : '-' ?>
+                                            </span>
                                         </p>
                                     </div>
                                 </div>

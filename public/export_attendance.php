@@ -81,10 +81,10 @@ $spreadsheet->getProperties()
     ->setSubject("Attendance Records");
 
 $sheet->setCellValue('A1', 'Attendance History for ' . ($student['first_name'] . ' ' . $student['last_name']));
-$sheet->mergeCells('A1:I1');
+$sheet->mergeCells('A1:G1');
 $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
 
-$headers = ['Date', 'Time In', 'Lunch Out', 'Lunch In', 'Time Out', 'Status', 'Verified', 'Hours Worked', 'Daily Task'];
+$headers = ['Date', 'Time In', 'Time Out', 'Status', 'Verified', 'Hours Worked', 'Daily Task'];
 $sheet->fromArray($headers, NULL, 'A3');
 
 $headerStyle = [
@@ -92,7 +92,7 @@ $headerStyle = [
     'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '4CAF50']],
     'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
 ];
-$sheet->getStyle('A3:I3')->applyFromArray($headerStyle);
+$sheet->getStyle('A3:G3')->applyFromArray($headerStyle);
 
 $row = 4;
 foreach ($attendance as $record) {
@@ -103,10 +103,9 @@ foreach ($attendance as $record) {
         
         $minutesWorked = max(0, (strtotime($record['time_out']) - strtotime($record['time_in'])) / 60);
         
-        if (!empty($record['lunch_in']) && !empty($record['lunch_out']) && 
-            strpos($record['lunch_in'], '0000') === false && 
-            strpos($record['lunch_out'], '0000') === false) {
-            $minutesWorked -= max(0, (strtotime($record['lunch_in']) - strtotime($record['lunch_out'])) / 60);
+        // Auto-deduct 60 minutes if shift is greater than 4 hours (240 minutes)
+        if ($minutesWorked > 240) {
+            $minutesWorked -= 60;
         }
         
         $hours = floor($minutesWorked / 60) . "h " . ($minutesWorked % 60) . "m";
@@ -114,18 +113,16 @@ foreach ($attendance as $record) {
     
     $sheet->setCellValue('A' . $row, $record['log_date']);
     $sheet->setCellValue('B' . $row, (!empty($record['time_in']) && strpos($record['time_in'], '0000') === false) ? date('H:i:s', strtotime($record['time_in'])) : '-');
-    $sheet->setCellValue('C' . $row, (!empty($record['lunch_out']) && strpos($record['lunch_out'], '0000') === false) ? date('H:i:s', strtotime($record['lunch_out'])) : '-');
-    $sheet->setCellValue('D' . $row, (!empty($record['lunch_in']) && strpos($record['lunch_in'], '0000') === false) ? date('H:i:s', strtotime($record['lunch_in'])) : '-');
-    $sheet->setCellValue('E' . $row, (!empty($record['time_out']) && strpos($record['time_out'], '0000') === false) ? date('H:i:s', strtotime($record['time_out'])) : '-');
-    $sheet->setCellValue('F' . $row, $record['status'] ?? '-');
-    $sheet->setCellValue('G' . $row, $record['verified'] == 1 ? 'Yes' : 'No');
-    $sheet->setCellValue('H' . $row, $hours);
-    $sheet->setCellValue('I' . $row, $record['daily_task'] ?? '-');
+    $sheet->setCellValue('C' . $row, (!empty($record['time_out']) && strpos($record['time_out'], '0000') === false) ? date('H:i:s', strtotime($record['time_out'])) : '-');
+    $sheet->setCellValue('D' . $row, $record['status'] ?? '-');
+    $sheet->setCellValue('E' . $row, $record['verified'] == 1 ? 'Yes' : 'No');
+    $sheet->setCellValue('F' . $row, $hours);
+    $sheet->setCellValue('G' . $row, $record['daily_task'] ?? '-');
     
     if ($record['verified'] == 1) {
-        $sheet->getStyle('G' . $row)->getFont()->getColor()->setRGB('008000');
+        $sheet->getStyle('E' . $row)->getFont()->getColor()->setRGB('008000');
     } else {
-        $sheet->getStyle('G' . $row)->getFont()->getColor()->setRGB('FF0000');
+        $sheet->getStyle('E' . $row)->getFont()->getColor()->setRGB('FF0000');
     }
     
     $row++;

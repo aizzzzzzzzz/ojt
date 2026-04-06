@@ -41,8 +41,6 @@ function get_attendance_records($pdo, $employer_id = null) {
                 s.required_hours,
                 a.log_date,
                 a.time_in,
-                a.lunch_out,
-                a.lunch_in,
                 a.time_out,
                 a.status,
                 a.reason,
@@ -52,12 +50,16 @@ function get_attendance_records($pdo, $employer_id = null) {
                     WHEN a.time_in IS NOT NULL AND a.time_out IS NOT NULL THEN
                         CONCAT(
                             FLOOR((
-                                TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out)
-                                - COALESCE(TIMESTAMPDIFF(MINUTE, a.lunch_out, a.lunch_in), 0)
+                                CASE 
+                                    WHEN TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out) > 240 THEN TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out) - 60
+                                    ELSE TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out)
+                                END
                             ) / 60), 'h ',
                             MOD((
-                                TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out)
-                                - COALESCE(TIMESTAMPDIFF(MINUTE, a.lunch_out, a.lunch_in), 0)
+                                CASE 
+                                    WHEN TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out) > 240 THEN TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out) - 60
+                                    ELSE TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out)
+                                END
                             ), 60), 'm'
                         )
                     ELSE '---'
@@ -84,8 +86,6 @@ function get_attendance_records($pdo, $employer_id = null) {
                     s.required_hours,
                     a.log_date,
                     a.time_in,
-                    a.lunch_out,
-                    a.lunch_in,
                     a.time_out,
                     a.status,
                     a.reason,
@@ -95,12 +95,16 @@ function get_attendance_records($pdo, $employer_id = null) {
                         WHEN a.time_in IS NOT NULL AND a.time_out IS NOT NULL THEN
                             CONCAT(
                                 FLOOR((
-                                    TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out)
-                                    - COALESCE(TIMESTAMPDIFF(MINUTE, a.lunch_out, a.lunch_in), 0)
+                                    CASE 
+                                        WHEN TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out) > 240 THEN TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out) - 60
+                                        ELSE TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out)
+                                    END
                                 ) / 60), 'h ',
                                 MOD((
-                                    TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out)
-                                    - COALESCE(TIMESTAMPDIFF(MINUTE, a.lunch_out, a.lunch_in), 0)
+                                    CASE 
+                                        WHEN TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out) > 240 THEN TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out) - 60
+                                        ELSE TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out)
+                                    END
                                 ), 60), 'm'
                             )
                         ELSE '---'
@@ -123,8 +127,6 @@ function get_attendance_records($pdo, $employer_id = null) {
                     s.required_hours,
                     a.log_date,
                     a.time_in,
-                    a.lunch_out,
-                    a.lunch_in,
                     a.time_out,
                     a.status,
                     a.reason,
@@ -134,12 +136,16 @@ function get_attendance_records($pdo, $employer_id = null) {
                         WHEN a.time_in IS NOT NULL AND a.time_out IS NOT NULL THEN
                             CONCAT(
                                 FLOOR((
-                                    TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out)
-                                    - COALESCE(TIMESTAMPDIFF(MINUTE, a.lunch_out, a.lunch_in), 0)
+                                    CASE 
+                                        WHEN TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out) > 240 THEN TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out) - 60
+                                        ELSE TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out)
+                                    END
                                 ) / 60), 'h ',
                                 MOD((
-                                    TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out)
-                                    - COALESCE(TIMESTAMPDIFF(MINUTE, a.lunch_out, a.lunch_in), 0)
+                                    CASE 
+                                        WHEN TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out) > 240 THEN TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out) - 60
+                                        ELSE TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out)
+                                    END
                                 ), 60), 'm'
                             )
                         ELSE '---'
@@ -163,8 +169,10 @@ function get_total_minutes($pdo, $employer_id = null) {
                 SUM(
                     CASE
                         WHEN a.time_in IS NOT NULL AND a.time_out IS NOT NULL AND a.verified = 1 THEN
-                            TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out)
-                            - COALESCE(TIMESTAMPDIFF(MINUTE, a.lunch_out, a.lunch_in), 0)
+                            CASE 
+                                WHEN TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out) > 240 THEN TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out) - 60
+                                ELSE TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out)
+                            END
                         ELSE 0
                     END
                 ) AS total_minutes
@@ -184,8 +192,10 @@ function get_total_minutes($pdo, $employer_id = null) {
                     SUM(
                         CASE
                             WHEN a.time_in IS NOT NULL AND a.time_out IS NOT NULL AND a.verified = 1 THEN
-                                TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out)
-                                - COALESCE(TIMESTAMPDIFF(MINUTE, a.lunch_out, a.lunch_in), 0)
+                                CASE 
+                                    WHEN TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out) > 240 THEN TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out) - 60
+                                    ELSE TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out)
+                                END
                             ELSE 0
                         END
                     ) AS total_minutes
@@ -202,8 +212,10 @@ function get_total_minutes($pdo, $employer_id = null) {
                     SUM(
                         CASE
                             WHEN a.time_in IS NOT NULL AND a.time_out IS NOT NULL AND a.verified = 1 THEN
-                                TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out)
-                                - COALESCE(TIMESTAMPDIFF(MINUTE, a.lunch_out, a.lunch_in), 0)
+                                CASE 
+                                    WHEN TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out) > 240 THEN TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out) - 60
+                                    ELSE TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out)
+                                END
                             ELSE 0
                         END
                     ) AS total_minutes

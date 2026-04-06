@@ -49,18 +49,19 @@ $summary_query = "
             CASE 
                 WHEN a.time_in IS NOT NULL AND a.time_out IS NOT NULL 
                 AND a.time_in NOT LIKE '%0000%' AND a.time_out NOT LIKE '%0000%'
-                THEN TIMESTAMPDIFF(MINUTE, 
-                    COALESCE(a.effective_start_time, a.time_in), 
-                    a.time_out
-                )
-                - COALESCE(
-                    CASE 
-                        WHEN a.lunch_in IS NOT NULL AND a.lunch_out IS NOT NULL 
-                        AND a.lunch_in NOT LIKE '%0000%' AND a.lunch_out NOT LIKE '%0000%'
-                        THEN TIMESTAMPDIFF(MINUTE, a.lunch_out, a.lunch_in)
-                        ELSE 0
-                    END, 0
-                )
+                THEN CASE 
+                    WHEN TIMESTAMPDIFF(MINUTE, 
+                        COALESCE(a.effective_start_time, a.time_in), 
+                        a.time_out
+                    ) > 240 THEN TIMESTAMPDIFF(MINUTE, 
+                        COALESCE(a.effective_start_time, a.time_in), 
+                        a.time_out
+                    ) - 60
+                    ELSE TIMESTAMPDIFF(MINUTE, 
+                        COALESCE(a.effective_start_time, a.time_in), 
+                        a.time_out
+                    )
+                END
                 ELSE 0
             END
         ), 0) as total_minutes
@@ -651,8 +652,6 @@ include_once __DIR__ . '/../templates/admin_header.php';
                 <tr>
                     <th>Date</th>
                     <th>Time In</th>
-                    <th>Lunch Out</th>
-                    <th>Lunch In</th>
                     <th>Time Out</th>
                     <th>Status</th>
                     <th>Shift</th>
@@ -671,9 +670,9 @@ include_once __DIR__ . '/../templates/admin_header.php';
                     if (!empty($startTime) && !empty($row['time_out']) &&
                         strpos($startTime, '0000') === false && strpos($row['time_out'], '0000') === false) {
                         $minutesWorked = max(0, (strtotime($row['time_out']) - strtotime($startTime)) / 60);
-                        if (!empty($row['lunch_in']) && !empty($row['lunch_out']) &&
-                            strpos($row['lunch_in'], '0000') === false && strpos($row['lunch_out'], '0000') === false) {
-                            $minutesWorked -= max(0, (strtotime($row['lunch_in']) - strtotime($row['lunch_out'])) / 60);
+                        // Auto-deduct 60 minutes if shift is greater than 4 hours (240 minutes)
+                        if ($minutesWorked > 240) {
+                            $minutesWorked -= 60;
                         }
                         $hoursWorked = floor($minutesWorked / 60) . "h " . ($minutesWorked % 60) . "m";
                     }
@@ -697,8 +696,6 @@ include_once __DIR__ . '/../templates/admin_header.php';
                     <tr>
                         <td data-label="Date"><?= htmlspecialchars($row['log_date']) ?></td>
                         <td data-label="Time In"><?= (strpos($row['time_in'], '0000') === false && !empty($row['time_in'])) ? date('H:i', strtotime($row['time_in'])) : '-' ?></td>
-                        <td data-label="Lunch Out"><?= (strpos($row['lunch_out'], '0000') === false && !empty($row['lunch_out'])) ? date('H:i', strtotime($row['lunch_out'])) : '-' ?></td>
-                        <td data-label="Lunch In"><?= (strpos($row['lunch_in'], '0000') === false && !empty($row['lunch_in'])) ? date('H:i', strtotime($row['lunch_in'])) : '-' ?></td>
                         <td data-label="Time Out"><?= (strpos($row['time_out'], '0000') === false && !empty($row['time_out'])) ? date('H:i', strtotime($row['time_out'])) : '-' ?></td>
                         <td data-label="Status">
                             <span class="status-badge-small <?= strtolower($row['status']) ?>"><?= $row['status'] ?></span>

@@ -152,7 +152,7 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
                 ->setSubject("Attendance Records");
             
             $sheet->setCellValue('A1', 'ATTENDANCE HISTORY REPORT');
-            $sheet->mergeCells('A1:I1');
+            $sheet->mergeCells('A1:G1');
             $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
             $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             
@@ -171,7 +171,7 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
             $sheet->setCellValue('A5', 'Generated On:');
             $sheet->setCellValue('B5', date('F d, Y h:i A'));
             
-            $headers = ['Date', 'Time In', 'Lunch Out', 'Lunch In', 'Time Out', 'Status', 'Verified', 'Hours Worked', 'End of Day Task'];
+            $headers = ['Date', 'Time In', 'Time Out', 'Status', 'Verified', 'Hours Worked', 'End of Day Task'];
             $sheet->fromArray($headers, NULL, 'A7');
             
             $headerStyle = [
@@ -188,7 +188,7 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
                     ],
                 ],
             ];
-            $sheet->getStyle('A7:I7')->applyFromArray($headerStyle);
+            $sheet->getStyle('A7:G7')->applyFromArray($headerStyle);
             
             $row = 8;
             $totalMinutes = 0;
@@ -219,15 +219,13 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
                 
                 $sheet->setCellValue('A' . $row, $record['log_date']);
                 $sheet->setCellValue('B' . $row, (!empty($record['time_in']) && strpos($record['time_in'], '0000') === false) ? date('h:i A', strtotime($record['time_in'])) : '-');
-                $sheet->setCellValue('C' . $row, (!empty($record['lunch_out']) && strpos($record['lunch_out'], '0000') === false) ? date('h:i A', strtotime($record['lunch_out'])) : '-');
-                $sheet->setCellValue('D' . $row, (!empty($record['lunch_in']) && strpos($record['lunch_in'], '0000') === false) ? date('h:i A', strtotime($record['lunch_in'])) : '-');
-                $sheet->setCellValue('E' . $row, (!empty($record['time_out']) && strpos($record['time_out'], '0000') === false) ? date('h:i A', strtotime($record['time_out'])) : '-');
-                $sheet->setCellValue('F' . $row, $record['status'] ?? '-');
-                $sheet->setCellValue('G' . $row, $record['verified'] == 1 ? 'Verified' : 'Pending');
-                $sheet->setCellValue('H' . $row, $hours);
-                $sheet->setCellValue('I' . $row, $record['daily_task'] ?? '-');
+                $sheet->setCellValue('C' . $row, (!empty($record['time_out']) && strpos($record['time_out'], '0000') === false) ? date('h:i A', strtotime($record['time_out'])) : '-');
+                $sheet->setCellValue('D' . $row, $record['status'] ?? '-');
+                $sheet->setCellValue('E' . $row, $record['verified'] == 1 ? 'Verified' : 'Pending');
+                $sheet->setCellValue('F' . $row, $hours);
+                $sheet->setCellValue('G' . $row, $record['daily_task'] ?? '-');
                 
-                $verifiedStyle = $sheet->getStyle('G' . $row);
+                $verifiedStyle = $sheet->getStyle('E' . $row);
                 if ($record['verified'] == 1) {
                     $verifiedStyle->getFont()->getColor()->setRGB('008000');
                 } else {
@@ -349,7 +347,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_task'])) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attendance_action'])) {
     $action = $_POST['attendance_action'];
-    $allowed = ['time_in','lunch_out','lunch_in','time_out'];
+    $allowed = ['time_in','time_out'];
     if (!in_array($action, $allowed)) {
         $messages[] = "Invalid action.";
     } else {
