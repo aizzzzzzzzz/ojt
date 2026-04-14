@@ -424,6 +424,31 @@ CREATE TABLE `uploaded_files` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
+-- Table structure for table `moa_documents`
+--
+
+CREATE TABLE `moa_documents` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `student_id` int(11) NOT NULL,
+  `document_type` enum('MOA','Endorsement Letter','Resume') NOT NULL,
+  `filename` varchar(255) NOT NULL,
+  `filepath` varchar(500) NOT NULL,
+  `supervisor_signature_path` varchar(500),
+  `supervisor_approval_status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  `supervisor_approved_at` timestamp NULL,
+  `supervisor_rejection_reason` text ,
+  `admin_approval_status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  `admin_approved_at` timestamp NULL,
+  `admin_rejection_reason` text,
+  `is_new_student` tinyint(1) NOT NULL DEFAULT 1,
+  `uploaded_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_student_doc` (`student_id`,`document_type`),
+  FOREIGN KEY (`student_id`) REFERENCES `students`(`student_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
 -- Indexes for dumped tables
 --
 

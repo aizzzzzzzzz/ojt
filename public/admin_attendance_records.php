@@ -157,6 +157,7 @@ if ($filter_student) {
     $attendance_details = $details_stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
+$render_admin_overview = false;
 include_once __DIR__ . '/../templates/admin_header.php';
 ?>
 

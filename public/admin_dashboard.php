@@ -192,6 +192,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_employer'])) {
 $students_count = $pdo->query("SELECT COUNT(*) AS count FROM students")->fetch(PDO::FETCH_ASSOC)['count'];
 $evaluations_count = $pdo->query("SELECT COUNT(*) AS count FROM evaluations")->fetch(PDO::FETCH_ASSOC)['count'];
 $employers = $pdo->query("SELECT employer_id, username, email, name, company, work_start, work_end FROM employers ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+$supervisors_count = count($employers);
+$total_accounts_count = (int)$students_count + $supervisors_count + 1;
+$admin_overview_date = date('F d, Y');
 
 include_once __DIR__ . '/../templates/admin_header.php';
 include_once __DIR__ . '/../templates/admin_main.php';

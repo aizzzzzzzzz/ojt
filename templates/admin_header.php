@@ -6,6 +6,7 @@
     <title>Admin Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/portal-ui.css">
 <style>
     :root {
         --bg:         #f1f4f9;
@@ -287,7 +288,8 @@
     }
 </style>
 </head>
-<body>
+<?php $render_admin_overview = $render_admin_overview ?? true; ?>
+<body class="portal-dashboard portal-admin">
 <div class="dashboard-container">
     <div class="topbar">
         <div class="topbar-left">
@@ -300,7 +302,32 @@
         </div>
     </div>
 
+    <?php if ($render_admin_overview): ?>
     <div class="dashboard-inner">
+
+    <div class="portal-hero portal-hero--dashboard">
+        <div class="portal-hero-copy">
+            <span class="portal-kicker">Administrative overview</span>
+            <h3 class="portal-hero-title">Manage internship operations with a clearer system overview.</h3>
+            <p class="portal-hero-text">
+                Add supervisors, review attendance activity, and keep maintenance tasks visible from a dashboard that feels more like a control center than a plain form page.
+            </p>
+            <div class="portal-hero-meta">
+                <span class="portal-chip"><?= htmlspecialchars($admin_overview_date) ?></span>
+                <span class="portal-chip"><?= $supervisors_count ?> supervisor<?= $supervisors_count === 1 ? '' : 's' ?> configured</span>
+                <span class="portal-chip"><?= $students_count ?> student<?= (int)$students_count === 1 ? '' : 's' ?> in the system</span>
+            </div>
+        </div>
+        <div class="portal-highlight-card">
+            <span class="portal-card-label">Platform footprint</span>
+            <span class="portal-card-value"><?= $total_accounts_count ?></span>
+            <span class="portal-card-note">combined administrator, supervisor, and student accounts currently represented in the portal.</span>
+            <div class="portal-mini-actions">
+                <a class="portal-link-pill" href="add_employer.php">Add supervisor</a>
+                <a class="portal-link-pill" href="admin_attendance_records.php">Open attendance records</a>
+            </div>
+        </div>
+    </div>
 
     <div class="summary-grid">
         <div class="summary-card">
@@ -309,10 +336,15 @@
         </div>
         <div class="summary-card">
             <div class="label">Supervisors</div>
-            <div class="value"><?= count($employers) ?></div>
+            <div class="value"><?= $supervisors_count ?></div>
         </div>
         <div class="summary-card">
             <div class="label">Evaluations</div>
             <div class="value"><?= $evaluations_count ?></div>
         </div>
+        <div class="summary-card">
+            <div class="label">Accounts</div>
+            <div class="value"><?= $total_accounts_count ?></div>
+        </div>
     </div>
+    <?php endif; ?>

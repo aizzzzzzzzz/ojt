@@ -6,7 +6,7 @@ require_once __DIR__ . '/../includes/audit.php';
 if (!isset($_SESSION['change_password']) || $_SESSION['change_password'] !== true) {
     if (isset($_SESSION['role'])) {
         if ($_SESSION['role'] === 'student') {
-            header("Location: student_dashboard.php");
+            header("Location: approval_status.php");
         } elseif ($_SESSION['role'] === 'employer') {
             header("Location: supervisor_dashboard.php");
         }
@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         echo "<script>
             setTimeout(function() {
-                window.location.href = '" . ($_SESSION['role'] === 'student' ? 'student_dashboard.php' : 'supervisor_dashboard.php') . "';
+                window.location.href = '" . ($_SESSION['role'] === 'student' ? 'approval_status.php' : 'supervisor_dashboard.php') . "';
             }, 2000);
         </script>";
     }

@@ -1,10 +1,12 @@
 <?php
 session_start();
 require "../private/config.php";
+require_once __DIR__ . '/../includes/middleware.php';
 require_once __DIR__ . '/../includes/audit.php';
 require_once __DIR__ . '/../includes/evaluation_security.php';
 
 ob_start();
+require_admin();
 ensure_supervisor_email_support($pdo);
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -174,7 +176,7 @@ try {
             <h2>Add Supervisor</h2>
             <p>Create a new supervisor account</p>
         </div>
-        <a href="index.php" class="btn-outline-secondary">⬅ Back</a>
+        <a href="admin_dashboard.php" class="btn-outline-secondary">⬅ Back</a>
     </div>
     <div class="page-inner">
 

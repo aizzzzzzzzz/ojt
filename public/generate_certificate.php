@@ -5,7 +5,6 @@ include_once __DIR__ . '/../private/config.php';
 require_once __DIR__ . '/../includes/audit.php';
 require_once __DIR__ . '/../lib/fpdf.php';
 require_once __DIR__ . '/../includes/email.php';
-require_once __DIR__ . '/../includes/Blockchain.php';
 
 if (!isset($_SESSION['employer_id']) || $_SESSION['role'] !== "employer") {
     header("Location: employer_login.php");
@@ -104,14 +103,6 @@ if (!empty($evaluation['signature_path'])) {
 }
 $signatureExists = !empty($signaturePath) && file_exists($signaturePath);
 
-$certificateHashColumns = [];
-try {
-    $columnStmt = $pdo->query("SHOW COLUMNS FROM certificate_hashes");
-    $certificateHashColumns = array_column($columnStmt->fetchAll(PDO::FETCH_ASSOC), 'Field');
-} catch (Throwable $e) {
-    error_log("Could not load certificate_hashes columns: " . $e->getMessage());
-}
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['generate'])) {
 
@@ -195,7 +186,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdf->Ln(6);
 
         $pdf->SetFont('Times','',12);
-        $pdf->MultiCell(0, 6, "has successfully completed the required On-the-Job Training (OJT) / Internship Program\nwith outstanding dedication and professional competence,", 0, 'C');
+        $pdf->MultiCell(0, 6, "has successfully completed the required On-the-Job Training\nwith outstanding dedication and professional competence,", 0, 'C');
         $pdf->Ln(3);
 
         $pdf->SetFont('Times','B',14);
@@ -234,65 +225,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $hashStmt = $pdo->prepare("INSERT INTO certificate_hashes (student_id, certificate_hash, generated_at) VALUES (?, ?, NOW()) ON DUPLICATE KEY UPDATE certificate_hash = VALUES(certificate_hash), generated_at = NOW()");
         $hashStmt->execute([$student_id, $certificate_no]);
-
-        $blockchain = new Blockchain();
-        $blockchainResult = $blockchain->addCertificate(
-            $student_id,
-            $certificate_no,
-            $student['name'],
-            $employer_name,
-            $total_hours
-        );
-
-        $dataHash = Blockchain::buildCertificateHash(
-            $student_id,
-            $certificate_no,
-            $student['name'],
-            $employer_name,
-            $total_hours
-        );
-
-        $optionalUpdates = [];
-        $optionalParams = [];
-
-        if (in_array('data_hash', $certificateHashColumns, true)) {
-            $optionalUpdates[] = "data_hash = ?";
-            $optionalParams[] = $dataHash;
-        }
-
-        if (in_array('chain_status', $certificateHashColumns, true)) {
-            $optionalUpdates[] = "chain_status = ?";
-            $optionalParams[] = $blockchainResult['chain_status'] ?? 'pending';
-        }
-
-        if (in_array('tx_hash', $certificateHashColumns, true)) {
-            $optionalUpdates[] = "tx_hash = ?";
-            $optionalParams[] = $blockchainResult['tx_hash'] ?? null;
-        }
-
-        if (in_array('chain_network', $certificateHashColumns, true)) {
-            $optionalUpdates[] = "chain_network = ?";
-            $optionalParams[] = $blockchainResult['network'] ?? 'sepolia';
-        }
-
-        if (in_array('anchored_at', $certificateHashColumns, true)) {
-            if (($blockchainResult['chain_status'] ?? '') === 'confirmed') {
-                $optionalUpdates[] = "anchored_at = NOW()";
-            }
-        }
-
-        if (!empty($optionalUpdates)) {
-            $optionalParams[] = $student_id;
-            $updateSql = "UPDATE certificate_hashes SET " . implode(', ', $optionalUpdates) . " WHERE student_id = ?";
-            try {
-                $optionalStmt = $pdo->prepare($updateSql);
-                $optionalStmt->execute($optionalParams);
-            } catch (Throwable $e) {
-                error_log("Optional blockchain metadata update failed: " . $e->getMessage());
-            }
-        }
-        
-        error_log("Blockchain addCertificate result: " . json_encode($blockchainResult));
 
         if (!empty($student['email'])) {
             $capitalized_student_name = ucwords(strtolower($student['name']));

@@ -186,6 +186,46 @@ if (!empty($student_ids)) {
         }
     }
 }
+
+$student_attendance = [];
+foreach ($attendance as $row) {
+    $student_attendance[$row['student_id']][] = $row;
+}
+
+$student_total = count($students);
+$pending_verification_count = 0;
+$late_risk_count = 0;
+$verified_today_count = 0;
+
+foreach ($student_attendance as &$records) {
+    usort($records, function($a, $b) {
+        return strtotime($b['log_date']) <=> strtotime($a['log_date']);
+    });
+
+    $latest = $records[0];
+    $latest_date = !empty($latest['log_date']) ? date('Y-m-d', strtotime($latest['log_date'])) : null;
+    $is_today = $latest_date === $today;
+    $has_time_in = !empty($latest['time_in']);
+    $has_time_out = !empty($latest['time_out']);
+    $is_verified = (int)($latest['verified'] ?? 0) === 1;
+
+    if ($is_today && $is_verified) {
+        $verified_today_count++;
+    }
+
+    if ($is_today && !$has_time_in && $now >= $late_cutoff_dt) {
+        $late_risk_count++;
+    }
+
+    if (!$is_verified && $has_time_out && (($latest_date && $latest_date < $today) || ($is_today && $now >= $eod_cutoff_dt))) {
+        $pending_verification_count++;
+    }
+}
+unset($records);
+
+$evaluation_total = count($evaluated_students);
+$certificate_total = count($certificate_map);
+$schedule_window = date('h:i A', strtotime($work_start_raw)) . ' - ' . date('h:i A', strtotime($work_end_raw));
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -194,6 +234,7 @@ if (!empty($student_ids)) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OJT Supervisor Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/portal-ui.css">
     <script>
         function toggleDetails(index) {
             const row = document.getElementById('details' + index);
@@ -291,7 +332,7 @@ if (!empty($student_ids)) {
 
         .logout-btn:hover { background: #b91c1c; color: #fff; transform: translateY(-1px); }
 
-        .dashboard-inner { padding: 28px 32px 36px; }
+        .dashboard-inner { padding: 22px 24px 28px; }
 
         .success-msg { background: var(--green-lt); color: #15803d; padding: 12px 16px; border-radius: 10px; border: 1px solid #bbf7d0; font-size: 14px; font-weight: 500; margin-bottom: 16px; }
         .error-msg   { background: var(--red-lt);   color: #b91c1c; padding: 12px 16px; border-radius: 10px; border: 1px solid #fecaca; font-size: 14px; font-weight: 500; margin-bottom: 16px; }
@@ -308,26 +349,43 @@ if (!empty($student_ids)) {
 
         .dashboard-inner h3:first-child { margin-top: 0; }
 
+        .portal-section-heading h3 {
+            margin: 0;
+            padding: 0;
+            border: none;
+            font-size: 16px;
+            line-height: 1.2;
+        }
+
+        .supervisor-layout-grid {
+            display: grid;
+            grid-template-columns: minmax(340px, 0.95fr) minmax(520px, 1.05fr);
+            gap: 18px;
+            margin-bottom: 18px;
+            align-items: start;
+        }
+
         .actions-section {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 12px;
-            margin-bottom: 28px;
+            margin-bottom: 0;
         }
 
         .action-card {
             background: var(--surface2);
             border: 1px solid var(--border);
-            padding: 18px 14px;
+            padding: 14px 14px 12px;
             border-radius: var(--radius);
             text-align: center;
             box-shadow: var(--shadow-sm);
             transition: transform 0.2s, box-shadow 0.2s;
+            min-height: 96px;
         }
 
         .action-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
 
-        .action-card .icon { font-size: 1.8rem; margin-bottom: 10px; display: block; }
+        .action-card .icon { font-size: 1.5rem; margin-bottom: 6px; display: block; }
 
         .action-card a {
             display: block;
@@ -346,15 +404,34 @@ if (!empty($student_ids)) {
         .attendance-actions {
             background: var(--surface2);
             border: 1px solid var(--border);
-            padding: 18px 20px;
+            padding: 16px 18px;
             border-radius: var(--radius);
-            margin-bottom: 20px;
+            margin-bottom: 12px;
             box-shadow: var(--shadow-sm);
         }
 
         .attendance-actions h4 { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
 
         .section-subtitle { color: var(--text-muted); font-size: 13px; margin-bottom: 14px; }
+
+        .settings-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .grace-period-form {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+            width: 100%;
+            max-width: none;
+        }
+
+        .grace-period-form .form-submit {
+            grid-column: 1 / -1;
+            margin-top: 0;
+        }
 
         .branding-grid { display: grid; grid-template-columns: minmax(160px, 200px) 1fr; gap: 18px; align-items: center; }
         .branding-preview { display: flex; flex-direction: column; align-items: center; gap: 8px; }
@@ -431,21 +508,37 @@ if (!empty($student_ids)) {
             outline: none !important;
         }
 
+        @media (max-width: 1280px) {
+            .supervisor-layout-grid { grid-template-columns: 1fr; }
+            .actions-section { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            th { font-size: 10px; padding: 10px 12px; }
+            td { padding: 10px 12px; font-size: 13px; }
+        }
+
+        @media (max-height: 900px) and (min-width: 981px) {
+            .dashboard-inner { padding: 18px 20px 24px; }
+            .dashboard-inner h3 { margin: 22px 0 12px; }
+            .action-card { min-height: 88px; padding: 12px 12px 10px; }
+            .attendance-actions { padding: 14px 16px; }
+        }
+
         @media (max-width: 768px) {
             body { padding: 12px 12px 40px; }
             .dashboard-container { border-radius: 14px; }
             .topbar, .dashboard-inner { padding: 16px 18px; }
+            .supervisor-layout-grid { grid-template-columns: 1fr; }
             .actions-section { grid-template-columns: 1fr 1fr; }
             .branding-grid { grid-template-columns: 1fr; }
+            .grace-period-form { grid-template-columns: 1fr; }
             table, thead, tbody, th, td, tr { display: block; width: 100%; }
             thead tr { position: absolute; top: -9999px; left: -9999px; }
             tr { border: 1px solid var(--border); margin-bottom: 10px; border-radius: 10px; padding: 10px; }
             td { border: none; position: relative; padding-left: 50%; text-align: right; margin-bottom: 8px; }
             td::before { content: attr(data-label); position: absolute; left: 10px; width: 45%; font-weight: 600; text-align: left; color: var(--text-muted); font-size: 12px; }
         }
-    </style>
+</style>
 </head>
-<body>
+<body class="portal-dashboard portal-supervisor">
     <div class="dashboard-container">
         <div class="topbar">
             <div class="topbar-left">
@@ -467,90 +560,163 @@ if (!empty($student_ids)) {
             <div class="error-msg"><?= htmlspecialchars($error_message) ?></div>
         <?php endif; ?>
 
-        <h3>Quick Actions</h3>
-        <div class="actions-section">
-            <div class="action-card">
-                <div class="icon">👤</div>
-                <a href="add_student.php">Add New Student</a>
+        <div class="portal-hero portal-hero--dashboard">
+            <div class="portal-hero-copy">
+                <span class="portal-kicker">Supervisor workspace</span>
+                <h3 class="portal-hero-title"><?= htmlspecialchars($employer['company'] ?? $employer['name']) ?> operations at a glance</h3>
+                <p class="portal-hero-text">
+                    Keep attendance verification moving, monitor student completion, and manage evaluation and certificate readiness from one control center.
+                </p>
+                <div class="portal-hero-meta">
+                    <span class="portal-chip"><?= htmlspecialchars(date('F d, Y', strtotime($today))) ?></span>
+                    <span class="portal-chip">Work hours: <?= htmlspecialchars($schedule_window) ?></span>
+                    <span class="portal-chip">Late cutoff <?= htmlspecialchars($late_cutoff) ?>, end-of-day cutoff <?= htmlspecialchars($eod_cutoff) ?></span>
+                </div>
             </div>
-            <div class="action-card">
-                <div class="icon">📁</div>
-                <a href="upload_documents.php">Upload Documents</a>
-            </div>
-            <div class="action-card">
-                <div class="icon">⚠️</div>
-                <a href="auto_mark_absent.php">Auto-Mark Absent</a>
-            </div>
-            <div class="action-card">
-                <div class="icon">📅</div>
-                <a href="manage_shift_requests.php">Shift Requests</a>
+            <div class="portal-highlight-card">
+                <?php if ($company_logo_exists): ?>
+                    <div class="portal-logo-preview">
+                        <img src="<?= htmlspecialchars($company_logo_relative) ?>" alt="Company logo">
+                    </div>
+                <?php endif; ?>
+                <span class="portal-card-label" style="margin-top: <?= $company_logo_exists ? '16px' : '0' ?>;">Attendance queue</span>
+                <span class="portal-card-value"><?= $pending_verification_count ?></span>
+                <span class="portal-card-note">student record(s) currently waiting for attendance verification.</span>
+                <div class="portal-mini-actions">
+                    <span class="portal-link-pill"><?= $student_total ?> student<?= $student_total === 1 ? '' : 's' ?></span>
+                    <span class="portal-link-pill"><?= $verified_today_count ?> verified today</span>
+                </div>
             </div>
         </div>
 
-        <h3>Attendance Settings</h3>
-        <div class="attendance-actions" style="margin-bottom:20px;">
-            <h4>Grace Period Configuration</h4>
-            <div class="section-subtitle">Controls when students are flagged as late or pending verification.</div>
-            <form method="POST" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:480px;">
-                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                <div>
-                    <label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:5px;">
-                        Late Grace Period
-                        <span style="font-size:11px;color:var(--text-muted);font-weight:400;">(1–30 min)</span>
-                    </label>
-                    <div style="display:flex;align-items:center;gap:8px;">
-                        <input type="number" name="late_grace_minutes"
-                            value="<?= htmlspecialchars($late_grace_minutes) ?>"
-                            min="1" max="30" step="1"
-                            style="width:80px;border-radius:9px;border:1px solid var(--border);padding:8px 10px;font-size:14px;font-family:inherit;">
-                        <span style="font-size:13px;color:var(--text-muted);">minutes</span>
-                    </div>
-                </div>
-                <div>
-                    <label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:5px;">
-                        EOD Verification Window
-                        <span style="font-size:11px;color:var(--text-muted);font-weight:400;">(1–6 hrs)</span>
-                    </label>
-                    <div style="display:flex;align-items:center;gap:8px;">
-                        <input type="number" name="eod_grace_hours"
-                            value="<?= htmlspecialchars($eod_grace_hours) ?>"
-                            min="1" max="6" step="1"
-                            style="width:80px;border-radius:9px;border:1px solid var(--border);padding:8px 10px;font-size:14px;font-family:inherit;">
-                        <span style="font-size:13px;color:var(--text-muted);">hours after work end</span>
-                    </div>
-                </div>
-                <div style="grid-column:span 2;margin-top:4px;">
-                    <button type="submit" name="save_grace_periods" class="btn btn-primary btn-sm">Save Settings</button>
-                </div>
-            </form>
+        <div class="portal-metrics">
+            <div class="portal-metric-card">
+                <span class="label">Students</span>
+                <span class="value"><?= $student_total ?></span>
+                <span class="note">Active student accounts under this supervisor.</span>
+            </div>
+            <div class="portal-metric-card">
+                <span class="label">Pending Verification</span>
+                <span class="value"><?= $pending_verification_count ?></span>
+                <span class="note">Attendance records that still need review.</span>
+            </div>
+            <div class="portal-metric-card">
+                <span class="label">Evaluated</span>
+                <span class="value"><?= $evaluation_total ?></span>
+                <span class="note">Students with submitted evaluations.</span>
+            </div>
+            <div class="portal-metric-card">
+                <span class="label">Certificate Ready</span>
+                <span class="value"><?= $certificate_total ?></span>
+                <span class="note"><?= $late_risk_count ?> student<?= $late_risk_count === 1 ? '' : 's' ?> flagged for late-risk follow-up today.</span>
+            </div>
         </div>
 
-        <?php if (!$company_logo_exists): ?>
-            <h3>Company Branding</h3>
-            <div class="attendance-actions">
-                <h4>Certificate Logo</h4>
-                <div class="section-subtitle">Shown on the top-right of certificates.</div>
-                <div class="branding-grid">
-                    <div class="branding-preview">
-                        <div class="text-muted">No company logo uploaded yet.</div>
+        <div class="supervisor-layout-grid">
+            <section class="supervisor-panel">
+                <div class="portal-section-heading">
+                    <div>
+                        <h3>Quick Actions</h3>
+                        <p>Common tasks for student monitoring and daily supervisor work.</p>
                     </div>
-                    <div class="branding-form">
-                        <form method="post" enctype="multipart/form-data" class="row g-2">
+                </div>
+                <div class="actions-section">
+                    <div class="action-card">
+                        <div class="icon">👤</div>
+                        <a href="add_student.php">Add New Student</a>
+                    </div>
+                    <div class="action-card">
+                        <div class="icon">✅</div>
+                        <a href="supervisor_approve_moa.php">Approve Student Documents</a>
+                    </div>
+                    <div class="action-card">
+                        <div class="icon">⚠️</div>
+                        <a href="auto_mark_absent.php">Auto-Mark Absent</a>
+                    </div>
+                    <div class="action-card">
+                        <div class="icon">📅</div>
+                        <a href="manage_shift_requests.php">Shift Requests</a>
+                    </div>
+                </div>
+            </section>
+
+            <section class="supervisor-panel">
+                <div class="portal-section-heading">
+                    <div>
+                        <h3>Attendance Settings</h3>
+                        <p>Adjust timing rules and certificate branding without leaving the dashboard.</p>
+                    </div>
+                </div>
+                <div class="settings-stack">
+                    <div class="attendance-actions" style="margin-bottom:0;">
+                        <h4>Grace Period Configuration</h4>
+                        <div class="section-subtitle">Controls when students are flagged as late or pending verification.</div>
+                        <form method="POST" class="grace-period-form">
                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                            <div class="col-12">
-                                <label for="company_logo" class="form-label">Upload Logo (PNG/JPG, max 2MB)</label>
-                                <input type="file" class="form-control" id="company_logo" name="company_logo" accept="image/png,image/jpeg" required>
+                            <div>
+                                <label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:5px;">
+                                    Late Grace Period
+                                    <span style="font-size:11px;color:var(--text-muted);font-weight:400;">(1–30 min)</span>
+                                </label>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <input type="number" name="late_grace_minutes"
+                                        value="<?= htmlspecialchars($late_grace_minutes) ?>"
+                                        min="1" max="30" step="1"
+                                        style="width:80px;border-radius:9px;border:1px solid var(--border);padding:8px 10px;font-size:14px;font-family:inherit;">
+                                    <span style="font-size:13px;color:var(--text-muted);">minutes</span>
+                                </div>
                             </div>
-                            <div class="col-12">
-                                <button type="submit" name="upload_company_logo" class="btn btn-primary">Upload Company Logo</button>
+                            <div>
+                                <label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:5px;">
+                                    EOD Verification Window
+                                    <span style="font-size:11px;color:var(--text-muted);font-weight:400;">(1–6 hrs)</span>
+                                </label>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <input type="number" name="eod_grace_hours"
+                                        value="<?= htmlspecialchars($eod_grace_hours) ?>"
+                                        min="1" max="6" step="1"
+                                        style="width:80px;border-radius:9px;border:1px solid var(--border);padding:8px 10px;font-size:14px;font-family:inherit;">
+                                    <span style="font-size:13px;color:var(--text-muted);">hours after work end</span>
+                                </div>
+                            </div>
+                            <div class="form-submit">
+                                <button type="submit" name="save_grace_periods" class="btn btn-primary btn-sm">Save Settings</button>
                             </div>
                         </form>
                     </div>
-                </div>
-            </div>
-        <?php endif; ?>
 
-        <h3>Attendance Records</h3>
+                    <?php if (!$company_logo_exists): ?>
+                        <div class="attendance-actions">
+                            <h4>Company Branding</h4>
+                            <div class="section-subtitle">Upload the certificate logo shown on generated documents.</div>
+                            <div class="branding-grid">
+                                <div class="branding-preview">
+                                    <div class="text-muted">No company logo uploaded yet.</div>
+                                </div>
+                                <div class="branding-form">
+                                    <form method="post" enctype="multipart/form-data" class="row g-2">
+                                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                                        <div class="col-12">
+                                            <label for="company_logo" class="form-label">Upload Logo (PNG/JPG, max 2MB)</label>
+                                            <input type="file" class="form-control" id="company_logo" name="company_logo" accept="image/png,image/jpeg" required>
+                                        </div>
+                                        <div class="col-12">
+                                            <button type="submit" name="upload_company_logo" class="btn btn-primary">Upload Company Logo</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </section>
+        </div>
+        <div class="portal-section-heading">
+            <div>
+                <h3>Attendance Records</h3>
+                <p>Latest student status, verification queue, and evaluation actions.</p>
+            </div>
+        </div>
 
         <div class="table-section">
             <table class="table table-bordered align-middle">
@@ -566,18 +732,9 @@ if (!empty($student_ids)) {
                 </thead>
                 <tbody>
                     <?php
-                    $student_attendance = [];
-                    foreach ($attendance as $row) {
-                        $student_attendance[$row['student_id']][] = $row;
-                    }
-
                     $index = 0;
 
                     foreach ($student_attendance as $student_id => $records):
-                        usort($records, function($a, $b) {
-                            return strtotime($b['log_date']) <=> strtotime($a['log_date']);
-                        });
-
                         $latest = $records[0];
 
                         $acc_minutes = $acc_map[$student_id] ?? 0;

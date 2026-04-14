@@ -25,28 +25,39 @@
                 rows="4"
                 class="form-control"
                 placeholder="Write what you did today..."
+                <?= empty($today_row['time_in']) ? 'disabled' : '' ?>
             ><?= htmlspecialchars($today_row['daily_task'] ?? '') ?></textarea>
 
             <button type="submit" name="save_task"
                 class="action-btn btn-primary"
-                style="margin-top:10px;">
+                style="margin-top:10px;"
+                <?= empty($today_row['time_in']) ? 'disabled' : '' ?>>
                  Save Task
             </button>
         </form>
 
         <p style="color:var(--text-muted);margin-top:8px;font-size:13px;">
-            You can only write/edit your task for <strong><?= $today ?></strong>.
+            <?php if (empty($today_row['time_in'])): ?>
+                You must record a Time In before you can save a task.
+            <?php else: ?>
+                You can only write/edit your task for <strong><?= $today ?></strong>.
+            <?php endif; ?>
         </p>
     </div>
 
     <div class="section-card">
-    <h3 style="margin-top:0;">Attendance Actions</h3>
-    <div class="attendance-actions">
-    
-    <!-- Shift Change Request Button -->
-    <a href="request_shift_change.php" class="action-btn btn-outline-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 10px;">
-        📅 Request Shift Change
-    </a>
+        <h3 style="margin-top:0;">Attendance Actions</h3>
+        <div class="attendance-actions">
+
+        <!-- MOA Documents Button -->
+        <a href="view_moa.php" class="action-btn btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 10px;">
+            📄 Open MOA Documents
+        </a>
+
+        <!-- Shift Change Request Button -->
+        <a href="request_shift_change.php" class="action-btn btn-outline-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 10px;">
+            📅 Request Shift Change
+        </a>
     
     <?php
     $time_in_done    = !empty($today_row['time_in']);

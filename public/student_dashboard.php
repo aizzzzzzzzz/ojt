@@ -552,6 +552,50 @@ $certificate_check_stmt = $pdo->prepare("SELECT certificate_id FROM certificates
 $certificate_check_stmt->execute([$student_id]);
 $has_generated_certificate = (bool) $certificate_check_stmt->fetch(PDO::FETCH_ASSOC);
 
+$required_minutes = 200 * 60;
+$remaining_minutes = max(0, $required_minutes - $total_minutes);
+$remaining_hours = floor($remaining_minutes / 60);
+$remaining_minutes_remainder = $remaining_minutes % 60;
+$progress_percent = $required_minutes > 0 ? min(100, (int) round(($total_minutes / $required_minutes) * 100)) : 0;
+$verified_days = 0;
+
+foreach ($attendance as $row) {
+    if ((int)($row['verified'] ?? 0) === 1) {
+        $verified_days++;
+    }
+}
+
+$portal_first_name = isset($student['first_name']) ? trim(explode(' ', $student['first_name'])[0]) : 'Student';
+$student_track_label = trim((string) ($student['course'] ?? $student['program'] ?? 'Internship Program'));
+$student_org_label = trim((string) ($student['school'] ?? 'College for Research and Technology'));
+$schedule_label = ($has_approved_shift ? 'Approved shift' : 'Regular shift') . ': '
+    . date('h:i A', strtotime($work_start_str))
+    . ' - '
+    . date('h:i A', strtotime($work_end_str));
+
+$today_state_label = 'No attendance yet';
+$today_state_note = 'Your time-in window starts at ' . $work_start_dt->format('h:i A') . '.';
+
+if (!empty($today_row)) {
+    if (!empty($today_row['time_out'])) {
+        $today_state_label = (int)($today_row['verified'] ?? 0) === 1 ? 'Verified today' : 'Awaiting verification';
+        $today_state_note = 'Time out recorded at ' . date('h:i A', strtotime($today_row['time_out'])) . '.';
+    } elseif (!empty($today_row['time_in'])) {
+        $today_state_label = 'Currently timed in';
+        $today_state_note = 'Time in recorded at ' . date('h:i A', strtotime($today_row['time_in'])) . '.';
+    } else {
+        $today_state_label = 'Attendance draft saved';
+    }
+}
+
+$evaluation_label = 'Pending evaluation';
+$evaluation_note = 'Your latest internship review will appear here once submitted.';
+
+if ($student_evaluation) {
+    $evaluation_label = $has_generated_certificate ? 'Certificate available' : 'Evaluation completed';
+    $evaluation_note = 'Supervisor: ' . ($student_evaluation['supervisor_name'] ?? 'Assigned supervisor');
+}
+
 $submitError = '';
 ?>
 <!DOCTYPE html>
@@ -561,7 +605,8 @@ $submitError = '';
 <title>Student Dashboard</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/portal-ui.css">
 <style>
     :root {
         --bg:         #f1f4f9;
@@ -792,6 +837,20 @@ $submitError = '';
         outline: none;
     }
 
+    .form-control:disabled, textarea:disabled {
+        background: #f3f4f6;
+        color: #9ca3af;
+        cursor: not-allowed;
+        border-color: #e5e7eb;
+    }
+
+    button:disabled, input[type="submit"]:disabled {
+        background: #e5e7eb !important;
+        color: #9ca3af !important;
+        cursor: not-allowed !important;
+        opacity: 1 !important;
+    }
+
     .table-section { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); margin-top: 16px; }
     .desktop-view table { width: 100%; border-collapse: collapse; background: var(--surface); }
 
@@ -902,7 +961,7 @@ $submitError = '';
     }
 </style>
 </head>
-<body>
+<body class="portal-dashboard portal-student">
 <div class="dashboard-container">
 
     <div class="topbar">
@@ -939,10 +998,54 @@ $submitError = '';
         <div class="error-msg"><?= htmlspecialchars($m) ?></div>
     <?php endforeach; ?>
 
-<div class="summary" id="summarySection">
-    <p><strong>Total Hours:</strong> <?= $hours ?> hr <?= $minutes ?> min / 200h</p>
-    <p><strong>Status:</strong> <span class="status <?= $statusClass ?>"><?= $statusText ?></span></p>
-    <p><strong>Today:</strong> <?= $today ?></p>
+<div class="portal-hero portal-hero--dashboard" id="welcomeHeader">
+    <div class="portal-hero-copy">
+        <span class="portal-kicker">Student workspace</span>
+        <h3 class="portal-hero-title">Stay on track, <?= htmlspecialchars($portal_first_name) ?>.</h3>
+        <p class="portal-hero-text">
+            Review your verified internship hours, keep today&apos;s attendance updated, and monitor evaluation or certificate progress from one dashboard.
+        </p>
+        <div class="portal-hero-meta">
+            <span class="portal-chip"><?= htmlspecialchars($student_track_label) ?></span>
+            <span class="portal-chip"><?= htmlspecialchars($student_org_label) ?></span>
+            <span class="portal-chip"><?= htmlspecialchars(date('F d, Y', strtotime($today))) ?></span>
+        </div>
+    </div>
+    <div class="portal-highlight-card">
+        <span class="portal-card-label">Completion progress</span>
+        <span class="portal-card-value"><?= $progress_percent ?>%</span>
+        <span class="portal-card-note"><?= $hours ?>h <?= $minutes ?>m verified out of the 200h target.</span>
+        <div class="portal-progress-rail">
+            <span style="width: <?= $progress_percent ?>%;"></span>
+        </div>
+        <div class="portal-mini-actions">
+            <span class="portal-link-pill"><?= htmlspecialchars($schedule_label) ?></span>
+            <span class="portal-link-pill"><?= htmlspecialchars($statusText) ?></span>
+        </div>
+    </div>
+</div>
+
+<div class="summary portal-summary-upgraded" id="summarySection">
+    <div class="portal-summary-item">
+        <span class="label">Verified Days</span>
+        <span class="value"><?= $verified_days ?></span>
+        <span class="note"><?= count($attendance) ?> attendance record(s) saved.</span>
+    </div>
+    <div class="portal-summary-item">
+        <span class="label">Remaining Hours</span>
+        <span class="value"><?= $remaining_hours ?>h</span>
+        <span class="note"><?= $remaining_minutes_remainder ?> minute(s) left before completion.</span>
+    </div>
+    <div class="portal-summary-item">
+        <span class="label">Today</span>
+        <span class="value" style="font-size:1.35rem; line-height:1.2;"><?= htmlspecialchars($today_state_label) ?></span>
+        <span class="note"><?= htmlspecialchars($today_state_note) ?></span>
+    </div>
+    <div class="portal-summary-item">
+        <span class="label">Evaluation</span>
+        <span class="value" style="font-size:1.35rem; line-height:1.2;"><?= htmlspecialchars($evaluation_label) ?></span>
+        <span class="note"><?= htmlspecialchars($evaluation_note) ?></span>
+    </div>
 </div>
 
 <div class="tab-switcher">
@@ -1084,8 +1187,13 @@ function switchTab(tabName, button) {
     const welcomeHeader = document.getElementById('welcomeHeader');
     const summarySection = document.getElementById('summarySection');
 
-    if (welcomeHeader) welcomeHeader.style.display = 'flex';
-    if (summarySection) summarySection.style.display = 'block';
+    if (tabName === 'export') {
+        if (welcomeHeader) welcomeHeader.style.display = 'none';
+        if (summarySection) summarySection.style.display = 'none';
+    } else {
+        if (welcomeHeader) welcomeHeader.style.display = 'flex';
+        if (summarySection) summarySection.style.display = 'grid';
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
