@@ -2,7 +2,6 @@
 session_start();
 include_once __DIR__ . '/../private/config.php';
 require_once __DIR__ . '/../includes/middleware.php';
-
 include_once __DIR__ . '/../includes/supervisor_auth.php';
 include_once __DIR__ . '/../includes/supervisor_db.php';
 include_once __DIR__ . '/../includes/supervisor_attendance.php';
@@ -174,10 +173,11 @@ if (!empty($student_ids)) {
     $certificate_stmt = $pdo->prepare("
         SELECT student_id, certificate_no, generated_at
         FROM certificates
-        WHERE student_id IN ($placeholders)
+        WHERE student_id IN ($placeholders) AND employer_id = ?
         ORDER BY generated_at DESC
     ");
-    $certificate_stmt->execute($student_ids);
+    $placeholdersArray = array_merge($student_ids, [$employer_id]);
+    $certificate_stmt->execute($placeholdersArray);
 
     while ($certificate_row = $certificate_stmt->fetch(PDO::FETCH_ASSOC)) {
         $certificate_student_id = (int) $certificate_row['student_id'];
@@ -272,7 +272,7 @@ $schedule_window = date('h:i A', strtotime($work_start_raw)) . ' - ' . date('h:i
 
         body {
             font-family: 'DM Sans', 'Segoe UI', sans-serif;
-            background: var(--bg);
+            background: radial-gradient(circle at top left, rgba(67,97,238,0.16), transparent 30%), linear-gradient(180deg, #eef4ff 0%, #f8fbff 50%, #f3f6fb 100%);
             color: var(--text);
             line-height: 1.6;
             min-height: 100vh;
@@ -282,9 +282,9 @@ $schedule_window = date('h:i A', strtotime($work_start_raw)) . ' - ' . date('h:i
 
         .dashboard-container {
             background: var(--surface);
-            border-radius: 20px;
-            border: 1px solid var(--border);
-            box-shadow: var(--shadow-md);
+            border-radius: 24px;
+            border: 1px solid rgba(226,232,240,0.8);
+            box-shadow: 0 20px 42px rgba(15,23,42,0.08);
             width: 100%;
             max-width: 1440px;
             margin: 0 auto;
@@ -296,14 +296,15 @@ $schedule_window = date('h:i A', strtotime($work_start_raw)) . ' - ' . date('h:i
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 20px 32px;
-            border-bottom: 1px solid var(--border);
+            padding: 28px 32px;
+            border-bottom: 1px solid rgba(226,232,240,0.9);
             gap: 16px;
             flex-wrap: wrap;
+            background: linear-gradient(135deg, rgba(67,97,238,0.08), rgba(99,170,229,0.05));
         }
 
-        .topbar-left h2 { font-size: 20px; font-weight: 700; color: var(--text); margin: 0; letter-spacing: -0.3px; }
-        .topbar-left p  { font-size: 13px; color: var(--text-muted); margin: 2px 0 0; }
+        .topbar-left h2 { font-size: 22px; font-weight: 700; color: var(--text); margin: 0; letter-spacing: -0.4px; }
+        .topbar-left p  { font-size: 14px; color: var(--text-muted); margin: 4px 0 0; line-height: 1.5; }
 
         .topbar-right { display: flex; align-items: center; gap: 10px; }
 
@@ -332,10 +333,10 @@ $schedule_window = date('h:i A', strtotime($work_start_raw)) . ' - ' . date('h:i
 
         .logout-btn:hover { background: #b91c1c; color: #fff; transform: translateY(-1px); }
 
-        .dashboard-inner { padding: 22px 24px 28px; }
+        .dashboard-inner { padding: 32px 28px 36px; }
 
-        .success-msg { background: var(--green-lt); color: #15803d; padding: 12px 16px; border-radius: 10px; border: 1px solid #bbf7d0; font-size: 14px; font-weight: 500; margin-bottom: 16px; }
-        .error-msg   { background: var(--red-lt);   color: #b91c1c; padding: 12px 16px; border-radius: 10px; border: 1px solid #fecaca; font-size: 14px; font-weight: 500; margin-bottom: 16px; }
+        .success-msg { background: rgba(5,150,105,0.1); color: #047857; padding: 16px 18px; border-radius: 14px; border: 1.5px solid rgba(16,185,129,0.25); font-size: 14px; font-weight: 600; margin-bottom: 20px; }
+        .error-msg   { background: rgba(239,68,68,0.1); color: #991b1b; padding: 16px 18px; border-radius: 14px; border: 1.5px solid rgba(239,68,68,0.25); font-size: 14px; font-weight: 600; margin-bottom: 20px; }
 
         .dashboard-inner h3 {
             font-size: 15px;
@@ -373,41 +374,42 @@ $schedule_window = date('h:i A', strtotime($work_start_raw)) . ' - ' . date('h:i
         }
 
         .action-card {
-            background: var(--surface2);
-            border: 1px solid var(--border);
-            padding: 14px 14px 12px;
-            border-radius: var(--radius);
+            background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+            border: 1px solid rgba(226,232,240,0.9);
+            padding: 18px 16px 16px;
+            border-radius: 20px;
             text-align: center;
-            box-shadow: var(--shadow-sm);
+            box-shadow: 0 15px 30px rgba(15,23,42,0.05);
             transition: transform 0.2s, box-shadow 0.2s;
-            min-height: 96px;
+            min-height: 110px;
         }
 
-        .action-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+        .action-card:hover { transform: translateY(-3px); box-shadow: 0 20px 40px rgba(15,23,42,0.1); }
 
-        .action-card .icon { font-size: 1.5rem; margin-bottom: 6px; display: block; }
+        .action-card .icon { font-size: 1.8rem; margin-bottom: 8px; display: block; }
 
         .action-card a {
             display: block;
-            padding: 9px 12px;
-            border-radius: 9px;
+            padding: 11px 14px;
+            border-radius: 12px;
             text-decoration: none;
-            font-weight: 600;
+            font-weight: 700;
             font-size: 13px;
             background: var(--accent);
             color: white;
-            transition: background 0.2s, transform 0.15s;
+            transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+            box-shadow: 0 8px 16px rgba(67,97,238,0.2);
         }
 
-        .action-card a:hover { background: var(--accent-dk); transform: translateY(-1px); }
+        .action-card a:hover { background: var(--accent-dk); transform: translateY(-1px); box-shadow: 0 12px 24px rgba(67,97,238,0.3); }
 
         .attendance-actions {
-            background: var(--surface2);
-            border: 1px solid var(--border);
-            padding: 16px 18px;
-            border-radius: var(--radius);
-            margin-bottom: 12px;
-            box-shadow: var(--shadow-sm);
+            background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+            border: 1px solid rgba(226,232,240,0.9);
+            padding: 20px 22px;
+            border-radius: 20px;
+            margin-bottom: 14px;
+            box-shadow: 0 15px 30px rgba(15,23,42,0.05);
         }
 
         .attendance-actions h4 { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
@@ -464,22 +466,22 @@ $schedule_window = date('h:i A', strtotime($work_start_raw)) . ' - ' . date('h:i
         tr:last-child td { border-bottom: none; }
         tr:hover td { background: var(--accent-lt); transition: background 0.15s; }
 
-        .btn, button.btn { font-family: inherit; font-size: 13px; font-weight: 600; border-radius: 9px; padding: 7px 14px; transition: all 0.18s; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; border: none; }
+        .btn, button.btn { font-family: inherit; font-size: 14px; font-weight: 700; border-radius: 12px; padding: 10px 16px; transition: all 0.18s; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: none; box-shadow: 0 8px 16px rgba(15,23,42,0.08); }
 
         .btn-primary    { background: var(--accent) !important; color: #fff !important; border: none !important; }
-        .btn-primary:hover  { background: var(--accent-dk) !important; transform: translateY(-1px) !important; }
+        .btn-primary:hover  { background: var(--accent-dk) !important; transform: translateY(-1px) !important; box-shadow: 0 12px 24px rgba(67,97,238,0.2) !important; }
 
-        .btn-success    { background: var(--green) !important; color: #fff !important; border: none !important; }
-        .btn-success:hover  { background: #15803d !important; transform: translateY(-1px) !important; }
+        .btn-success    { background: var(--green) !important; color: #fff !important; border: none !important; box-shadow: 0 8px 16px rgba(22,163,74,0.15) !important; }
+        .btn-success:hover  { background: #15803d !important; transform: translateY(-1px) !important; box-shadow: 0 12px 24px rgba(22,163,74,0.25) !important; }
 
-        .btn-warning    { background: #f59e0b !important; color: #fff !important; border: none !important; }
-        .btn-warning:hover  { background: var(--amber) !important; transform: translateY(-1px) !important; }
+        .btn-warning    { background: #f59e0b !important; color: #fff !important; border: none !important; box-shadow: 0 8px 16px rgba(245,158,11,0.15) !important; }
+        .btn-warning:hover  { background: var(--amber) !important; transform: translateY(-1px) !important; box-shadow: 0 12px 24px rgba(217,119,6,0.25) !important; }
 
-        .btn-danger     { background: var(--red) !important; color: #fff !important; border: none !important; }
-        .btn-danger:hover   { background: #b91c1c !important; transform: translateY(-1px) !important; }
+        .btn-danger     { background: var(--red) !important; color: #fff !important; border: none !important; box-shadow: 0 8px 16px rgba(220,38,38,0.15) !important; }
+        .btn-danger:hover   { background: #b91c1c !important; transform: translateY(-1px) !important; box-shadow: 0 12px 24px rgba(220,38,38,0.25) !important; }
 
-        .btn-outline-secondary { background: transparent !important; color: var(--text-muted) !important; border: 1.5px solid var(--border) !important; }
-        .btn-outline-secondary:hover { background: var(--surface2) !important; color: var(--text) !important; transform: translateY(-1px) !important; }
+        .btn-outline-secondary { background: transparent !important; color: var(--text) !important; border: 1.5px solid rgba(15,23,42,0.1) !important; box-shadow: none !important; border-radius: 12px !important; }
+        .btn-outline-secondary:hover { background: rgba(71,85,105,0.05) !important; color: var(--text) !important; transform: translateY(-1px) !important; border-color: rgba(15,23,42,0.15) !important; }
 
         .details-row { display: none !important; }
         .details-row.show { display: table-row !important; }
@@ -493,18 +495,20 @@ $schedule_window = date('h:i A', strtotime($work_start_raw)) . ' - ' . date('h:i
         }
 
         .form-control, .form-select {
-            border-radius: 9px !important;
-            border: 1px solid var(--border) !important;
-            padding: 9px 12px !important;
+            border-radius: 14px !important;
+            border: 1.5px solid rgba(226,232,240,0.9) !important;
+            padding: 12px 16px !important;
             font-size: 14px !important;
             font-family: inherit !important;
             color: var(--text) !important;
-            transition: border-color 0.2s, box-shadow 0.2s !important;
+            background: #f8fbff !important;
+            transition: border-color 0.2s, box-shadow 0.2s, background 0.2s !important;
         }
 
         .form-control:focus, .form-select:focus {
             border-color: var(--accent) !important;
-            box-shadow: 0 0 0 3px rgba(67,97,238,0.12) !important;
+            background: var(--surface) !important;
+            box-shadow: 0 0 0 4px rgba(67,97,238,0.1) !important;
             outline: none !important;
         }
 
@@ -783,7 +787,7 @@ $schedule_window = date('h:i A', strtotime($work_start_raw)) . ' - ' . date('h:i
                             <?php if ($latest['verified'] == 1): ?>
                                 <br><small style="color:green;">(Verified)</small>
                             <?php endif; ?>
-                            <?php if ($late_risk): ?>
+                            <?php if ($late_risk && strtolower($status) !== 'absent'): ?>
                                 <div class="status-pill status-late">Late risk</div>
                             <?php endif; ?>
                             <?php if ($pending_verification): ?>
@@ -814,7 +818,7 @@ $schedule_window = date('h:i A', strtotime($work_start_raw)) . ' - ' . date('h:i
                                 <div style="display: flex; flex-direction: column; gap: 5px;">
                                     <span style="color:green; font-weight:bold;">✔ Evaluation Completed</span>
                                     <?php if ($evaluation_passed && !$has_certificate): ?>
-                                        <a href="generate_certificate.php?student_id=<?= $student_id ?>" class="btn btn-success btn-sm" target="_top" rel="noopener" onclick="return openCertificateLink(this.href);">
+                                        <a href="generate_certificate.php?student_id=<?= $student_id ?>" class="btn btn-success btn-sm">
                                             📄 Generate Certificate
                                         </a>
                                     <?php elseif ($evaluation_passed && $has_certificate): ?>
@@ -880,7 +884,7 @@ $schedule_window = date('h:i A', strtotime($work_start_raw)) . ' - ' . date('h:i
                                 <?php if ($already_evaluated): ?>
                                     <p style="margin-top:15px;">
                                         <?php if ($evaluation_passed && !$existing_cert): ?>
-                                            <a href="generate_certificate.php?student_id=<?= $student_id ?>" class="btn btn-success btn-sm" target="_top" rel="noopener" onclick="return openCertificateLink(this.href);">📄 Generate Certificate</a>
+                                            <a href="generate_certificate.php?student_id=<?= $student_id ?>" class="btn btn-success btn-sm">📄 Generate Certificate</a>
                                         <?php elseif (!$evaluation_passed): ?>
                                             <span style="color:#dc3545; font-weight:bold;">Evaluation Failed</span>
                                         <?php endif; ?>

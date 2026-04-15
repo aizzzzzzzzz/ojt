@@ -61,6 +61,8 @@ try {
                 // Column might already exist, that's fine
             }
         }
+} catch (PDOException $e) {
+    // Table might already exist, that's fine
 }
 
 // Get document
@@ -128,15 +130,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_signature'])) {
     *,*::before,*::after{box-sizing:border-box;}
     body{font-family:'DM Sans','Segoe UI',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh;margin:0;padding:32px 20px 60px;}
     .page-card{background:var(--surface);border-radius:20px;border:1px solid var(--border);box-shadow:var(--shadow-md);width:100%;margin:0 auto;overflow:hidden;}
-    .page-topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px;}
-    .page-topbar h2{font-size:18px;font-weight:700;margin:0;letter-spacing:-.3px;}
-    .page-topbar p{font-size:13px;color:var(--text-muted);margin:2px 0 0;}
-    .page-inner{padding:24px 28px 32px;}
+    .page-topbar{display:flex;align-items:center;justify-content:space-between;padding:28px 32px;border-bottom:1px solid rgba(226,232,240,.9);flex-wrap:wrap;gap:16px;background:linear-gradient(135deg,rgba(67,97,238,.08),rgba(99,170,229,.05));}
+    .page-topbar h2{font-size:22px;font-weight:700;margin:0;letter-spacing:-.4px;}
+    .page-topbar p{font-size:14px;color:var(--text-muted);margin:4px 0 0;line-height:1.5;}
+    .page-inner{padding:32px 32px 40px;}
     .info-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:16px;}
     .info-box p{margin:0;font-size:13px;}
     .info-box strong{color:var(--text);}
-    .success-msg{background:var(--green-lt);color:#15803d;padding:12px 16px;border-radius:10px;border:1px solid #bbf7d0;font-size:14px;font-weight:500;margin-bottom:16px;}
-    .error-msg{background:var(--red-lt);color:#b91c1c;padding:12px 16px;border-radius:10px;border:1px solid #fecaca;font-size:14px;font-weight:500;margin-bottom:16px;}
+    .success-msg{background:rgba(5,150,105,.1);color:#047857;padding:16px 18px;border-radius:14px;border:1.5px solid rgba(16,185,129,.25);font-size:14px;font-weight:600;margin-bottom:20px;}
+    .error-msg{background:rgba(239,68,68,.1);color:#991b1b;padding:16px 18px;border-radius:14px;border:1.5px solid rgba(239,68,68,.25);font-size:14px;font-weight:600;margin-bottom:20px;}
     .form-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:5px;display:block;}
     .signature-pad{border:2px dashed var(--border);border-radius:var(--radius);background:#fafbfd;width:100%;height:200px;cursor:crosshair;display:block;margin-bottom:12px;}
     .signature-actions{display:flex;gap:8px;flex-wrap:wrap;}

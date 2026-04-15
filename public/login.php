@@ -191,8 +191,19 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
+            // Check if username exists in any table
+            $userExists = false;
+            foreach (['admins' => 'username', 'employers' => 'username', 'students' => 'username'] as $table => $col) {
+            $chk = $pdo->prepare("SELECT 1 FROM `$table` WHERE `$col` = ? LIMIT 1");
+            $chk->execute([$username]);
+            if ($chk->fetch()) { $userExists = true; break; }
+            }
+
+            if (!$userExists) {
+            $error = "Invalid username or password.";
+            } else {
             record_login_attempt($pdo, $username);
-            $status_after = check_login_attempts($pdo, $username);
+                $status_after = check_login_attempts($pdo, $username);
 
             if ($status_after === 'locked') {
                 $show_reset_btn = true;
@@ -201,13 +212,14 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $lockout_remaining = get_lockout_remaining($pdo, $username);
                 $error = "Too many failed attempts. Please wait {$lockout_remaining} second(s) before trying again.";
             } else {
-                $row           = get_login_attempt_row($pdo, $username, $_SERVER['REMOTE_ADDR'] ?? 'unknown');
-                $count         = $row ? (int)$row['attempt_count'] : 1;
-                $attempts_left = max(0, 3 - $count);
-                $error = $attempts_left > 0
-                    ? "Invalid username or password. {$attempts_left} attempt(s) remaining before cooldown."
-                    : "Invalid username or password.";
+            $row= get_login_attempt_row($pdo, $username, $_SERVER['REMOTE_ADDR'] ?? 'unknown');
+            $count= $row ? (int)$row['attempt_count'] : 1;
+            $attempts_left = max(0, 3 - $count);
+            $error = $attempts_left > 0
+            ? "Invalid username or password. {$attempts_left} attempt(s) remaining before cooldown."
+            : "Invalid username or password.";
             }
+            }           
         }
     }
 }

@@ -280,17 +280,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_signature'])) {
             $pdf->Image($company_logo_path, $companyLogoX, 12, $companyLogoSize);
         }
 
+        $studentSchool = trim((string) ($student['school'] ?? ''));
+        $studentCourse = trim((string) ($student['course'] ?? ''));
+        if ($studentSchool === '') {
+            $studentSchool = 'School Not Specified';
+        }
+        if ($studentCourse === '') {
+            $studentCourse = 'Course Not Specified';
+        }
+
         $pdf->SetY(15);
         $pdf->SetFont('Times','B',16);
-        $pdf->Cell(0, 8, 'School of Engineering and Technology', 0, 1, 'C');
+        $pdf->MultiCell(0, 8, $studentSchool, 0, 'C');
         $pdf->SetFont('Times','I',12);
-        $pdf->Cell(0, 6, 'Excellence in Practical Education', 0, 1, 'C');
+        $pdf->MultiCell(0, 6, $studentCourse, 0, 'C');
         $pdf->Ln(8);
 
         $pdf->SetFont('Times','B',24);
         $pdf->Cell(0, 12, 'CERTIFICATE OF COMPLETION', 0, 1, 'C');
-        $pdf->SetLineWidth(0.8);
-        $pdf->Line(40, $pdf->GetY(), $pdf->GetPageWidth()-40, $pdf->GetY());
         $pdf->Ln(8);
 
         $pdf->SetFont('Times','',12);
@@ -299,6 +306,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_signature'])) {
 
         $pdf->SetFont('Times','B',20);
         $pdf->Cell(0, 10, $student['name'], 0, 1, 'C');
+        $nameUnderlineY = $pdf->GetY() - 1.5;
+        $nameUnderlineWidth = min($pdf->GetStringWidth((string) $student['name']) + 12, $pdf->GetPageWidth() - 70);
+        $nameUnderlineX = ($pdf->GetPageWidth() - $nameUnderlineWidth) / 2;
+        $pdf->SetLineWidth(0.6);
+        $pdf->Line($nameUnderlineX, $nameUnderlineY, $nameUnderlineX + $nameUnderlineWidth, $nameUnderlineY);
         $pdf->Ln(6);
 
         $pdf->SetFont('Times','',12);
@@ -343,7 +355,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_signature'])) {
         
         if (!empty($student['email'])) {
             $capitalized_student_name = ucwords(strtolower($student['name']));
-            $email_result = send_certificate_notification($student['email'], $capitalized_student_name, $supervisor_name, $certificate_no);
+            $certificateAbsolutePath = __DIR__ . DIRECTORY_SEPARATOR . ltrim($certificatePath, '/\\');
+            $certificateAttachmentName = 'OJT_Certificate_' . preg_replace('/[^A-Za-z0-9\-_]/', '_', $capitalized_student_name) . '.pdf';
+            $certificateAttachments = is_file($certificateAbsolutePath)
+                ? [['path' => $certificateAbsolutePath, 'name' => $certificateAttachmentName]]
+                : [];
+            $email_result = send_certificate_notification($student['email'], $capitalized_student_name, $supervisor_name, $certificate_no, $certificateAttachments);
             if ($email_result !== true) {
                 error_log("Failed to send certificate notification: " . $email_result);
             }

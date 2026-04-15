@@ -39,9 +39,9 @@ function write_audit_log($action, $target = null) {
         $user_id = $_SESSION['admin_id'];
     }
     
-    if ($user_type === 'guest' && isset($_SESSION['student_id']) && !empty($_SESSION['student_id'])) {
+    if ($user_type === 'guest' && isset($_SESSION['student_id'])) {
         $user_type = 'student';
-        $user_id = $_SESSION['student_id'];
+        $user_id = (int)$_SESSION['student_id'];
     }
     
     $ip = $_SERVER['REMOTE_ADDR'] ?? null;

@@ -47,14 +47,37 @@ function send_email($to, $subject, $body, $altBody = '', $attachments = []) {
         $mail->SMTPSecure = $email_config['smtp_encryption'];
         $mail->Port       = $email_config['smtp_port'];
 
-        $mail->setFrom($email_config['from_email'], $email_config['from_name']);
-        $mail->addReplyTo($email_config['reply_to_email'], $email_config['reply_to_name']);
+        $senderEmail = $email_config['from_email'] ?? '';
+        if (empty($senderEmail) || stripos($senderEmail, '@yourdomain.com') !== false || !filter_var($senderEmail, FILTER_VALIDATE_EMAIL)) {
+            $senderEmail = $email_config['smtp_username'];
+        }
+        $replyToEmail = $email_config['reply_to_email'] ?? '';
+        if (empty($replyToEmail) || stripos($replyToEmail, '@yourdomain.com') !== false || !filter_var($replyToEmail, FILTER_VALIDATE_EMAIL)) {
+            $replyToEmail = $senderEmail;
+        }
+
+        $mail->setFrom($senderEmail, $email_config['from_name']);
+        $mail->addReplyTo($replyToEmail, $email_config['reply_to_name']);
         $mail->addAddress($to);
 
         if (!empty($attachments) && is_array($attachments)) {
             foreach ($attachments as $attachment) {
-                if (file_exists($attachment)) {
-                    $mail->addAttachment($attachment);
+                $attachmentPath = null;
+                $attachmentName = '';
+
+                if (is_string($attachment)) {
+                    $attachmentPath = $attachment;
+                } elseif (is_array($attachment) && !empty($attachment['path'])) {
+                    $attachmentPath = (string) $attachment['path'];
+                    $attachmentName = !empty($attachment['name']) ? (string) $attachment['name'] : '';
+                }
+
+                if ($attachmentPath && is_file($attachmentPath)) {
+                    if ($attachmentName !== '') {
+                        $mail->addAttachment($attachmentPath, $attachmentName);
+                    } else {
+                        $mail->addAttachment($attachmentPath);
+                    }
                 }
             }
         }
@@ -112,7 +135,7 @@ function send_test_email($test_email) {
     return send_email($test_email, $subject, $body, $altBody);
 }
 
-function send_evaluation_notification($student_email, $student_name, $supervisor_name, $evaluation_passed = null, $average_rating = null) {
+function send_evaluation_notification($student_email, $student_name, $supervisor_name, $evaluation_passed = null, $average_rating = null, $attachments = []) {
     $subject = "OJT Evaluation Result - " . $student_name;
     $header_title = "Evaluation Completed";
     $header_color = "#007bff";
@@ -143,6 +166,9 @@ function send_evaluation_notification($student_email, $student_name, $supervisor
         $result_alt = "Your OJT evaluation has been completed by your supervisor, $supervisor_name.\n\nResult: Not Passed$average_alt\n\nPlease review your supervisor's feedback and coordinate your next steps.";
     }
 
+    $attachment_message = !empty($attachments) ? "<p>Your evaluation report is attached as an A4 PDF file.</p>" : "";
+    $attachment_alt = !empty($attachments) ? "\n\nYour evaluation report is attached as an A4 PDF file." : "";
+
     $body = "
         <html>
         <head>
@@ -163,6 +189,7 @@ function send_evaluation_notification($student_email, $student_name, $supervisor
                 <div class='content'>
                     <p>Dear <strong>$student_name</strong>,</p>
                     $result_message
+                    $attachment_message
                 </div>
                 <div class='footer'>
                     <p>This is an automated message from the OJT System.</p>
@@ -172,9 +199,9 @@ function send_evaluation_notification($student_email, $student_name, $supervisor
         </html>
     ";
 
-    $altBody = "Dear $student_name,\n\n$result_alt\n\nThis is an automated message from the OJT System.";
+    $altBody = "Dear $student_name,\n\n$result_alt$attachment_alt\n\nThis is an automated message from the OJT System.";
 
-    return send_email($student_email, $subject, $body, $altBody);
+    return send_email($student_email, $subject, $body, $altBody, $attachments);
 }
 
 function send_evaluation_verification_code($supervisor_email, $supervisor_name, $student_name, $code, $expires_minutes = 10) {
@@ -232,12 +259,15 @@ function send_evaluation_verification_code($supervisor_email, $supervisor_name, 
     return send_email($supervisor_email, $subject, $body, $altBody);
 }
 
-function send_certificate_notification($student_email, $student_name, $supervisor_name, $certificate_no = null) {
+function send_certificate_notification($student_email, $student_name, $supervisor_name, $certificate_no = null, $attachments = []) {
     $subject = "OJT Certificate Generated - " . $student_name;
     $header_title = "Certificate Generated";
     $header_color = "#28a745";
     $cert_line = $certificate_no ? "<p><strong>Certificate No:</strong> " . htmlspecialchars($certificate_no) . "</p>" : "";
     $cert_alt = $certificate_no ? "\nCertificate No: " . $certificate_no : "";
+
+    $attachment_message = !empty($attachments) ? "<p>Your certificate is attached as an A4 PDF file.</p>" : "";
+    $attachment_alt = !empty($attachments) ? "\n\nYour certificate is attached as an A4 PDF file." : "";
 
     $body = "
         <html>
@@ -260,6 +290,7 @@ function send_certificate_notification($student_email, $student_name, $superviso
                     <p>Your OJT certificate has been generated by your supervisor, <strong>$supervisor_name</strong>.</p>
                     $cert_line
                     <p>You can now log in to your account to download your certificate.</p>
+                    $attachment_message
                 </div>
                 <div class='footer'>
                     <p>This is an automated message from the OJT System.</p>
@@ -269,9 +300,9 @@ function send_certificate_notification($student_email, $student_name, $superviso
         </html>
     ";
 
-    $altBody = "Dear $student_name,\n\nYour OJT certificate has been generated by your supervisor, $supervisor_name.$cert_alt\n\nYou can now log in to your account to download your certificate.\n\nThis is an automated message from the OJT System.";
+    $altBody = "Dear $student_name,\n\nYour OJT certificate has been generated by your supervisor, $supervisor_name.$cert_alt\n\nYou can now log in to your account to download your certificate.$attachment_alt\n\nThis is an automated message from the OJT System.";
 
-    return send_email($student_email, $subject, $body, $altBody);
+    return send_email($student_email, $subject, $body, $altBody, $attachments);
 }
 
 function send_attendance_notification($student_email, $student_name, $date, $status) {

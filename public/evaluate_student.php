@@ -4,6 +4,7 @@ require_once __DIR__ . '/../private/config.php';
 require_once __DIR__ . '/../includes/audit.php';
 require_once __DIR__ . '/../includes/email.php';
 require_once __DIR__ . '/../includes/evaluation_security.php';
+require_once __DIR__ . '/../lib/fpdf.php';
 
 if (!isset($_SESSION['employer_id']) || $_SESSION['role'] !== 'employer') {
     header("Location: employer_login.php");
@@ -90,6 +91,93 @@ function save_supervisor_signature(int $employerId, int $studentId): array {
     return ['success' => $signatureSaved && $uploadError === '', 'error' => $uploadError, 'path' => $signatureSaved ? $signaturePath : null];
 }
 
+function build_evaluation_pdf_attachment(array $studentData, string $supervisorName, array $ratings, string $comments, int $evaluationId): ?array {
+    if (!class_exists('FPDF')) {
+        return null;
+    }
+
+    $criteria = [
+        'Attendance' => (int) ($ratings['attendance_rating'] ?? 0),
+        'Quality of Work' => (int) ($ratings['work_quality_rating'] ?? 0),
+        'Initiative' => (int) ($ratings['initiative_rating'] ?? 0),
+        'Communication' => (int) ($ratings['communication_rating'] ?? 0),
+        'Teamwork' => (int) ($ratings['teamwork_rating'] ?? 0),
+        'Adaptability' => (int) ($ratings['adaptability_rating'] ?? 0),
+        'Professionalism' => (int) ($ratings['professionalism_rating'] ?? 0),
+        'Problem Solving' => (int) ($ratings['problem_solving_rating'] ?? 0),
+        'Technical Skills' => (int) ($ratings['technical_skills_rating'] ?? 0),
+    ];
+    $average = round(array_sum($criteria) / count($criteria), 2);
+    $safeComments = trim($comments) !== '' ? $comments : 'No comments provided.';
+
+    try {
+        $pdf = new FPDF('P', 'mm', 'A4');
+        $pdf->SetMargins(15, 15, 15);
+        $pdf->SetAutoPageBreak(true, 15);
+        $pdf->AddPage();
+
+        $pdf->SetFont('Arial', 'B', 16);
+        $pdf->Cell(0, 10, 'OJT Evaluation Report', 0, 1, 'C');
+        $pdf->Ln(2);
+
+        $studentFullName = trim(($studentData['first_name'] ?? '') . ' ' . (!empty($studentData['middle_name']) ? $studentData['middle_name'] . ' ' : '') . ($studentData['last_name'] ?? ''));
+        $pdf->SetFont('Arial', '', 11);
+        $pdf->Cell(40, 7, 'Student:', 0, 0, 'L');
+        $pdf->SetFont('Arial', 'B', 11);
+        $pdf->Cell(0, 7, $studentFullName !== '' ? $studentFullName : 'N/A', 0, 1, 'L');
+
+        $pdf->SetFont('Arial', '', 11);
+        $pdf->Cell(40, 7, 'Supervisor:', 0, 0, 'L');
+        $pdf->SetFont('Arial', 'B', 11);
+        $pdf->Cell(0, 7, $supervisorName !== '' ? $supervisorName : 'N/A', 0, 1, 'L');
+
+        $pdf->SetFont('Arial', '', 11);
+        $pdf->Cell(40, 7, 'Evaluation Date:', 0, 0, 'L');
+        $pdf->SetFont('Arial', 'B', 11);
+        $pdf->Cell(0, 7, date('F d, Y'), 0, 1, 'L');
+        $pdf->Ln(4);
+
+        $criteriaWidth = 135;
+        $scoreWidth = 40;
+
+        $pdf->SetFont('Arial', 'B', 11);
+        $pdf->SetFillColor(235, 244, 255);
+        $pdf->Cell($criteriaWidth, 8, 'Criteria', 1, 0, 'L', true);
+        $pdf->Cell($scoreWidth, 8, 'Rating (1-5)', 1, 1, 'C', true);
+
+        $pdf->SetFont('Arial', '', 11);
+        foreach ($criteria as $label => $score) {
+            $pdf->Cell($criteriaWidth, 8, $label, 1, 0, 'L');
+            $pdf->Cell($scoreWidth, 8, (string) $score, 1, 1, 'C');
+        }
+
+        $pdf->SetFont('Arial', 'B', 11);
+        $pdf->Cell($criteriaWidth, 8, 'Average Rating', 1, 0, 'L');
+        $pdf->Cell($scoreWidth, 8, number_format($average, 2) . '/5', 1, 1, 'C');
+        $pdf->Ln(6);
+
+        $pdf->SetFont('Arial', 'B', 11);
+        $pdf->Cell(0, 7, 'Comments', 0, 1, 'L');
+        $pdf->SetFont('Arial', '', 11);
+        $pdf->MultiCell(0, 7, $safeComments, 1, 'L');
+
+        $storageDir = __DIR__ . '/../storage/email_attachments/evaluations';
+        if (!is_dir($storageDir) && !mkdir($storageDir, 0777, true) && !is_dir($storageDir)) {
+            return null;
+        }
+
+        $baseName = preg_replace('/[^A-Za-z0-9\-_]/', '_', $studentFullName !== '' ? $studentFullName : 'Student');
+        $fileName = 'OJT_Evaluation_' . $baseName . '_' . $evaluationId . '.pdf';
+        $filePath = $storageDir . DIRECTORY_SEPARATOR . $fileName;
+        $pdf->Output('F', $filePath);
+
+        return ['path' => $filePath, 'name' => $fileName];
+    } catch (Throwable $e) {
+        error_log("Failed to build evaluation PDF attachment: " . $e->getMessage());
+        return null;
+    }
+}
+
 $employerId = (int) $_SESSION['employer_id'];
 $supervisorStmt = $pdo->prepare("SELECT employer_id, name, email, company_id FROM employers WHERE employer_id = ? LIMIT 1");
 $supervisorStmt->execute([$employerId]);
@@ -150,7 +238,13 @@ if ($selectedStudent) {
         }
 
         $issueVerificationCode = function () use ($pdo, $employerId, $selectedStudentId, $selectedStudentName, $supervisor, $verificationSessionKey, &$currentVerificationKey, &$currentVerification, &$info, &$error): void {
-            $request = create_evaluation_verification_request($pdo, $employerId, $selectedStudentId, $supervisor['email']);
+            try {
+                $request = create_evaluation_verification_request($pdo, $employerId, $selectedStudentId, $supervisor['email']);
+            } catch (Throwable $e) {
+                error_log("Failed to create evaluation verification request: " . $e->getMessage());
+                $error = "Unable to prepare email verification right now. Please try again.";
+                return;
+            }
             $emailResult = send_evaluation_verification_code($supervisor['email'], $supervisor['name'] ?? 'Supervisor', $selectedStudentName ?? 'the selected student', $request['plain_code']);
             if ($emailResult === true) {
                 $_SESSION[$verificationSessionKey] = $request['verification_key'];
@@ -204,10 +298,37 @@ if ($selectedStudent) {
                     $emailNotice = '';
                     if (!empty($studentData['email'])) {
                         $studentFullName = trim(($studentData['first_name'] ?? '') . ' ' . (!empty($studentData['middle_name']) ? $studentData['middle_name'] . ' ' : '') . ($studentData['last_name'] ?? ''));
-                        $emailResult = send_evaluation_notification($studentData['email'], $studentFullName, $supervisor['name'] ?? 'Supervisor', $evaluationPassed, $averageRating);
+                        $evaluationAttachment = build_evaluation_pdf_attachment(
+                            $studentData,
+                            (string) ($supervisor['name'] ?? 'Supervisor'),
+                            [
+                                'attendance_rating' => $_POST['attendance_rating'],
+                                'work_quality_rating' => $_POST['work_quality_rating'],
+                                'initiative_rating' => $_POST['initiative_rating'],
+                                'communication_rating' => $_POST['communication_rating'],
+                                'teamwork_rating' => $_POST['teamwork_rating'],
+                                'adaptability_rating' => $_POST['adaptability_rating'],
+                                'professionalism_rating' => $_POST['professionalism_rating'],
+                                'problem_solving_rating' => $_POST['problem_solving_rating'],
+                                'technical_skills_rating' => $_POST['technical_skills_rating'],
+                            ],
+                            (string) ($_POST['comments'] ?? ''),
+                            $evaluationId
+                        );
+                        $attachments = $evaluationAttachment ? [$evaluationAttachment] : [];
+
+                        $emailResult = send_evaluation_notification(
+                            $studentData['email'],
+                            $studentFullName,
+                            $supervisor['name'] ?? 'Supervisor',
+                            $evaluationPassed,
+                            $averageRating,
+                            $attachments
+                        );
                         if ($emailResult !== true) {
                             error_log("Failed to send evaluation notification: " . $emailResult);
-                            $emailNotice = " Evaluation saved, but failed to send email notification.";
+                            $mailErrorSummary = preg_replace('/\s+/', ' ', trim((string) $emailResult));
+                            $emailNotice = " Evaluation saved, but failed to send email notification. " . $mailErrorSummary;
                         }
                     } else {
                         $emailNotice = " Evaluation saved, but the student has no email address on file.";
@@ -250,13 +371,17 @@ if ($selectedStudent) {
         .topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px;}
         .topbar h2{font-size:18px;font-weight:700;margin:0;} .topbar p{font-size:13px;color:var(--text-muted);margin:2px 0 0;}
         .inner{padding:24px 28px 32px;} .box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:20px;}
-        .success-msg,.info-msg,.error-msg{padding:12px 16px;border-radius:10px;font-size:14px;font-weight:500;margin-bottom:16px;border:1px solid transparent;}
-        .success-msg{background:var(--green-lt);color:#15803d;border-color:#bbf7d0;} .info-msg{background:var(--accent-lt);color:var(--accent-dk);border-color:#c7d2fe;} .error-msg{background:var(--red-lt);color:#b91c1c;border-color:#fecaca;}
+        .success-msg,.info-msg,.error-msg{padding:16px 18px;border-radius:14px;font-size:14px;font-weight:600;margin-bottom:20px;border:1.5px solid transparent;}
+        .success-msg{background:rgba(5,150,105,.1);color:#047857;border-color:rgba(16,185,129,.25);}
+        .info-msg{background:rgba(67,97,238,.1);color:#2c3e80;border-color:rgba(67,97,238,.25);}
+        .error-msg{background:rgba(239,68,68,.1);color:#991b1b;border-color:rgba(239,68,68,.25);}
         .box h3{margin:0 0 6px;font-size:14px;font-weight:700;} .muted{color:var(--text-muted);font-size:13px;}
-        .form-label{display:inline-block;margin-bottom:6px;font-weight:600;font-size:13px;}
-        .form-select,.form-control{border:1px solid var(--border);border-radius:9px;min-height:44px;font-family:inherit;font-size:14px;width:100%;padding:9px 12px;background:var(--surface);color:var(--text);}
-        .form-select:focus,.form-control:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(67,97,238,.12);outline:none;}
-        .btn{font-family:inherit;font-size:13px;font-weight:600;border-radius:9px;padding:9px 18px;display:inline-flex;align-items:center;gap:6px;border:none;text-decoration:none;}
+        .form-label{font-size:14px;font-weight:700;color:var(--text);margin-bottom:8px;display:block;letter-spacing:-.2px;}
+        .form-select,.form-control{border:1.5px solid rgba(226,232,240,.9);border-radius:14px;min-height:44px;font-family:inherit;font-size:14px;width:100%;padding:12px 16px;background:#f8fbff;color:var(--text);}
+        .form-select:focus,.form-control:focus{border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 4px rgba(67,97,238,.1);outline:none;}
+        .btn{font-family:inherit;font-size:14px;font-weight:700;border-radius:14px;padding:12px 20px;transition:all .18s;cursor:pointer;display:inline-flex;align-items:center;gap:8px;border:none;text-decoration:none;box-shadow:0 12px 24px rgba(15,23,42,.08);}
+        .btn-primary{background:var(--accent);color:#fff;}.btn-primary:hover{background:var(--accent-dk);transform:translateY(-1px);color:#fff;box-shadow:0 16px 32px rgba(67,97,238,.2);}
+        .btn-secondary{background:transparent;color:var(--text);border:1.5px solid rgba(15,23,42,.1);border-radius:12px;padding:8px 14px;font-size:13px;font-weight:600;}.btn-secondary:hover{background:rgba(71,85,105,.05);border-color:rgba(15,23,42,.15);}
         .btn-primary{background:var(--accent);color:#fff;} .btn-success{background:var(--green);color:#fff;} .btn-outline-secondary{background:transparent;color:var(--text-muted);border:1.5px solid var(--border);}
         .ratings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 16px;margin-top:16px;} .actions-row{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;}
         .signature-wrapper{border:1px solid var(--border);background:var(--surface);border-radius:var(--radius);padding:14px;} .signature-pad{width:100%;height:220px;border:2px dashed var(--border);border-radius:10px;background:#fafbfd;cursor:crosshair;display:block;}

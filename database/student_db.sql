@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 13, 2026 at 08:48 PM
+-- Generation Time: Apr 15, 2026 at 10:21 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -63,7 +63,18 @@ INSERT INTO `activity_logs` (`id`, `user_id`, `role`, `action`, `target`, `ip_ad
 (19, 1, 'student', 'Student Login', 'Student aiz logged in', '::1', '2026-04-13 16:35:31'),
 (20, 1, 'student', 'Download Certificate', 'Downloaded OJT certificate', '::1', '2026-04-13 16:35:41'),
 (21, 1, 'student', 'Download Evaluation', 'Downloaded evaluation report', '::1', '2026-04-13 16:35:43'),
-(22, 1, 'student', 'Student Login', 'Student aiz logged in', '::1', '2026-04-13 16:35:54');
+(22, 1, 'student', 'Student Login', 'Student aiz logged in', '::1', '2026-04-13 16:35:54'),
+(23, 3, 'student', 'Student Login', 'Student jade logged in', '::1', '2026-04-15 01:47:09'),
+(24, 3, 'student', 'Student Login', 'Student jade logged in', '::1', '2026-04-15 01:48:16'),
+(25, 3, 'student', 'Student Login', 'Student jade logged in', '::1', '2026-04-15 01:49:59'),
+(26, 3, 'student', 'Student Login', 'Student jade logged in', '::1', '2026-04-15 01:52:04'),
+(27, 3, 'student', 'Download Evaluation', 'Downloaded evaluation report', '::1', '2026-04-15 01:52:10'),
+(28, 3, 'student', 'Student Login', 'Student jade logged in', '::1', '2026-04-15 01:55:14'),
+(29, 1, 'student', 'Student Login', 'Student aiz logged in', '::1', '2026-04-15 01:56:48'),
+(30, 1, 'student', 'Student Login', 'Student aiz logged in', '::1', '2026-04-15 07:52:02'),
+(31, 1, 'student', 'Student Login', 'Student aiz logged in', '::1', '2026-04-15 07:53:54'),
+(32, 5, 'student', 'Student Login', 'Student rome logged in', '::1', '2026-04-15 08:10:08'),
+(33, 5, 'student', 'Change Password', 'Student changed password after first login', '::1', '2026-04-15 08:10:24');
 
 -- --------------------------------------------------------
 
@@ -122,12 +133,12 @@ INSERT INTO `attendance` (`id`, `student_id`, `employer_id`, `log_date`, `time_i
 (7, 2, 1, '2026-03-17', '2026-03-17 08:03:00', NULL, '2026-03-17 17:00:00', 'Present', 'on_time', 0, 1, NULL, 'Checked student dashboard behavior on the live deployment.'),
 (8, 2, 1, '2026-03-18', '2026-03-18 08:01:00', NULL, '2026-03-18 17:04:00', 'Present', 'on_time', 0, 1, NULL, 'Performed attendance logging and routine deployment checks.'),
 (9, 2, 1, '2026-03-19', '2026-03-19 08:03:00', NULL, '2026-03-19 17:01:00', 'Present', 'on_time', 0, 1, NULL, 'Completed attendance after shift request rejection and maintained normal schedule.'),
-(10, 2, 1, '2026-03-20', '2026-03-20 08:00:00', NULL, '2026-03-20 17:03:00', 'Present', 'on_time', 0, 0, NULL, 'Finished the final live attendance validation cycle.'),
+(10, 2, 1, '2026-03-20', '2026-03-20 08:00:00', NULL, '2026-03-20 17:03:00', 'Present', 'on_time', 0, 1, NULL, 'Finished the final live attendance validation cycle.'),
 (11, 3, 1, '2026-03-16', '2026-03-16 08:00:00', NULL, '2026-03-16 17:00:00', 'Present', 'on_time', 0, 1, NULL, 'Logged in successfully and tested attendance submission on production.'),
 (12, 3, 1, '2026-03-17', '2026-03-17 08:05:00', NULL, '2026-03-17 17:02:00', 'Present', 'on_time', 0, 1, NULL, 'Performed regular attendance logging and online functionality checks.'),
 (13, 3, 1, '2026-03-18', '2026-03-18 08:02:00', NULL, '2026-03-18 17:01:00', 'Present', 'on_time', 0, 1, NULL, 'Validated attendance history and time capture accuracy.'),
 (14, 3, 1, '2026-03-19', '2026-03-19 08:01:00', NULL, '2026-03-19 17:04:00', 'Present', 'on_time', 0, 1, NULL, 'Completed pre-evaluation live testing tasks and attendance logging.'),
-(15, 3, 1, '2026-03-20', '2026-03-20 10:02:00', '2026-03-20 10:00:00', '2026-03-20 19:01:00', 'Present', 'adjusted_shift', 0, 0, NULL, 'Worked under the approved adjusted shift and completed final production checks.');
+(15, 3, 1, '2026-03-20', '2026-03-20 10:02:00', '2026-03-20 10:00:00', '2026-03-20 19:01:00', 'Present', 'adjusted_shift', 0, 1, NULL, 'Worked under the approved adjusted shift and completed final production checks.');
 
 -- --------------------------------------------------------
 
@@ -166,7 +177,9 @@ INSERT INTO `audit_logs` (`id`, `user_type`, `user_id`, `action`, `target`, `ip_
 (14, 'employer', 1, 'Generate Certificate', 'Certificate generated for student ID: 3, Certificate No: CERT-2026-3-001', '::1', '2026-04-06 14:23:46'),
 (15, 'employer', 1, 'Generate Certificate', 'Certificate generated for student ID: 2, Certificate No: CERT-2026-2-001', '::1', '2026-04-06 14:23:52'),
 (16, 'employer', 1, 'Verify Attendance', 'Verified attendance for student ID: 1, Date: 2026-03-20', '::1', '2026-04-06 14:31:17'),
-(17, 'admin', 1, 'Admin Login', 'Admin Sir Raf logged in.', '::1', '2026-04-13 16:59:09');
+(17, 'admin', 1, 'Admin Login', 'Admin Sir Raf logged in.', '::1', '2026-04-13 16:59:09'),
+(18, 'employer', 1, 'Verify Attendance', 'Verified attendance for student ID: 3, Date: 2026-03-20', '::1', '2026-04-15 00:49:16'),
+(35, 'employer', 1, 'Add Student', 'Employer added student: rome', '::1', '2026-04-15 08:10:04');
 
 -- --------------------------------------------------------
 
@@ -189,9 +202,9 @@ CREATE TABLE `certificates` (
 --
 
 INSERT INTO `certificates` (`certificate_id`, `student_id`, `employer_id`, `certificate_no`, `file_path`, `hours_completed`, `generated_at`) VALUES
-(4, 1, 1, 'CERT-2026-1-001', 'certificates/certificate_1_1775485414.pdf', 40.07, '2026-03-20 17:23:34'),
-(5, 3, 1, 'CERT-2026-3-001', 'certificates/certificate_3_1775485422.pdf', 39.97, '2026-03-20 17:25:42'),
-(6, 2, 1, 'CERT-2026-2-001', 'certificates/certificate_2_1775485428.pdf', 39.90, '2026-03-20 17:27:48');
+(2, 1, 1, 'CERT-2026-1-001', 'certificates/certificate_1_1776236453.pdf', 40.07, '2026-04-15 15:00:53'),
+(4, 3, 1, 'CERT-2026-3-001', 'certificates/certificate_3_1776236463.pdf', 39.97, '2026-04-15 15:01:03'),
+(5, 2, 1, 'CERT-2026-2-001', 'certificates/certificate_2_1776238167.pdf', 39.90, '2026-04-15 15:29:27');
 
 -- --------------------------------------------------------
 
@@ -211,9 +224,9 @@ CREATE TABLE `certificate_hashes` (
 --
 
 INSERT INTO `certificate_hashes` (`id`, `student_id`, `certificate_hash`, `generated_at`) VALUES
-(4, 1, 'CERT-2026-1-001', '2026-04-06 14:23:34'),
-(5, 3, 'CERT-2026-3-001', '2026-04-06 14:23:42'),
-(6, 2, 'CERT-2026-2-001', '2026-04-06 14:23:48');
+(4, 1, 'CERT-2026-1-001', '2026-04-15 07:00:53'),
+(5, 3, 'CERT-2026-3-001', '2026-04-15 07:01:03'),
+(6, 2, 'CERT-2026-2-001', '2026-04-15 07:29:28');
 
 -- --------------------------------------------------------
 
@@ -294,9 +307,9 @@ CREATE TABLE `evaluations` (
 --
 
 INSERT INTO `evaluations` (`evaluation_id`, `student_id`, `employer_id`, `evaluation_date`, `attendance_rating`, `work_quality_rating`, `initiative_rating`, `communication_rating`, `teamwork_rating`, `adaptability_rating`, `professionalism_rating`, `problem_solving_rating`, `technical_skills_rating`, `comments`, `signature_path`, `created_at`) VALUES
-(1, 1, 1, '2026-03-20', 5, 5, 4, 4, 5, 4, 5, 4, 4, 'Completed the live InfinityFree deployment test successfully and demonstrated reliable attendance logging.', NULL, '2026-04-06 14:18:49'),
-(2, 2, 1, '2026-03-20', 4, 4, 4, 4, 4, 4, 4, 4, 4, 'Completed attendance and workflow validation successfully under the standard schedule.', NULL, '2026-04-06 14:18:49'),
-(3, 3, 1, '2026-03-20', 5, 5, 5, 4, 5, 5, 5, 4, 5, 'Completed the full online testing cycle successfully, including adjusted shift workflow validation.', NULL, '2026-04-06 14:18:49');
+(1, 1, 1, '2026-04-15', 5, 5, 5, 5, 5, 5, 4, 5, 5, '', 'assets/signature_1_1.png', '2026-04-15 01:23:54'),
+(2, 3, 1, '2026-04-15', 4, 4, 4, 4, 3, 3, 3, 4, 3, '', 'assets/signature_1_3.png', '2026-04-15 01:46:40'),
+(3, 2, 1, '2026-04-15', 5, 4, 4, 4, 4, 4, 4, 4, 4, '', 'assets/signature_1_2.png', '2026-04-15 06:35:15');
 
 -- --------------------------------------------------------
 
@@ -319,6 +332,15 @@ CREATE TABLE `evaluation_verification_codes` (
   `evaluation_id` int(11) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `evaluation_verification_codes`
+--
+
+INSERT INTO `evaluation_verification_codes` (`verification_id`, `verification_key`, `employer_id`, `student_id`, `sent_to_email`, `code_hash`, `attempts`, `max_attempts`, `expires_at`, `verified_at`, `used_at`, `evaluation_id`, `created_at`) VALUES
+(1, 'c2663a1a70d1102e3395c782b4a7533f', 1, 1, 'aizjedlian@gmail.com', '$2y$10$vvbqwnNpXmiEkSz5yoSKfuwNzCa0IR7kjre5ian6s74vO7OC9B9uC', 0, 5, '2026-04-15 09:33:19', '2026-04-15 09:23:36', '2026-04-15 09:23:54', 0, '2026-04-15 01:23:19'),
+(2, '2261b6b4b33ec35d64d3f5e8da4b177e', 1, 3, 'aizjedlian@gmail.com', '$2y$10$JTeTUqeagtwSVglPpKTdpuRCfryjmMuwi4rJ9yZW6JeZ2vuxVGTYm', 0, 5, '2026-04-15 09:54:09', '2026-04-15 09:44:40', '2026-04-15 09:46:40', 2, '2026-04-15 01:44:09'),
+(3, '2e7d9d207c83d673bfba4b972f37db66', 1, 2, 'aizjedlian@gmail.com', '$2y$10$8y3pwzx6jarxU05gqaXHQOoqw6rko0kYfsmm2uPb0kyY7zYqUy80W', 0, 5, '2026-04-15 14:44:35', '2026-04-15 14:34:53', '2026-04-15 14:35:15', 3, '2026-04-15 06:34:35');
 
 -- --------------------------------------------------------
 
@@ -343,7 +365,44 @@ CREATE TABLE `login_attempts` (
 --
 
 INSERT INTO `login_attempts` (`id`, `username`, `ip_address`, `attempt_count`, `locked_at`, `reset_token`, `reset_expires`, `reset_used`, `updated_at`) VALUES
-(2, 'Sir Ge', '::1', 2, NULL, NULL, NULL, 0, '2026-04-13 16:36:03');
+(2, 'Sir Ge', '::1', 3, '2026-04-15 15:43:49', NULL, NULL, 0, '2026-04-15 07:43:49'),
+(3, 'rome', '::1', 1, NULL, NULL, NULL, 0, '2026-04-15 08:11:57');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `moa_documents`
+--
+
+CREATE TABLE `moa_documents` (
+  `id` int(11) NOT NULL,
+  `student_id` int(11) NOT NULL,
+  `document_type` enum('MOA','Endorsement Letter','Resume') NOT NULL,
+  `filename` varchar(255) NOT NULL,
+  `filepath` varchar(500) NOT NULL,
+  `supervisor_signature_path` varchar(500) DEFAULT NULL,
+  `supervisor_approval_status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  `supervisor_approved_at` timestamp NULL DEFAULT NULL,
+  `supervisor_rejection_reason` text DEFAULT NULL,
+  `admin_approval_status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  `admin_approved_at` timestamp NULL DEFAULT NULL,
+  `admin_rejection_reason` text DEFAULT NULL,
+  `is_new_student` tinyint(1) NOT NULL DEFAULT 1,
+  `uploaded_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `moa_documents`
+--
+
+INSERT INTO `moa_documents` (`id`, `student_id`, `document_type`, `filename`, `filepath`, `supervisor_signature_path`, `supervisor_approval_status`, `supervisor_approved_at`, `supervisor_rejection_reason`, `admin_approval_status`, `admin_approved_at`, `admin_rejection_reason`, `is_new_student`, `uploaded_at`, `updated_at`) VALUES
+(4, 3, 'MOA', 'michael resume.docx', 'C:\\xampp\\htdocs\\ojt\\public/../uploads/moa/69deeede46caa_michael resume.docx', NULL, 'approved', '2026-04-15 01:51:44', NULL, 'approved', '2026-04-15 01:51:55', NULL, 0, '2026-04-15 01:50:22', '2026-04-15 01:52:04'),
+(5, 3, 'Endorsement Letter', 'PERALTA RESUME.docx', 'C:\\xampp\\htdocs\\ojt\\public/../uploads/moa/69deeee4b5918_PERALTA RESUME.docx', NULL, 'approved', '2026-04-15 01:51:43', NULL, 'approved', '2026-04-15 01:51:56', NULL, 0, '2026-04-15 01:50:28', '2026-04-15 01:52:04'),
+(6, 3, 'Resume', 'TATAN RESUME.docx', 'C:\\xampp\\htdocs\\ojt\\public/../uploads/moa/69deeeea2e4e8_TATAN RESUME.docx', NULL, 'approved', '2026-04-15 01:51:42', NULL, 'approved', '2026-04-15 01:51:57', NULL, 0, '2026-04-15 01:50:34', '2026-04-15 01:52:04'),
+(7, 1, 'MOA', 'michael resume.docx', 'C:\\xampp\\htdocs\\ojt\\public/../uploads/moa/69df43aeb4e19_michael resume.docx', NULL, 'approved', '2026-04-15 07:53:35', NULL, 'approved', '2026-04-15 07:53:48', NULL, 0, '2026-04-15 07:52:14', '2026-04-15 07:53:54'),
+(8, 1, 'Endorsement Letter', 'PERALTA RESUME.docx', 'C:\\xampp\\htdocs\\ojt\\public/../uploads/moa/69df43b3e83a2_PERALTA RESUME.docx', NULL, 'approved', '2026-04-15 07:53:34', NULL, 'approved', '2026-04-15 07:53:49', NULL, 0, '2026-04-15 07:52:19', '2026-04-15 07:53:54'),
+(9, 1, 'Resume', 'TATAN RESUME.docx', 'C:\\xampp\\htdocs\\ojt\\public/../uploads/moa/69df43ba26d02_TATAN RESUME.docx', NULL, 'approved', '2026-04-15 07:53:33', NULL, 'approved', '2026-04-15 07:53:50', NULL, 0, '2026-04-15 07:52:26', '2026-04-15 07:53:54');
 
 -- --------------------------------------------------------
 
@@ -421,31 +480,6 @@ CREATE TABLE `uploaded_files` (
   `filepath` varchar(500) NOT NULL,
   `uploaded_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `description` text DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Table structure for table `moa_documents`
---
-
-CREATE TABLE `moa_documents` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `student_id` int(11) NOT NULL,
-  `document_type` enum('MOA','Endorsement Letter','Resume') NOT NULL,
-  `filename` varchar(255) NOT NULL,
-  `filepath` varchar(500) NOT NULL,
-  `supervisor_signature_path` varchar(500),
-  `supervisor_approval_status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
-  `supervisor_approved_at` timestamp NULL,
-  `supervisor_rejection_reason` text ,
-  `admin_approval_status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
-  `admin_approved_at` timestamp NULL,
-  `admin_rejection_reason` text,
-  `is_new_student` tinyint(1) NOT NULL DEFAULT 1,
-  `uploaded_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `unique_student_doc` (`student_id`,`document_type`),
-  FOREIGN KEY (`student_id`) REFERENCES `students`(`student_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -536,6 +570,13 @@ ALTER TABLE `login_attempts`
   ADD KEY `idx_reset_token` (`reset_token`);
 
 --
+-- Indexes for table `moa_documents`
+--
+ALTER TABLE `moa_documents`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_student_doc` (`student_id`,`document_type`);
+
+--
 -- Indexes for table `shift_change_requests`
 --
 ALTER TABLE `shift_change_requests`
@@ -567,7 +608,7 @@ ALTER TABLE `uploaded_files`
 -- AUTO_INCREMENT for table `activity_logs`
 --
 ALTER TABLE `activity_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
 
 --
 -- AUTO_INCREMENT for table `admins`
@@ -579,19 +620,19 @@ ALTER TABLE `admins`
 -- AUTO_INCREMENT for table `attendance`
 --
 ALTER TABLE `attendance`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
 
 --
 -- AUTO_INCREMENT for table `certificates`
 --
 ALTER TABLE `certificates`
-  MODIFY `certificate_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `certificate_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `certificate_hashes`
@@ -621,13 +662,19 @@ ALTER TABLE `evaluations`
 -- AUTO_INCREMENT for table `evaluation_verification_codes`
 --
 ALTER TABLE `evaluation_verification_codes`
-  MODIFY `verification_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `verification_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `login_attempts`
 --
 ALTER TABLE `login_attempts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `moa_documents`
+--
+ALTER TABLE `moa_documents`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `shift_change_requests`
@@ -639,7 +686,7 @@ ALTER TABLE `shift_change_requests`
 -- AUTO_INCREMENT for table `students`
 --
 ALTER TABLE `students`
-  MODIFY `student_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `student_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `uploaded_files`
@@ -652,43 +699,10 @@ ALTER TABLE `uploaded_files`
 --
 
 --
--- Constraints for table `certificates`
+-- Constraints for table `moa_documents`
 --
-ALTER TABLE `certificates`
-  ADD CONSTRAINT `certificates_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `students` (`student_id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `certificates_ibfk_2` FOREIGN KEY (`employer_id`) REFERENCES `employers` (`employer_id`) ON DELETE CASCADE;
-
---
--- Constraints for table `certificate_hashes`
---
-ALTER TABLE `certificate_hashes`
-  ADD CONSTRAINT `certificate_hashes_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `students` (`student_id`) ON DELETE CASCADE;
-
---
--- Constraints for table `employers`
---
-ALTER TABLE `employers`
-  ADD CONSTRAINT `fk_employers_company_id` FOREIGN KEY (`company_id`) REFERENCES `companies` (`company_id`) ON DELETE SET NULL;
-
---
--- Constraints for table `evaluations`
---
-ALTER TABLE `evaluations`
-  ADD CONSTRAINT `evaluations_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `students` (`student_id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `evaluations_ibfk_2` FOREIGN KEY (`employer_id`) REFERENCES `employers` (`employer_id`) ON DELETE CASCADE;
-
---
--- Constraints for table `shift_change_requests`
---
-ALTER TABLE `shift_change_requests`
-  ADD CONSTRAINT `shift_change_requests_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `students` (`student_id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `shift_change_requests_ibfk_2` FOREIGN KEY (`reviewed_by`) REFERENCES `employers` (`employer_id`) ON DELETE SET NULL;
-
---
--- Constraints for table `students`
---
-ALTER TABLE `students`
-  ADD CONSTRAINT `fk_students_company_id` FOREIGN KEY (`company_id`) REFERENCES `companies` (`company_id`) ON DELETE SET NULL;
+ALTER TABLE `moa_documents`
+  ADD CONSTRAINT `moa_documents_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `students` (`student_id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

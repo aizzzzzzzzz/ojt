@@ -46,6 +46,19 @@ function ensure_evaluation_verification_table(PDO $pdo): void {
                 INDEX idx_eval_verify_owner (employer_id, student_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
         ");
+
+        // Repair legacy schema where verification_id exists but is not AUTO_INCREMENT.
+        $idColumn = $pdo->query("SHOW COLUMNS FROM evaluation_verification_codes LIKE 'verification_id'")
+            ->fetch(PDO::FETCH_ASSOC);
+        $idExtra = strtolower((string) ($idColumn['Extra'] ?? ''));
+        if ($idColumn && strpos($idExtra, 'auto_increment') === false) {
+            $maxId = (int) ($pdo->query("SELECT COALESCE(MAX(verification_id), 0) FROM evaluation_verification_codes")
+                ->fetchColumn());
+            $pdo->exec("ALTER TABLE evaluation_verification_codes MODIFY verification_id INT NOT NULL AUTO_INCREMENT");
+            if ($maxId > 0) {
+                $pdo->exec("ALTER TABLE evaluation_verification_codes AUTO_INCREMENT = " . ($maxId + 1));
+            }
+        }
     } catch (PDOException $e) {
         error_log("Failed to ensure evaluation_verification_codes table: " . $e->getMessage());
     }
@@ -107,14 +120,31 @@ function create_evaluation_verification_request(PDO $pdo, int $employerId, int $
             code_hash, expires_at
         ) VALUES (?, ?, ?, ?, ?, ?)
     ");
-    $insert->execute([
-        $verificationKey,
-        $employerId,
-        $studentId,
-        $email,
-        password_hash($plainCode, PASSWORD_DEFAULT),
-        $expiresAt
-    ]);
+    try {
+        $insert->execute([
+            $verificationKey,
+            $employerId,
+            $studentId,
+            $email,
+            password_hash($plainCode, PASSWORD_DEFAULT),
+            $expiresAt
+        ]);
+    } catch (PDOException $e) {
+        // Last-chance repair for environments where the table existed without AUTO_INCREMENT.
+        if (strpos($e->getMessage(), "Duplicate entry '0' for key 'PRIMARY'") !== false) {
+            $pdo->exec("ALTER TABLE evaluation_verification_codes MODIFY verification_id INT NOT NULL AUTO_INCREMENT");
+            $insert->execute([
+                $verificationKey,
+                $employerId,
+                $studentId,
+                $email,
+                password_hash($plainCode, PASSWORD_DEFAULT),
+                $expiresAt
+            ]);
+        } else {
+            throw $e;
+        }
+    }
 
     return [
         'verification_key' => $verificationKey,

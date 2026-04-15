@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(php *)",
-      "Bash(del *)"
+      "Bash(del *)",
+      "Bash(dir *)",
+      "Bash(type *)",
+      "Bash(findstr *)",
+      "Bash(powershell *)"
     ]
   },
   "$version": 3

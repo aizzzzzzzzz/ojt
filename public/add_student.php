@@ -117,28 +117,28 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     :root{--bg:#f1f4f9;--surface:#fff;--surface2:#f8fafc;--border:#e3e8f0;--text:#111827;--text-muted:#6b7280;--accent:#4361ee;--accent-dk:#3451d1;--accent-lt:#eef1fd;--green:#16a34a;--green-lt:#dcfce7;--red:#dc2626;--red-lt:#fee2e2;--amber:#d97706;--amber-lt:#fef3c7;--radius:14px;--shadow-md:0 2px 8px rgba(0,0,0,.07),0 8px 28px rgba(0,0,0,.07);}
     *,*::before,*::after{box-sizing:border-box;}
-    body{font-family:'DM Sans','Segoe UI',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh;margin:0;padding:32px 20px 60px;}
-    .page-card{background:var(--surface);border-radius:20px;border:1px solid var(--border);box-shadow:var(--shadow-md);width:100%;margin:0 auto;overflow:hidden;}
-    .page-topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px;}
-    .page-topbar h2{font-size:18px;font-weight:700;margin:0;letter-spacing:-.3px;}
-    .page-topbar p{font-size:13px;color:var(--text-muted);margin:2px 0 0;}
-    .page-inner{padding:24px 28px 32px;}
-    .page-inner h3{font-size:15px;font-weight:700;margin:24px 0 12px;padding-bottom:9px;border-bottom:1px solid var(--border);}
+    body{font-family:'DM Sans','Segoe UI',sans-serif;background:radial-gradient(circle at top left,rgba(67,97,238,.16),transparent 30%),linear-gradient(180deg,#eef4ff 0%,#f8fbff 50%,#f3f6fb 100%);color:var(--text);line-height:1.6;min-height:100vh;margin:0;padding:32px 20px 60px;}
+    .page-card{background:var(--surface);border-radius:24px;border:1px solid rgba(226,232,240,.8);box-shadow:0 20px 42px rgba(15,23,42,.08);width:100%;margin:0 auto;overflow:hidden;}
+    .page-topbar{display:flex;align-items:center;justify-content:space-between;padding:28px 32px;border-bottom:1px solid rgba(226,232,240,.9);flex-wrap:wrap;gap:16px;background:linear-gradient(135deg,rgba(67,97,238,.08),rgba(99,170,229,.05));}
+    .page-topbar h2{font-size:22px;font-weight:700;margin:0;letter-spacing:-.4px;color:var(--text);}
+    .page-topbar p{font-size:14px;color:var(--text-muted);margin:4px 0 0;line-height:1.5;}
+    .page-inner{padding:32px 32px 40px;}
+    .page-inner h3{font-size:15px;font-weight:700;margin:28px 0 16px;padding-bottom:12px;border-bottom:1px solid rgba(226,232,240,.9);}
     .page-inner h3:first-child{margin-top:0;}
-    .success-msg{background:var(--green-lt);color:#15803d;padding:12px 16px;border-radius:10px;border:1px solid #bbf7d0;font-size:14px;font-weight:500;margin-bottom:16px;}
-    .error-msg{background:var(--red-lt);color:#b91c1c;padding:12px 16px;border-radius:10px;border:1px solid #fecaca;font-size:14px;font-weight:500;margin-bottom:16px;}
-    .form-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:5px;display:block;}
-    .form-text{font-size:12px;color:var(--text-muted);margin-top:4px;}
-    input[type=text],input[type=email],input[type=password],input[type=number],input[type=time],input[type=date],textarea,select,.form-control{border-radius:9px;border:1px solid var(--border);padding:9px 12px;font-size:14px;font-family:inherit;color:var(--text);background:var(--surface);transition:border-color .2s,box-shadow .2s;width:100%;}
-    input:focus,textarea:focus,select:focus,.form-control:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(67,97,238,.12);outline:none;}
+    .success-msg{background:rgba(5,150,105,.1);color:#047857;padding:16px 18px;border-radius:14px;border:1.5px solid rgba(16,185,129,.25);font-size:14px;font-weight:600;margin-bottom:20px;line-height:1.5;}
+    .error-msg{background:rgba(239,68,68,.1);color:#991b1b;padding:16px 18px;border-radius:14px;border:1.5px solid rgba(239,68,68,.25);font-size:14px;font-weight:600;margin-bottom:20px;line-height:1.5;}
+    .form-label{font-size:14px;font-weight:700;color:var(--text);margin-bottom:8px;display:block;letter-spacing:-.2px;}
+    .form-text{font-size:13px;color:var(--text-muted);margin-top:6px;line-height:1.4;}
+    input[type=text],input[type=email],input[type=password],input[type=number],input[type=time],input[type=date],textarea,select,.form-control{border-radius:14px;border:1.5px solid rgba(226,232,240,.9);padding:12px 16px;font-size:14px;font-family:inherit;color:var(--text);background:#f8fbff;transition:border-color .2s,box-shadow .2s,background .2s;width:100%;}
+    input:focus,textarea:focus,select:focus,.form-control:focus{border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 4px rgba(67,97,238,.1);outline:none;}
     .mb-3{margin-bottom:16px;}.mb-4{margin-bottom:24px;}
-    .btn{font-family:inherit;font-size:13px;font-weight:600;border-radius:9px;padding:9px 18px;transition:all .18s;cursor:pointer;display:inline-flex;align-items:center;gap:6px;border:none;text-decoration:none;}
-    .btn-primary{background:var(--accent);color:#fff;}.btn-primary:hover{background:var(--accent-dk);transform:translateY(-1px);color:#fff;}
+    .btn{font-family:inherit;font-size:14px;font-weight:700;border-radius:14px;padding:12px 20px;transition:all .18s;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;text-decoration:none;box-shadow:0 12px 24px rgba(15,23,42,.08);}
+    .btn-primary{background:var(--accent);color:#fff;}.btn-primary:hover{background:var(--accent-dk);transform:translateY(-1px);color:#fff;box-shadow:0 16px 32px rgba(67,97,238,.2);}
     .btn-success{background:var(--green);color:#fff;}.btn-success:hover{background:#15803d;transform:translateY(-1px);color:#fff;}
     .btn-secondary{background:var(--surface2);color:var(--text);border:1.5px solid var(--border);}.btn-secondary:hover{background:var(--border);}
-    .btn-outline-secondary{background:transparent;color:var(--text-muted);border:1.5px solid var(--border);border-radius:9px;padding:7px 14px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-family:inherit;transition:all .18s;}
-    .btn-outline-secondary:hover{background:var(--surface2);color:var(--text);}
-    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+    .btn-outline-secondary{background:transparent;color:var(--text);border:1.5px solid rgba(15,23,42,.1);border-radius:12px;padding:8px 14px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-family:inherit;transition:all .18s;}
+    .btn-outline-secondary:hover{background:rgba(71,85,105,.05);color:var(--text);border-color:rgba(15,23,42,.15);}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
     .span-2{grid-column:span 2;}
     @media(max-width:640px){body{padding:10px 10px 40px;}.page-card{border-radius:14px;}.page-topbar,.page-inner{padding:14px 16px;}.form-grid{grid-template-columns:1fr;}.span-2{grid-column:span 1;}}
 
@@ -151,6 +151,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         <div>
             <h2>Add Student</h2>
             <p>Create a student account and set their internship profile</p>
+            <p class="form-text" style="margin:6px 0 0;">Use the full school and course names (no abbreviations).</p>
         </div>
         <a href="supervisor_dashboard.php" class="btn-outline-secondary">⬅ Back</a>
     </div>
@@ -191,32 +192,34 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 </div>
                 <div class="mb-3">
                     <label class="form-label" for="course">Course</label>
-                    <input type="text" id="course" name="course" placeholder="e.g. BSIT, BSEd" value="<?= htmlspecialchars($form_data['course']) ?>" required>
+                    <input type="text" id="course" name="course" placeholder="e.g. Bachelor of Science in Information Technology" value="<?= htmlspecialchars($form_data['course']) ?>" required>
+                    <div class="form-text">Enter the full course name.</div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label" for="school">School</label>
-                    <input type="text" id="school" name="school" placeholder="School name" value="<?= htmlspecialchars($form_data['school']) ?>" required>
+                    <input type="text" id="school" name="school" placeholder="e.g. College for Research and Technology" value="<?= htmlspecialchars($form_data['school']) ?>" required>
+                    <div class="form-text">Enter the full school name.</div>
                 </div>
                 <div class="mb-3 span-2">
                     <label class="form-label" for="password">Password</label>
                     <input type="password" id="password" name="password" placeholder="Initial password" required>
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px;">Add Student</button>
+            <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px;">Add Student</button>
         </form>
     </div>
 </div>
 
 <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius:16px;border:1px solid var(--border);">
-            <div class="modal-header" style="border-bottom:1px solid var(--border);">
-                <h5 class="modal-title" style="font-weight:700;">Student Added</h5>
+        <div class="modal-content" style="border-radius:20px;border:1px solid rgba(226,232,240,.8);box-shadow:0 20px 42px rgba(15,23,42,.1);">
+            <div class="modal-header" style="border-bottom:1px solid rgba(226,232,240,.9);padding:24px;">
+                <h5 class="modal-title" style="font-weight:700;font-size:18px;">✓ Student Added</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body" style="font-size:14px;">Student account created successfully!</div>
-            <div class="modal-footer" style="border-top:1px solid var(--border);">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <div class="modal-body" style="font-size:15px;padding:24px;">Student account created successfully!</div>
+            <div class="modal-footer" style="border-top:1px solid rgba(226,232,240,.9);padding:16px 24px;">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>

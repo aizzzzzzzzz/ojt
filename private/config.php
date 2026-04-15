@@ -12,12 +12,19 @@ if (!defined('DEMO_DISABLE_ATTENDANCE_GRACE_PERIOD')) {
 
 $is_local = in_array($_SERVER['HTTP_HOST'] ?? '', ['localhost', '127.0.0.1', 'localhost:8080', '127.0.0.1:8080']);
 
-
-
-$host = getenv('DB_HOST') ?: "sql106.infinityfree.com";
-$db   = getenv('DB_NAME') ?: "if0_41121145_student_db";
-$user = getenv('DB_USER') ?: "if0_41121145";
-$pass = getenv('DB_PASS') ?: "6fvGRVlsh9";
+if ($is_local) {
+    // Use local XAMPP database
+    $host = "localhost";
+    $db   = "student_db";
+    $user = "root";
+    $pass = "";
+} else {
+    // Use remote InfinityFree database
+    $host = getenv('DB_HOST') ?: "sql106.infinityfree.com";
+    $db   = getenv('DB_NAME') ?: "if0_41121145_student_db";
+    $user = getenv('DB_USER') ?: "if0_41121145";
+    $pass = getenv('DB_PASS') ?: "6fvGRVlsh9";
+}
 $backup_cron_token = getenv('BACKUP_CRON_TOKEN') ?: "";
 $auto_absent_cron_token = getenv('AUTO_ABSENT_CRON_TOKEN') ?: "";
 
@@ -192,10 +199,10 @@ $email_config = [
     'smtp_encryption' => getenv('SMTP_ENCRYPTION') ?: 'tls',
     'smtp_username' => getenv('SMTP_USERNAME') ?: 'aizjedlian@gmail.com',
     'smtp_password' => getenv('SMTP_PASSWORD') ?: 'kriiazezwyeqqpnw',
-    'from_email' => getenv('FROM_EMAIL') ?: 'noreply@yourdomain.com',
-    'from_name' => getenv('FROM_NAME') ?: 'Internship System',
-    'reply_to_email' => getenv('REPLY_TO_EMAIL') ?: 'noreply@yourdomain.com',
-    'reply_to_name' => getenv('REPLY_TO_NAME') ?: 'Internship System Support',
+    'from_email' => getenv('FROM_EMAIL') ?: (getenv('SMTP_USERNAME') ?: 'aizjedlian@gmail.com'),
+    'from_name' => getenv('FROM_NAME') ?: 'OJT System',
+    'reply_to_email' => getenv('REPLY_TO_EMAIL') ?: (getenv('SMTP_USERNAME') ?: 'aizjedlian@gmail.com'),
+    'reply_to_name' => getenv('REPLY_TO_NAME') ?: 'OJT Monitoring Evaluation System Support',
     'debug_mode' => getenv('EMAIL_DEBUG') ?: false,
 ];
 

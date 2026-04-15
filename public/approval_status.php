@@ -103,7 +103,8 @@ if ($has_moa && $has_endorsement) {
         * { box-sizing: border-box; }
         body {
             font-family: 'DM Sans', 'Segoe UI', sans-serif;
-            background: var(--bg);
+            background: radial-gradient(circle at top left, rgba(67,97,238,0.16), transparent 30%),
+                        linear-gradient(180deg, #eef4ff 0%, #f8fbff 50%, #f3f6fb 100%);
             color: var(--text);
             line-height: 1.6;
             min-height: 100vh;
@@ -125,10 +126,36 @@ if ($has_moa && $has_endorsement) {
         }
 
         .card-header {
-            background: linear-gradient(135deg, rgba(67, 97, 238, 0.1), rgba(99, 170, 229, 0.08));
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, rgba(67, 97, 238, 0.12), rgba(99, 170, 229, 0.08));
             border-bottom: 1px solid var(--border);
-            padding: 32px 28px;
+            padding: 34px 28px;
             text-align: center;
+        }
+
+        .card-header::before,
+        .card-header::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.45;
+        }
+
+        .card-header::before {
+            width: 140px;
+            height: 140px;
+            background: rgba(67, 97, 238, 0.15);
+            top: -30px;
+            right: -30px;
+        }
+
+        .card-header::after {
+            width: 84px;
+            height: 84px;
+            background: rgba(67, 97, 238, 0.08);
+            bottom: -20px;
+            left: -16px;
         }
 
         .card-header h1 {
@@ -148,22 +175,44 @@ if ($has_moa && $has_endorsement) {
             padding: 32px 28px;
         }
 
+        .hero-panel {
+            display: grid;
+            gap: 18px;
+            margin-bottom: 30px;
+            background: linear-gradient(180deg, rgba(67,97,238,0.08), rgba(99,170,229,0.04));
+            border: 1px solid rgba(67,97,238,0.12);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+        }
+
+        .hero-panel strong {
+            color: var(--text);
+        }
+
         .status-message {
-            background: var(--yellow-lt);
-            color: #92400e;
-            border: 1px solid #fcd34d;
-            padding: 16px;
-            border-radius: 10px;
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid rgba(67,97,238,0.16);
+            padding: 20px;
+            border-radius: 16px;
             margin-bottom: 28px;
-            font-size: 14px;
+            font-size: 15px;
+            line-height: 1.7;
+            box-shadow: 0 20px 42px rgba(67,97,238,0.05);
+        }
+
+        .document-grid {
+            display: grid;
+            gap: 18px;
         }
 
         .document-check {
-            margin-bottom: 20px;
-            padding: 16px;
-            border-radius: 10px;
-            border: 1px solid var(--border);
-            background: var(--surface2);
+            padding: 22px;
+            border-radius: 20px;
+            border: 1px solid rgba(226,232,240,0.9);
+            background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+            box-shadow: 0 15px 30px rgba(15, 23, 42, 0.05);
         }
 
         .document-check h3 {
@@ -176,34 +225,39 @@ if ($has_moa && $has_endorsement) {
         }
 
         .status-badge {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             font-size: 12px;
-            font-weight: 600;
-            padding: 4px 10px;
-            border-radius: 6px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            padding: 6px 12px;
+            border-radius: 999px;
             margin-left: auto;
+            min-width: 120px;
+            text-align: center;
         }
 
         .status-pending {
-            background: var(--yellow-lt);
+            background: rgba(250,204,21,0.14);
             color: #92400e;
         }
 
         .status-approved {
-            background: var(--green-lt);
-            color: #15803d;
+            background: rgba(5,150,105,0.14);
+            color: #047857;
         }
 
         .status-rejected {
-            background: var(--red-lt);
+            background: rgba(239,68,68,0.14);
             color: #b91c1c;
         }
 
         .approval-step {
-            margin: 12px 0 0;
-            padding: 12px 0;
-            border-top: 1px solid var(--border);
-            font-size: 13px;
+            margin: 16px 0 0;
+            padding: 18px 0 0;
+            border-top: 1px solid rgba(226,232,240,0.9);
+            font-size: 14px;
         }
 
         .approval-step:first-of-type {
@@ -227,45 +281,52 @@ if ($has_moa && $has_endorsement) {
         }
 
         .step-reason {
-            background: var(--red-lt);
-            color: #b91c1c;
-            padding: 8px 12px;
-            border-radius: 6px;
-            margin: 8px 0 0;
-            font-size: 12px;
-            border: 1px solid #fecaca;
+            background: rgba(254, 205, 211, 0.7);
+            color: #991b1b;
+            padding: 10px 14px;
+            border-radius: 12px;
+            margin: 10px 0 0;
+            font-size: 13px;
+            border: 1px solid rgba(251,146,60,0.2);
         }
 
         .missing-document {
-            padding: 16px;
-            background: var(--red-lt);
-            border: 1px solid #fecaca;
-            border-radius: 10px;
-            color: #b91c1c;
+            padding: 18px;
+            background: rgba(254, 226, 226, 0.7);
+            border: 1px dashed rgba(239, 68, 68, 0.35);
+            border-radius: 16px;
+            color: #991b1b;
             margin-bottom: 20px;
-            font-size: 13px;
+            font-size: 14px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 12px;
         }
 
         .missing-document strong {
             display: block;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
+            font-size: 15px;
         }
 
         .upload-link {
-            background: var(--red);
+            background: var(--accent);
             color: #fff;
-            padding: 6px 14px;
-            border-radius: 6px;
+            padding: 10px 16px;
+            border-radius: 12px;
             text-decoration: none;
-            font-weight: 600;
-            font-size: 12px;
-            transition: all .18s;
+            font-weight: 700;
+            font-size: 13px;
+            transition: all .18s ease;
+            box-shadow: 0 12px 24px rgba(67,97,238,0.12);
             white-space: nowrap;
+        }
+
+        .upload-link:hover {
+            transform: translateY(-1px);
+            background: var(--accent-dk);
         }
 
         .upload-link:hover {
@@ -277,23 +338,31 @@ if ($has_moa && $has_endorsement) {
             display: flex;
             gap: 12px;
             margin-top: 28px;
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
         .btn {
             flex: 1;
-            padding: 12px 18px;
+            padding: 14px 20px;
             border: none;
-            border-radius: 9px;
-            font-size: 13px;
-            font-weight: 600;
+            border-radius: 14px;
+            font-size: 14px;
+            font-weight: 700;
             cursor: pointer;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
-            transition: all .18s;
+            gap: 8px;
+            transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
             font-family: inherit;
+            min-width: 160px;
+            box-shadow: 0 14px 24px rgba(15, 23, 42, 0.08);
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
         }
 
         .btn-primary {
@@ -307,12 +376,12 @@ if ($has_moa && $has_endorsement) {
 
         .btn-outline {
             background: transparent;
-            color: var(--text-muted);
-            border: 1.5px solid var(--border);
+            color: var(--text);
+            border: 1.5px solid rgba(15, 23, 42, 0.1);
         }
 
         .btn-outline:hover {
-            background: var(--surface2);
+            background: rgba(71, 85, 105, 0.04);
             color: var(--text);
         }
 
@@ -347,7 +416,7 @@ if ($has_moa && $has_endorsement) {
                 Welcome, <strong><?= htmlspecialchars($student_name ?? $student_username) ?></strong>! Your account requires document approval before you can proceed. Both your MOA and Endorsement Letter must be approved by your supervisor and admin.
             </div>
 
-            <div>
+            <div class="document-grid">
                 <!-- MOA Status -->
                 <div class="document-check">
                     <h3>
@@ -475,7 +544,7 @@ if ($has_moa && $has_endorsement) {
                         <div class="missing-document">
                             <strong>⚠️ Not yet uploaded</strong>
                             Your Endorsement Letter hasn't been uploaded yet.
-                            <a href="upload_student_document.php?type=Endorsement Letter" class="upload-link">Upload now</a>
+                            <a href="upload_student_document.php?type=Endorsement%20Letter" class="upload-link">Upload now</a>
                         </div>
                     <?php endif; ?>
                 </div>

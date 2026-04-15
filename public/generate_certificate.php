@@ -7,12 +7,304 @@ require_once __DIR__ . '/../lib/fpdf.php';
 require_once __DIR__ . '/../includes/email.php';
 
 if (!isset($_SESSION['employer_id']) || $_SESSION['role'] !== "employer") {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+        exit;
+    }
     header("Location: employer_login.php");
     exit;
 }
 
 $employer_id = (int)$_SESSION['employer_id'];
 
+// Handle AJAX request
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
+    header('Content-Type: application/json');
+    
+    if (!isset($_POST['student_id'])) {
+        echo json_encode(['success' => false, 'message' => 'Missing student_id']);
+        exit;
+    }
+
+    $student_id = (int)$_POST['student_id'];
+    
+    // Fetch student data
+    $stmt = $pdo->prepare("SELECT *,
+        CONCAT(
+            first_name,
+            IF(middle_name IS NOT NULL AND middle_name != '', CONCAT(' ', middle_name), ''),
+            ' ',
+            last_name
+        ) AS name,
+        email
+    FROM students WHERE student_id = ? LIMIT 1");
+    $stmt->execute([$student_id]);
+    $student = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$student) {
+        echo json_encode(['success' => false, 'message' => 'Student not found']);
+        exit;
+    }
+
+    // Fetch evaluation
+    $eval_check = $pdo->prepare("SELECT * FROM evaluations WHERE student_id = ? AND employer_id = ?");
+    $eval_check->execute([$student_id, $employer_id]);
+    $evaluation = $eval_check->fetch(PDO::FETCH_ASSOC);
+
+    if (!$evaluation) {
+        echo json_encode(['success' => false, 'message' => 'Evaluation not found']);
+        exit;
+    }
+
+    // Fetch attendance
+    $attendance_stmt = $pdo->prepare("SELECT * FROM attendance WHERE student_id = ? ORDER BY log_date DESC");
+    $attendance_stmt->execute([$student_id]);
+    $attendance = $attendance_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $total_minutes = 0;
+    foreach ($attendance as $row) {
+        if ($row['verified'] == 1 && !empty($row['time_in']) && !empty($row['time_out'])) {
+            $time_in = strtotime($row['time_in']);
+            $time_out = strtotime($row['time_out']);
+            $minutesWorked = max(0, ($time_out - $time_in) / 60);
+            if ($minutesWorked > 240) {
+                $minutesWorked -= 60;
+            }
+            $total_minutes += max(0, $minutesWorked);
+        }
+    }
+
+    $hours = floor($total_minutes / 60);
+    $minutes = $total_minutes % 60;
+
+    $employer_name = "(assigned organization)";
+    $supervisor_name = "(supervisor name)";
+    $emp_stmt = $pdo->prepare("SELECT name, company, company_id FROM employers WHERE employer_id = ?");
+    $emp_stmt->execute([$employer_id]);
+    $emp = $emp_stmt->fetch(PDO::FETCH_ASSOC);
+    if ($emp) {
+        $employer_name = $emp['company'];
+        $supervisor_name = $emp['name'];
+    }
+
+    $company_logo_path = '';
+    $company_logo_candidates = [];
+    if (!empty($emp) && !empty($emp['company_id'])) {
+        $company_logo_candidates[] = 'assets/company_logo_company_' . $emp['company_id'];
+    }
+    $company_logo_candidates[] = 'assets/company_logo_employer_' . $employer_id;
+    $company_logo_candidates[] = 'assets/company_logo';
+    $company_logo_exts = ['png', 'jpg', 'jpeg'];
+    foreach ($company_logo_candidates as $candidate) {
+        foreach ($company_logo_exts as $ext) {
+            $candidate_path = $candidate . '.' . $ext;
+            if (file_exists($candidate_path)) {
+                $company_logo_path = $candidate_path;
+                break 2;
+            }
+        }
+    }
+
+    $signaturePath = '';
+    if (!empty($evaluation['signature_path'])) {
+        $signaturePath = $evaluation['signature_path'];
+    } else {
+        $signaturePath = 'assets/signature_' . $employer_id . '_' . $student_id . '.png';
+    }
+    $signatureExists = !empty($signaturePath) && file_exists($signaturePath);
+
+    // Generate certificate PDF
+    class CertificatePDF extends FPDF {
+        public $certificate_no;
+        public $signaturePath;
+        public $supervisorName;
+
+        function Footer() {
+            $innerMargin = 8;
+            $baseY = $this->GetPageHeight() - $innerMargin - 10;
+
+            $this->SetXY($innerMargin + 2, $baseY);
+            $this->SetFont('Times','',9);
+            $this->Cell(100, 5, 'Certificate No: ' . $this->certificate_no, 0, 0, 'L');
+
+            if (!empty($this->signaturePath) && file_exists($this->signaturePath)) {
+                $sigWidth = 35;
+                $sigHeight = 12;
+                $sigX = $this->GetPageWidth() - $innerMargin - $sigWidth - 2;
+                $sigY = $baseY - $sigHeight - 2;
+
+                $this->Image($this->signaturePath, $sigX, $sigY, $sigWidth, $sigHeight);
+
+                $lineY = $sigY + $sigHeight;
+                $this->SetLineWidth(0.3);
+                $this->Line($sigX, $lineY, $sigX + $sigWidth, $lineY);
+
+                $this->SetXY($sigX, $lineY + 1);
+                $this->SetFont('Times','',8);
+                $this->Cell($sigWidth, 4, 'Authorized Signature', 0, 2, 'C');
+                $this->Cell($sigWidth, 4, $this->supervisorName, 0, 0, 'C');
+            }
+        }
+    }
+
+    $certificate_no = 'CERT-' . date('Y') . '-' . $student_id . '-' . str_pad($employer_id, 3, '0', STR_PAD_LEFT);
+
+    $pdf = new CertificatePDF('L', 'mm', 'A4');
+    $pdf->certificate_no = $certificate_no;
+    $pdf->signaturePath = $signaturePath;
+    $pdf->supervisorName = $supervisor_name;
+    $pdf->SetAutoPageBreak(false);
+    $pdf->AddPage();
+
+    $pdf->SetLineWidth(1);
+    $pdf->Rect(5, 5, $pdf->GetPageWidth()-10, $pdf->GetPageHeight()-10);
+    $pdf->SetLineWidth(0.2);
+    $pdf->Rect(8, 8, $pdf->GetPageWidth()-16, $pdf->GetPageHeight()-16);
+
+    $logoPath = 'assets/school_logo.png';
+    if (file_exists($logoPath)) {
+        $pdf->Image($logoPath, 15, 12, 22);
+    }
+
+    if (!empty($company_logo_path) && file_exists($company_logo_path)) {
+        $companyLogoSize = 30;
+        $companyLogoX = $pdf->GetPageWidth() - 15 - $companyLogoSize;
+        $pdf->Image($company_logo_path, $companyLogoX, 12, $companyLogoSize);
+    }
+
+    $studentSchool = trim((string) ($student['school'] ?? ''));
+    $studentCourse = trim((string) ($student['course'] ?? ''));
+    if ($studentSchool === '') {
+        $studentSchool = 'School Not Specified';
+    }
+    if ($studentCourse === '') {
+        $studentCourse = 'Course Not Specified';
+    }
+
+    $pdf->SetY(15);
+    $pdf->SetFont('Times','B',16);
+    $pdf->MultiCell(0, 8, $studentSchool, 0, 'C');
+    $pdf->SetFont('Times','I',12);
+    $pdf->MultiCell(0, 6, $studentCourse, 0, 'C');
+    $pdf->Ln(8);
+
+    $pdf->SetFont('Times','B',24);
+    $pdf->Cell(0, 12, 'CERTIFICATE OF COMPLETION', 0, 1, 'C');
+    $pdf->Ln(8);
+
+    $pdf->SetFont('Times','',12);
+    $pdf->Cell(0, 10, 'This is to certify that', 0, 1, 'C');
+    $pdf->Ln(3);
+
+    $pdf->SetFont('Times','B',20);
+    $pdf->Cell(0, 10, $student['name'], 0, 1, 'C');
+    $nameUnderlineY = $pdf->GetY() - 1.5;
+    $nameUnderlineWidth = min($pdf->GetStringWidth((string) $student['name']) + 12, $pdf->GetPageWidth() - 70);
+    $nameUnderlineX = ($pdf->GetPageWidth() - $nameUnderlineWidth) / 2;
+    $pdf->SetLineWidth(0.6);
+    $pdf->Line($nameUnderlineX, $nameUnderlineY, $nameUnderlineX + $nameUnderlineWidth, $nameUnderlineY);
+    $pdf->Ln(6);
+
+    $pdf->SetFont('Times','',12);
+    $pdf->MultiCell(0, 6, "has successfully completed the required On-the-Job Training\nwith outstanding dedication and professional competence,", 0, 'C');
+    $pdf->Ln(3);
+
+    $pdf->SetFont('Times','B',14);
+    $hoursDisplay = $hours > 0 ? "{$hours} hours" : "";
+    if ($minutes > 0) {
+        $hoursDisplay .= ($hoursDisplay ? " and " : "") . "{$minutes} minutes";
+    }
+    $hoursDisplay = trim($hoursDisplay) ?: "0 hours";
+    $pdf->Cell(0, 4, "{$hoursDisplay} of supervised practical training", 0, 1, 'C');
+    $pdf->Ln(3);
+
+    $pdf->SetFont('Times','',12);
+    $pdf->Cell(0, 8, 'at', 0, 1, 'C');
+    $pdf->SetFont('Times','B',14);
+    $pdf->Cell(0, 8, $employer_name, 0, 1, 'C');
+    $pdf->Ln(6);
+
+    $pdf->SetFont('Times','',11);
+    $pdf->Cell(0, 6, 'Given this ' . date('jS') . ' day of ' . date('F, Y'), 0, 1, 'C');
+
+    $certificateFileName = 'certificate_' . $student_id . '_' . time() . '.pdf';
+    $certificatePath = 'certificates/' . $certificateFileName;
+
+    if (!is_dir('certificates')) {
+        mkdir('certificates', 0777, true);
+    }
+
+    $pdf->Output('F', $certificatePath);
+
+    // Save to database
+    $certStmt = $pdo->prepare("INSERT INTO certificates
+        (student_id, employer_id, certificate_no, file_path, hours_completed, generated_at)
+        VALUES (?, ?, ?, ?, ?, NOW())
+        ON DUPLICATE KEY UPDATE
+        file_path = VALUES(file_path), hours_completed = VALUES(hours_completed), generated_at = NOW()");
+
+    $total_hours = $hours + ($minutes / 60);
+    
+    try {
+        $certResult = $certStmt->execute([
+            $student_id, $employer_id, $certificate_no, $certificatePath, $total_hours
+        ]);
+
+        if (!$certResult) {
+            $errorInfo = $certStmt->errorInfo();
+            error_log("Certificate insert failed: " . print_r($errorInfo, true));
+            echo json_encode(['success' => false, 'message' => 'Database error: ' . $errorInfo[2]]);
+            exit;
+        }
+    } catch (PDOException $e) {
+        error_log("Certificate insert exception: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+        exit;
+    }
+
+    // Verify the certificate was saved
+    usleep(100000);
+    $verify_stmt = $pdo->prepare("SELECT certificate_id FROM certificates WHERE student_id = ? AND employer_id = ?");
+    $verify_stmt->execute([$student_id, $employer_id]);
+    $cert_exists = $verify_stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$cert_exists) {
+        error_log("Certificate verification failed for student_id: $student_id, employer_id: $employer_id");
+        echo json_encode(['success' => false, 'message' => 'Certificate verification failed']);
+        exit;
+    }
+
+    // Save certificate hash
+    $hashStmt = $pdo->prepare("INSERT INTO certificate_hashes (student_id, certificate_hash, generated_at) VALUES (?, ?, NOW()) ON DUPLICATE KEY UPDATE certificate_hash = VALUES(certificate_hash), generated_at = NOW()");
+    $hashStmt->execute([$student_id, $certificate_no]);
+
+    // Send email notification
+    if (!empty($student['email'])) {
+        $capitalized_student_name = ucwords(strtolower($student['name']));
+        $certificateAbsolutePath = __DIR__ . DIRECTORY_SEPARATOR . ltrim($certificatePath, '/\\');
+        $certificateAttachmentName = 'OJT_Certificate_' . preg_replace('/[^A-Za-z0-9\-_]/', '_', $capitalized_student_name) . '.pdf';
+        $certificateAttachments = is_file($certificateAbsolutePath)
+            ? [['path' => $certificateAbsolutePath, 'name' => $certificateAttachmentName]]
+            : [];
+        $email_result = send_certificate_notification($student['email'], $capitalized_student_name, $supervisor_name, $certificate_no, $certificateAttachments);
+        if ($email_result !== true) {
+            error_log("Failed to send certificate notification: " . $email_result);
+        }
+    }
+
+    // Log to audit
+    audit_log($pdo, 'Generate Certificate', "Certificate generated for student ID: $student_id, Certificate No: $certificate_no");
+
+    echo json_encode([
+        'success' => true, 
+        'message' => 'Certificate generated successfully!',
+        'certificate_no' => $certificate_no
+    ]);
+    exit;
+}
+
+// Regular page request (for backward compatibility)
 if (!isset($_GET['student_id'])) {
     header("Location: supervisor_dashboard.php");
     exit;
@@ -164,17 +456,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdf->Image($company_logo_path, $companyLogoX, 12, $companyLogoSize);
         }
 
+        $studentSchool = trim((string) ($student['school'] ?? ''));
+        $studentCourse = trim((string) ($student['course'] ?? ''));
+        if ($studentSchool === '') {
+            $studentSchool = 'School Not Specified';
+        }
+        if ($studentCourse === '') {
+            $studentCourse = 'Course Not Specified';
+        }
+
         $pdf->SetY(15);
         $pdf->SetFont('Times','B',16);
-        $pdf->Cell(0, 8, 'School of Engineering and Technology', 0, 1, 'C');
+        $pdf->MultiCell(0, 8, $studentSchool, 0, 'C');
         $pdf->SetFont('Times','I',12);
-        $pdf->Cell(0, 6, 'Excellence in Practical Education', 0, 1, 'C');
+        $pdf->MultiCell(0, 6, $studentCourse, 0, 'C');
         $pdf->Ln(8);
 
         $pdf->SetFont('Times','B',24);
         $pdf->Cell(0, 12, 'CERTIFICATE OF COMPLETION', 0, 1, 'C');
-        $pdf->SetLineWidth(0.8);
-        $pdf->Line(40, $pdf->GetY(), $pdf->GetPageWidth()-40, $pdf->GetY());
         $pdf->Ln(8);
 
         $pdf->SetFont('Times','',12);
@@ -183,6 +482,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $pdf->SetFont('Times','B',20);
         $pdf->Cell(0, 10, $student['name'], 0, 1, 'C');
+        $nameUnderlineY = $pdf->GetY() - 1.5;
+        $nameUnderlineWidth = min($pdf->GetStringWidth((string) $student['name']) + 12, $pdf->GetPageWidth() - 70);
+        $nameUnderlineX = ($pdf->GetPageWidth() - $nameUnderlineWidth) / 2;
+        $pdf->SetLineWidth(0.6);
+        $pdf->Line($nameUnderlineX, $nameUnderlineY, $nameUnderlineX + $nameUnderlineWidth, $nameUnderlineY);
         $pdf->Ln(6);
 
         $pdf->SetFont('Times','',12);
@@ -190,7 +494,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdf->Ln(3);
 
         $pdf->SetFont('Times','B',14);
-        $pdf->Cell(0, 4, "200 hours of supervised practical training", 0, 1, 'C');
+        $hoursDisplay = $hours > 0 ? "{$hours} hours" : "";
+        if ($minutes > 0) {
+            $hoursDisplay .= ($hoursDisplay ? " and " : "") . "{$minutes} minutes";
+        }
+        $hoursDisplay = trim($hoursDisplay) ?: "0 hours";
+        $pdf->Cell(0, 4, "{$hoursDisplay} of supervised practical training", 0, 1, 'C');
         $pdf->Ln(3);
 
         $pdf->SetFont('Times','',12);
@@ -211,24 +520,69 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         $pdf->Output('F', $certificatePath);
         
-        $certStmt = $pdo->prepare("INSERT INTO certificates 
-            (student_id, employer_id, certificate_no, file_path, hours_completed, generated_at) 
+        $certStmt = $pdo->prepare("INSERT INTO certificates
+            (student_id, employer_id, certificate_no, file_path, hours_completed, generated_at)
             VALUES (?, ?, ?, ?, ?, NOW())
-            ON DUPLICATE KEY UPDATE 
-            file_path = ?, hours_completed = ?, generated_at = NOW()");
-        
+            ON DUPLICATE KEY UPDATE
+            file_path = VALUES(file_path), hours_completed = VALUES(hours_completed), generated_at = NOW()");
+
         $total_hours = $hours + ($minutes / 60);
-        $certStmt->execute([
-            $student_id, $employer_id, $certificate_no, $certificatePath, $total_hours,
-            $certificatePath, $total_hours
-        ]);
+        
+        try {
+            $certResult = $certStmt->execute([
+                $student_id, $employer_id, $certificate_no, $certificatePath, $total_hours
+            ]);
+
+            if (!$certResult) {
+                $errorInfo = $certStmt->errorInfo();
+                error_log("Certificate insert failed. Error: " . print_r($errorInfo, true));
+                $_SESSION['error_message'] = "Failed to save certificate to database. Error: " . $errorInfo[2];
+                header("Location: supervisor_dashboard.php");
+                exit;
+            }
+            
+            error_log("Certificate inserted successfully: student_id=$student_id, employer_id=$employer_id, certificate_no=$certificate_no");
+        } catch (PDOException $e) {
+            error_log("Certificate insert exception: " . $e->getMessage());
+            $_SESSION['error_message'] = "Failed to save certificate: " . $e->getMessage();
+            header("Location: supervisor_dashboard.php");
+            exit;
+        }
+
+        // Verify the certificate was actually saved
+        // Add a small delay to ensure the write is committed
+        usleep(100000); // 100ms delay
+        
+        $verify_stmt = $pdo->prepare("SELECT certificate_id, file_path, generated_at FROM certificates WHERE student_id = ? AND employer_id = ?");
+        $verify_stmt->execute([$student_id, $employer_id]);
+        $cert_exists = $verify_stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$cert_exists) {
+            error_log("Certificate verification failed for student_id: $student_id, employer_id: $employer_id, certificate_no: $certificate_no");
+            error_log("Running diagnostic query...");
+            $diag_stmt = $pdo->prepare("SELECT COUNT(*) as cnt FROM certificates WHERE student_id = ?");
+            $diag_stmt->execute([$student_id]);
+            $diag_result = $diag_stmt->fetch(PDO::FETCH_ASSOC);
+            error_log("Diagnostic: student_id $student_id has " . $diag_result['cnt'] . " certificate(s)");
+            
+            $_SESSION['error_message'] = "Certificate was not saved to database. Please check error logs.";
+            header("Location: supervisor_dashboard.php");
+            exit;
+        }
+        
+        error_log("Certificate verification successful: certificate_id=" . $cert_exists['certificate_id'] . ", file_path=" . $cert_exists['file_path']);
 
         $hashStmt = $pdo->prepare("INSERT INTO certificate_hashes (student_id, certificate_hash, generated_at) VALUES (?, ?, NOW()) ON DUPLICATE KEY UPDATE certificate_hash = VALUES(certificate_hash), generated_at = NOW()");
         $hashStmt->execute([$student_id, $certificate_no]);
 
         if (!empty($student['email'])) {
             $capitalized_student_name = ucwords(strtolower($student['name']));
-            $email_result = send_certificate_notification($student['email'], $capitalized_student_name, $supervisor_name, $certificate_no);
+            $certificateAbsolutePath = __DIR__ . DIRECTORY_SEPARATOR . ltrim($certificatePath, '/\\');
+            $certificateAttachmentName = 'OJT_Certificate_' . preg_replace('/[^A-Za-z0-9\-_]/', '_', $capitalized_student_name) . '.pdf';
+            $certificateAttachments = is_file($certificateAbsolutePath)
+                ? [['path' => $certificateAbsolutePath, 'name' => $certificateAttachmentName]]
+                : [];
+            $email_result = send_certificate_notification($student['email'], $capitalized_student_name, $supervisor_name, $certificate_no, $certificateAttachments);
             if ($email_result !== true) {
                 error_log("Failed to send certificate notification: " . $email_result);
             }
@@ -240,7 +594,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Log supervisor certificate generation to audit_logs
         audit_log($pdo, 'Generate Certificate', "Certificate generated for student ID: $student_id, Certificate No: $certificate_no");
 
-        header("Location: supervisor_dashboard.php");
+        header("Location: supervisor_dashboard.php?cert_generated=1");
         exit;
     }
     

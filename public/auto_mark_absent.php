@@ -3,10 +3,10 @@
  * Auto-Mark Absent Script
  * 
  * This script automatically marks students as absent if:
- * 1. They have no attendance record for the day AND it's past 7:00 PM
+ * 1. They have no attendance record for the day AND it's past 2:00 PM
  * 2. OR they have an attendance record that is NOT verified by the supervisor
  * 
- * Run this via cron job daily at 7:00 PM or manually access it
+ * Run this via cron job daily at 2:00 PM or manually access it
  */
 
 session_start();
@@ -33,10 +33,10 @@ if (!$is_admin && !$is_employer && !$is_cli) {
 
 $today = date('Y-m-d');
 $now = new DateTime('now', new DateTimeZone('Asia/Manila'));
-$cutoff_time = new DateTime('19:00:00', new DateTimeZone('Asia/Manila'));
+$cutoff_time = new DateTime('14:00:00', new DateTimeZone('Asia/Manila'));
 
-// Check if current time is past 7 PM
-$is_past_7pm = $now >= $cutoff_time;
+// Check if current time is past 2 PM
+$is_past_2pm = $now >= $cutoff_time;
 
 // For testing purposes, allow manual override via GET parameter
 $force_run = isset($_GET['force']) && $_GET['force'] === '1';
@@ -77,20 +77,20 @@ try {
 
         if (!$attendance) {
             // No attendance record exists
-            if ($is_past_7pm || $force_run) {
+            if ($is_past_2pm || $force_run) {
                 // Mark as absent
                 $insert_stmt = $pdo->prepare("
                     INSERT INTO attendance (student_id, log_date, status, reason, verified)
-                    VALUES (?, ?, 'Absent', 'Auto-marked: No attendance recorded by 7:00 PM', 0)
+                    VALUES (?, ?, 'Absent', 'Auto-marked: No attendance recorded by 2:00 PM', 0)
                 ");
                 $insert_stmt->execute([$student_id, $today]);
 
                 $results['marked_absent']++;
                 
                 if ($is_cli || $is_admin) {
-                    audit_log($pdo, 'Auto Mark Absent', "Student ID $student_id ($student_name) marked as absent - no attendance by 7PM");
+                    audit_log($pdo, 'Auto Mark Absent', "Student ID $student_id ($student_name) marked as absent - no attendance by 2PM");
                 } else {
-                    audit_log($pdo, 'Auto Mark Absent', "Student ID $student_id ($student_name) marked as absent - no attendance by 7PM");
+                    audit_log($pdo, 'Auto Mark Absent', "Student ID $student_id ($student_name) marked as absent - no attendance by 2PM");
                 }
             }
         } else {
@@ -101,25 +101,8 @@ try {
                 if ($attendance['verified'] == 1) {
                     $results['already_present']++;
                 } else {
-                    // Present but not verified - mark as absent if past 7 PM
-                    if ($is_past_7pm || $force_run) {
-                        $update_stmt = $pdo->prepare("
-                            UPDATE attendance 
-                            SET status = 'Absent', 
-                                reason = COALESCE(reason, 'Auto-marked: Attendance not verified by supervisor by 7:00 PM'),
-                                verified = 0
-                            WHERE student_id = ? AND log_date = ?
-                        ");
-                        $update_stmt->execute([$student_id, $today]);
-
-                        $results['unverified_present']++;
-                        
-                        if ($is_cli || $is_admin) {
-                            audit_log($pdo, 'Auto Mark Absent', "Student ID $student_id ($student_name) changed from Present to Absent - unverified by 7PM");
-                        }
-                    } else {
-                        $results['unverified_present']++;
-                    }
+                    // Present with time_in - they're actively working, don't mark absent
+                    $results['unverified_present']++;
                 }
             }
         }
@@ -135,7 +118,7 @@ if ($is_cli) {
     echo "=== Auto-Mark Absent Results ===\n";
     echo "Date: $today\n";
     echo "Current Time: " . $now->format('H:i:s') . "\n";
-    echo "Past 7 PM: " . ($is_past_7pm ? 'Yes' : 'No') . "\n";
+    echo "Past 2 PM: " . ($is_past_2pm ? 'Yes' : 'No') . "\n";
     echo "Force Run: " . ($force_run ? 'Yes' : 'No') . "\n";
     echo "--------------------------------\n";
     echo "Total Students: {$results['total_students']}\n";
@@ -228,13 +211,13 @@ if ($is_cli) {
             <h2>📊 Auto-Mark Absent Results</h2>
             <p class="subtitle">Date: <?= $today ?> | Time: <?= $now->format('H:i:s') ?></p>
 
-            <?php if ($is_past_7pm || $force_run): ?>
+            <?php if ($is_past_2pm || $force_run): ?>
                 <div class="alert alert-success mb-4">
                     ✓ Auto-marking completed successfully
                 </div>
             <?php else: ?>
                 <div class="alert alert-warning mb-4">
-                    ⚠️ It's not yet 7:00 PM. Use <code>?force=1</code> to run manually.
+                    ⚠️ It's not yet 2:00 PM. Use <code>?force=1</code> to run manually.
                 </div>
             <?php endif; ?>
 
