@@ -3,7 +3,6 @@ session_start();
 require_once __DIR__ . '/../private/config.php';
 require_once __DIR__ . '/../includes/middleware.php';
 
-// If not logged in or not a student, redirect
 if (empty($_SESSION['student_id']) || $_SESSION['role'] !== 'student') {
     header("Location: login.php");
     exit;
@@ -12,7 +11,6 @@ if (empty($_SESSION['student_id']) || $_SESSION['role'] !== 'student') {
 $student_id = $_SESSION['student_id'];
 $student_username = '';
 
-// Get student info
 $stmt = $pdo->prepare("SELECT username, CONCAT(first_name, ' ', last_name) as full_name FROM students WHERE student_id = ?");
 $stmt->execute([$student_id]);
 $student = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -21,7 +19,6 @@ if ($student) {
     $student_name = $student['full_name'];
 }
 
-// Get MOA document status
 $moa_stmt = $pdo->prepare("
     SELECT
         id,

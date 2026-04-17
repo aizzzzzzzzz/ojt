@@ -116,7 +116,8 @@ CREATE TABLE `attendance` (
   `late_minutes` int(11) DEFAULT 0,
   `verified` tinyint(1) DEFAULT 0,
   `reason` text DEFAULT NULL,
-  `daily_task` text DEFAULT NULL
+  `daily_task` text DEFAULT NULL,
+  `dtr_picture` varchar(500) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --

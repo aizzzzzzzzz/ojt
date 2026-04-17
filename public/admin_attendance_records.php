@@ -659,6 +659,7 @@ include_once __DIR__ . '/../templates/admin_header.php';
                     <th>Verified</th>
                     <th>Hours</th>
                     <th>Task</th>
+                    <th>DTR Photo</th>
                 </tr>
             </thead>
             <tbody>
@@ -717,6 +718,15 @@ include_once __DIR__ . '/../templates/admin_header.php';
                                 </span>
                             <?php else: ?>
                                 -
+                            <?php endif; ?>
+                        </td>
+                        <td data-label="DTR Photo">
+                            <?php if (!empty($row['dtr_picture'])): ?>
+                                <a href="view_dtr.php?id=<?= htmlspecialchars((string)$row['id']) ?>" target="_blank" class="view-link" style="color: #1976d2;">
+                                    📸 View
+                                </a>
+                            <?php else: ?>
+                                <span style="color:var(--text-muted);">-</span>
                             <?php endif; ?>
                         </td>
                     </tr>

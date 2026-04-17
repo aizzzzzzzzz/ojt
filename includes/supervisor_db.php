@@ -39,6 +39,7 @@ function get_attendance_records($pdo, $employer_id = null) {
                 s.last_name,
                 s.school,
                 s.required_hours,
+                a.id,
                 a.log_date,
                 a.time_in,
                 a.time_out,
@@ -46,6 +47,7 @@ function get_attendance_records($pdo, $employer_id = null) {
                 a.reason,
                 a.verified,
                 a.daily_task,
+                a.dtr_picture,
                 CASE
                     WHEN a.time_in IS NOT NULL AND a.time_out IS NOT NULL THEN
                         CONCAT(
@@ -84,6 +86,7 @@ function get_attendance_records($pdo, $employer_id = null) {
                     s.last_name,
                     s.school,
                     s.required_hours,
+                    a.id,
                     a.log_date,
                     a.time_in,
                     a.time_out,
@@ -91,6 +94,7 @@ function get_attendance_records($pdo, $employer_id = null) {
                     a.reason,
                     a.verified,
                     a.daily_task,
+                    a.dtr_picture,
                     CASE
                         WHEN a.time_in IS NOT NULL AND a.time_out IS NOT NULL THEN
                             CONCAT(
@@ -125,6 +129,7 @@ function get_attendance_records($pdo, $employer_id = null) {
                     s.last_name,
                     s.school,
                     s.required_hours,
+                    a.id,
                     a.log_date,
                     a.time_in,
                     a.time_out,
@@ -132,6 +137,7 @@ function get_attendance_records($pdo, $employer_id = null) {
                     a.reason,
                     a.verified,
                     a.daily_task,
+                    a.dtr_picture,
                     CASE
                         WHEN a.time_in IS NOT NULL AND a.time_out IS NOT NULL THEN
                             CONCAT(

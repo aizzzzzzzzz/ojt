@@ -3,7 +3,6 @@ session_start();
 require_once __DIR__ . '/../private/config.php';
 require_once __DIR__ . '/../includes/audit.php';
 
-// Only supervisors can edit
 if (empty($_SESSION['employer_id']) || $_SESSION['role'] !== 'employer') {
     header('Location: supervisor_login.php');
     exit;
@@ -18,7 +17,6 @@ if ($doc_id <= 0) {
     die('Invalid document ID.');
 }
 
-// Create table if it doesn't exist
 $createTableSQL = "
     CREATE TABLE IF NOT EXISTS moa_documents (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -43,7 +41,6 @@ $createTableSQL = "
 try {
     $pdo->exec($createTableSQL);
         
-        // Add missing columns if they don't exist
         $alterSQL = [
             "ALTER TABLE moa_documents ADD COLUMN supervisor_approval_status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending'",
             "ALTER TABLE moa_documents ADD COLUMN supervisor_approved_at TIMESTAMP NULL",
@@ -58,14 +55,13 @@ try {
             try {
                 $pdo->exec($sql);
             } catch (PDOException $ae) {
-                // Column might already exist, that's fine
+                
             }
         }
 } catch (PDOException $e) {
-    // Table might already exist, that's fine
+    
 }
 
-// Get document
 $stmt = $pdo->prepare("
     SELECT m.id, m.student_id, m.document_type, m.filename, m.filepath,
            s.username, CONCAT(s.first_name, ' ', s.last_name) as student_name
@@ -80,7 +76,6 @@ if (!$doc) {
     die('Document not found.');
 }
 
-// Handle signature upload
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_signature'])) {
     if (!empty($_POST['signature_data'])) {
         $signaturePath = 'assets/signature_moa_' . $doc['student_id'] . '_' . $doc_id . '.png';

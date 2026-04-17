@@ -110,7 +110,6 @@ function handle_excel_export($pdo, $student_id, $start_date, $end_date) {
 
                 $minutesWorked = max(0, (strtotime($record['time_out']) - strtotime($record['time_in'])) / 60);
 
-                // Auto-deduct 60 minutes if shift is greater than 4 hours (240 minutes)
                 if ($minutesWorked > 240) {
                     $minutesWorked -= 60;
                 }

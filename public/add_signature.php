@@ -54,7 +54,6 @@ foreach ($attendance as $row) {
         $time_in = strtotime($row['time_in']);
         $time_out = strtotime($row['time_out']);
         $minutesWorked = max(0, ($time_out - $time_in) / 60);
-        // Auto-deduct 60 minutes if shift is greater than 4 hours (240 minutes)
         if ($minutesWorked > 240) {
             $minutesWorked -= 60;
         }
@@ -210,7 +209,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_signature'])) {
                 $time_in = strtotime($row['time_in']);
                 $time_out = strtotime($row['time_out']);
                 $minutesWorked = max(0, ($time_out - $time_in) / 60);
-                // Auto-deduct 60 minutes if shift is greater than 4 hours (240 minutes)
                 if ($minutesWorked > 240) {
                     $minutesWorked -= 60;
                 }

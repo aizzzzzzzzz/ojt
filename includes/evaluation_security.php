@@ -46,8 +46,6 @@ function ensure_evaluation_verification_table(PDO $pdo): void {
                 INDEX idx_eval_verify_owner (employer_id, student_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
         ");
-
-        // Repair legacy schema where verification_id exists but is not AUTO_INCREMENT.
         $idColumn = $pdo->query("SHOW COLUMNS FROM evaluation_verification_codes LIKE 'verification_id'")
             ->fetch(PDO::FETCH_ASSOC);
         $idExtra = strtolower((string) ($idColumn['Extra'] ?? ''));
@@ -130,7 +128,6 @@ function create_evaluation_verification_request(PDO $pdo, int $employerId, int $
             $expiresAt
         ]);
     } catch (PDOException $e) {
-        // Last-chance repair for environments where the table existed without AUTO_INCREMENT.
         if (strpos($e->getMessage(), "Duplicate entry '0' for key 'PRIMARY'") !== false) {
             $pdo->exec("ALTER TABLE evaluation_verification_codes MODIFY verification_id INT NOT NULL AUTO_INCREMENT");
             $insert->execute([

@@ -169,4 +169,59 @@ function handle_attendance_action($pdo, $student_id, $today, $action) {
     }
     return "";
 }
+
+function handle_dtr_upload($pdo, $student_id, $today, $file) {
+    try {
+        if (empty($file['tmp_name'])) {
+            return ['success' => false, 'message' => 'No file selected.'];
+        }
+
+        $maxSize = 5 * 1024 * 1024;
+        if ($file['size'] > $maxSize) {
+            return ['success' => false, 'message' => 'File too large (max 5MB).'];
+        }
+
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_file($finfo, $file['tmp_name']);
+        finfo_close($finfo);
+
+        if (!in_array($mimeType, $allowedTypes)) {
+            return ['success' => false, 'message' => 'Invalid file type. Only JPEG, PNG, and WebP images are allowed.'];
+        }
+
+        $uploadDir = __DIR__ . '/../storage/uploads/dtr/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0777, true);
+        }
+
+        $fileName = $student_id . '_' . date('Y-m-d') . '_' . uniqid() . '.' . pathinfo($file['name'], PATHINFO_EXTENSION);
+        $destPath = $uploadDir . $fileName;
+
+        if (!move_uploaded_file($file['tmp_name'], $destPath)) {
+            return ['success' => false, 'message' => 'Failed to upload file. Please try again.'];
+        }
+
+        $stmt = $pdo->prepare("SELECT dtr_picture FROM attendance WHERE student_id = ? AND log_date = ?");
+        $stmt->execute([$student_id, $today]);
+        $oldRecord = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($oldRecord && !empty($oldRecord['dtr_picture'])) {
+            $oldPath = __DIR__ . '/../storage/uploads/dtr/' . basename($oldRecord['dtr_picture']);
+            if (file_exists($oldPath)) {
+                unlink($oldPath);
+            }
+        }
+
+        $relativeFilePath = 'storage/uploads/dtr/' . $fileName;
+        $updateStmt = $pdo->prepare("UPDATE attendance SET dtr_picture = ? WHERE student_id = ? AND log_date = ?");
+        $updateStmt->execute([$relativeFilePath, $student_id, $today]);
+
+        log_activity('DTR Upload', "Student uploaded DTR picture for $today");
+
+        return ['success' => true, 'message' => 'DTR picture uploaded successfully!', 'filePath' => $relativeFilePath];
+    } catch (Exception $e) {
+        return ['success' => false, 'message' => 'Error: ' . $e->getMessage()];
+    }
+}
 ?>

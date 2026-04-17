@@ -456,6 +456,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attendance_action']))
     }
 }
 
+// Handle DTR picture upload
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['dtr_picture'])) {
+    if (!isset($_POST['csrf_token']) || !validate_csrf_token($_POST['csrf_token'])) {
+        $messages[] = "Invalid request. Please try again.";
+    } else if ($_FILES['dtr_picture']['error'] === UPLOAD_ERR_NO_FILE) {
+        // No file selected, skip silently
+    } else if ($_FILES['dtr_picture']['error'] !== UPLOAD_ERR_OK) {
+        $messages[] = "File upload error. Please try again.";
+    } else {
+        $upload_result = handle_dtr_upload($pdo, $student_id, $today, $_FILES['dtr_picture']);
+        if ($upload_result['success']) {
+            $_SESSION['success'] = $upload_result['message'];
+            header("Location: " . $_SERVER['PHP_SELF']);
+            exit;
+        } else {
+            $messages[] = $upload_result['message'];
+        }
+    }
+}
+
 $stmt = $pdo->prepare("SELECT * FROM students WHERE student_id = ? LIMIT 1");
 $stmt->execute([$student_id]);
 $student = $stmt->fetch(PDO::FETCH_ASSOC);

@@ -92,7 +92,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     $empData = $verifyEmpStmt->fetch();
                     error_log("DEBUG: Employer verification: " . print_r($empData, true));
 
-                    // Log admin add employer action
                     audit_log($pdo, 'Add Employer', "Added employer: $username (Company: $company_input)");
 
                     $_SESSION['success'] = "Employer account created successfully! Company ID: {$company_id}, Employer ID: {$employer_id}";

@@ -15,10 +15,6 @@ if (!isset($_SESSION['change_password']) || $_SESSION['change_password'] !== tru
     }
     exit;
 }
-
-$error = "";
-$success = "";
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $new_password = $_POST['new_password'];
     $confirm_password = $_POST['confirm_password'];
@@ -89,7 +85,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .btn-outline-secondary{background:transparent;color:var(--text-muted);border:1.5px solid var(--border);border-radius:9px;padding:7px 14px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-family:inherit;transition:all .18s;}
     .btn-outline-secondary:hover{background:var(--surface2);color:var(--text);}
     .mb-3{margin-bottom:16px;}
-
     .page-card { max-width:480px; }
     @media(max-width:640px){body{padding:16px 16px 40px;}.page-card{border-radius:18px;}.page-topbar,.page-inner{padding:20px 24px;}}
 </style>
@@ -99,11 +94,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="page-topbar">
         <div>
             <h2>Change Password</h2>
-            <p style="font-size:13px;color:var(--text-muted);margin:2px 0 0;">Required before continuing</p>
+            <p style="font-size:13px;color:var(--text-muted);margin:2px 0 0;">R equired before continuing</p>
         </div>
     </div>
     <div class="page-inner">
-        <p style="font-size:14px;color:var(--text-muted);margin:0 0 18px;">This is your first login. Please set a new password to continue.</p>
+        <p style="font-size:14px;color:var(--text-muted);margin:0 0 18px;">This is your first time logging in. Please set a new password to continue.</p>
         <?php if (!empty($error)): ?>
             <div class="error-msg"><?= htmlspecialchars($error) ?></div>
         <?php endif; ?>

@@ -13,13 +13,11 @@ if (!defined('DEMO_DISABLE_ATTENDANCE_GRACE_PERIOD')) {
 $is_local = in_array($_SERVER['HTTP_HOST'] ?? '', ['localhost', '127.0.0.1', 'localhost:8080', '127.0.0.1:8080']);
 
 if ($is_local) {
-    // Use local XAMPP database
     $host = "localhost";
     $db   = "student_db";
     $user = "root";
     $pass = "";
 } else {
-    // Use remote InfinityFree database
     $host = getenv('DB_HOST') ?: "sql106.infinityfree.com";
     $db   = getenv('DB_NAME') ?: "if0_41121145_student_db";
     $user = getenv('DB_USER') ?: "if0_41121145";

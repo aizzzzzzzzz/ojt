@@ -85,7 +85,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $stmt = $pdo->prepare("INSERT INTO students (username, password, first_name, middle_name, last_name, email, required_hours, course, school, created_by, company_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
             if ($stmt->execute([$username, $hashed_password, $first_name, $middle_name, $last_name, $email, $required_hours, $course, $school, $created_by, $company_id])) {
-                // Log add student action based on user role
                 if ($_SESSION['role'] === 'admin') {
                     audit_log($pdo, 'Add Student', "Admin added student: $username");
                 } else {

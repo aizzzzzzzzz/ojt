@@ -12,7 +12,6 @@ $success_message = '';
 $error_message = '';
 $admin_id = $_SESSION['admin_id'] ?? null;
 
-// Handle approval/rejection
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     check_csrf($_POST['csrf_token'] ?? '');
     
@@ -36,7 +35,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $success_message = "Document approved successfully!";
                 write_audit_log('MOA Student Approval', "Admin approved MOA document ID: $doc_id");
             } else {
-                // Reject
                 if (empty($rejection_reason)) {
                     $error_message = "Please provide a rejection reason.";
                 } else {
@@ -58,7 +56,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 }
 
-// Create MOA table if not exists
 $createTableSQL = "CREATE TABLE IF NOT EXISTS moa_documents (
     id INT AUTO_INCREMENT PRIMARY KEY,
     student_id INT NOT NULL,

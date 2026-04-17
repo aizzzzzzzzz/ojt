@@ -66,12 +66,12 @@ body.portal-home {
 }
 
 .portal-brand img {
-    width: 58px;
-    height: 58px;
+    width: 90px;
+    height: 90px;
     object-fit: contain;
     border-radius: 16px;
     background: rgba(255, 255, 255, 0.14);
-    padding: 8px;
+    padding: 12px;
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
 }
 
@@ -170,9 +170,9 @@ body.portal-home {
     align-items: center;
     gap: 8px;
     margin-bottom: 14px;
-    padding: 7px 14px;
+    padding: 12px 24px;
     border-radius: 999px;
-    font-size: 12px;
+    font-size: 18px;
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -190,10 +190,11 @@ body.portal-home {
 
 .portal-subtitle {
     max-width: 640px;
-    margin: 18px 0 24px;
-    font-size: 17px;
+    margin: 52px 0 24px;
+    font-size: 18px;
     line-height: 1.75;
-    color: rgba(255, 255, 255, 0.82);
+    color: rgba(255, 255, 255, 0.88);
+    font-weight: 500;
 }
 
 .portal-actions {

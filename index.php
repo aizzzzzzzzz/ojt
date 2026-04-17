@@ -55,10 +55,9 @@ $admin_count = $stmt->fetchColumn();
     <section class="portal-home-hero">
       <div class="portal-story-card">
         <span class="portal-kicker">CRT OJT Portal</span>
-        <h1 class="portal-title">Track attendance, evaluations, and certificate progress from one clear home page.</h1>
         <p class="portal-subtitle">
           This system gives students, supervisors, and administrators a shared space for daily attendance,
-          hour monitoring, internship evaluation, and certificate preparation with a cleaner workflow from start to finish.
+          hour monitoring, evaluation, and certificate preparation with a cleaner workflow from start to finish.
         </p>
         <div class="portal-actions">
           <a class="portal-primary-btn" href="public/login.php">Open Login Portal</a>

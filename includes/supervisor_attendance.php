@@ -11,7 +11,6 @@ function handle_mark_absent($pdo, $student_id, $date, $reason) {
         $message = mark_student_absent($pdo, $student_id, $date, $reason);
         $pdo->commit();
         
-        // Log to audit_logs
         audit_log($pdo, 'Mark Absent', "Student ID: $student_id, Date: $date");
 
         $student_stmt = $pdo->prepare("SELECT first_name, last_name, email FROM students WHERE student_id = ?");
@@ -54,7 +53,6 @@ function handle_verify_attendance($pdo, $student_id, $date) {
             }
         }
 
-        // Log to audit_logs
         audit_log($pdo, 'Verify Attendance', "Student ID: $student_id, Date: $date");
         return "Attendance verified successfully!";
     } catch (PDOException $e) {

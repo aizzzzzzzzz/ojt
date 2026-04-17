@@ -874,6 +874,13 @@ $schedule_window = date('h:i A', strtotime($work_start_raw)) . ' - ' . date('h:i
                                                 <span style="color:red; font-weight:bold;">No</span>
                                             <?php endif; ?>
                                         </p>
+                                        <?php if (!empty($latest['dtr_picture'])): ?>
+                                            <p style="margin-top:10px;">
+                                                <a href="view_dtr.php?id=<?= htmlspecialchars((string)$latest['id']) ?>" target="_blank" class="btn btn-outline-primary btn-sm">
+                                                    📸 View DTR Photo
+                                                </a>
+                                            </p>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
 
