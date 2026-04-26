@@ -7,7 +7,6 @@ require_once __DIR__ . '/../includes/audit.php';
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
-// Support both student and admin access
 $is_admin = isset($_SESSION['admin_id']) && $_SESSION['role'] === 'admin';
 $is_student = isset($_SESSION['student_id']) && $_SESSION['role'] === 'student';
 
@@ -16,12 +15,10 @@ if (!$is_admin && !$is_student) {
     exit;
 }
 
-// Get filter parameters (admin only)
 $filter_date_from = $_GET['date_from'] ?? '';
 $filter_date_to = $_GET['date_to'] ?? '';
 $filter_status = $_GET['status'] ?? '';
 
-// Determine student_id
 if ($is_admin && isset($_GET['student_id'])) {
     $student_id = (int)$_GET['student_id'];
 } elseif ($is_student) {
@@ -31,7 +28,6 @@ if ($is_admin && isset($_GET['student_id'])) {
     exit;
 }
 
-// Log activity
 if ($is_admin) {
     write_audit_log('Export Attendance', "Admin exported attendance for student ID: $student_id");
 } else {
@@ -46,7 +42,6 @@ if (!$student) {
     die("Student not found.");
 }
 
-// Build attendance query with filters
 $attendance_query = "SELECT * FROM attendance WHERE student_id = ?";
 $params = [$student_id];
 
@@ -103,7 +98,6 @@ foreach ($attendance as $record) {
         
         $minutesWorked = max(0, (strtotime($record['time_out']) - strtotime($record['time_in'])) / 60);
         
-        // Auto-deduct 60 minutes if shift is greater than 4 hours (240 minutes)
         if ($minutesWorked > 240) {
             $minutesWorked -= 60;
         }
@@ -142,7 +136,6 @@ $sheet->setCellValue('B' . ($row + 3), count($attendance));
 $sheet->setCellValue('A' . ($row + 4), 'Verified Days:');
 $sheet->setCellValue('B' . ($row + 4), count(array_filter($attendance, function($a) { return $a['verified'] == 1; })));
 
-// Build filename with filters if admin
 $filename_parts = [];
 if ($filter_date_from) $filename_parts[] = $filter_date_from;
 if ($filter_date_to) $filename_parts[] = $filter_date_to;

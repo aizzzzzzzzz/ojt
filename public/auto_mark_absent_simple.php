@@ -1,21 +1,13 @@
 <?php
-/**
- * Auto-Mark Absent Cron - Simple Version
- * For InfinityFree hosting
- * 
- * URL: http://your-domain.com/public/auto_mark_absent_simple.php?token=TOKEN_HERE
- */
 
 session_start();
 require_once __DIR__ . '/../private/config.php';
 require_once __DIR__ . '/../includes/audit.php';
 
-// Hardcoded token for simplicity
 define('AUTO_ABSENT_TOKEN', 'auto_absent_a7f3c9e2b1d4f8a6');
 
 $token = $_GET['token'] ?? '';
 
-// Check token
 $is_cli = php_sapi_name() === 'cli';
 $has_valid_token = !empty($token) && hash_equals(AUTO_ABSENT_TOKEN, $token);
 
@@ -33,7 +25,6 @@ $now = new DateTime('now', new DateTimeZone('Asia/Manila'));
 $cutoff_time = new DateTime('14:00:00', new DateTimeZone('Asia/Manila'));
 $is_past_2pm = $now >= $cutoff_time;
 
-// For testing, allow force run
 $force_run = isset($_GET['force']) && $_GET['force'] === '1';
 
 if (!$is_past_2pm && !$force_run) {
@@ -55,7 +46,6 @@ $results = [
 ];
 
 try {
-    // Get all students
     $stmt = $pdo->query("
         SELECT s.student_id, s.first_name, s.last_name
         FROM students s
@@ -68,7 +58,6 @@ try {
         $student_id = $student['student_id'];
         $student_name = $student['first_name'] . ' ' . $student['last_name'];
 
-        // Check if attendance record exists for today
         $stmt = $pdo->prepare("
             SELECT id, status, verified 
             FROM attendance 
@@ -78,7 +67,6 @@ try {
         $attendance = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$attendance) {
-            // No attendance record - mark as absent
             $insert_stmt = $pdo->prepare("
                 INSERT INTO attendance (student_id, log_date, status, reason, verified)
                 VALUES (?, ?, 'Absent', 'Auto-marked: No attendance by 2:00 PM', 0)
@@ -88,11 +76,9 @@ try {
             
             audit_log($pdo, 'Auto Mark Absent', "Student ID $student_id - no attendance by 2PM");
         } else {
-            // Attendance exists - if they checked in, they're present
             if ($attendance['status'] === 'Absent') {
                 $results['already_absent']++;
             } else {
-                // Any record with time_in means they're actually present
                 $results['already_present']++;
             }
         }
@@ -107,7 +93,6 @@ try {
     error_log("Auto-mark absent error: " . $e->getMessage());
 }
 
-// Output
 header('Content-Type: application/json');
 echo json_encode($results, JSON_PRETTY_PRINT);
 ?>

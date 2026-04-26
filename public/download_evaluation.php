@@ -11,7 +11,6 @@ if (!isset($_SESSION['student_id']) || ($_SESSION['role'] ?? '') !== 'student') 
     exit;
 }
 
-// Log student download activity
 log_activity('Download Evaluation', "Downloaded evaluation report");
 
 $student_id = (int) $_SESSION['student_id'];

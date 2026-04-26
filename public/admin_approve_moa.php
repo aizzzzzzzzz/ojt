@@ -78,7 +78,6 @@ $createTableSQL = "CREATE TABLE IF NOT EXISTS moa_documents (
 try {
     $pdo->exec($createTableSQL);
     
-    // Add missing columns if they don't exist
     $alterSQL = [
         "ALTER TABLE moa_documents ADD COLUMN supervisor_approval_status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending'",
         "ALTER TABLE moa_documents ADD COLUMN supervisor_approved_at TIMESTAMP NULL",
@@ -93,14 +92,12 @@ try {
         try {
             $pdo->exec($sql);
         } catch (PDOException $ae) {
-            // Column might already exist, that's fine
         }
     }
 } catch (PDOException $e) {
     error_log("Error creating MOA table: " . $e->getMessage());
 }
 
-// Get pending documents (supervisor approved, waiting for admin)
 $pending_stmt = $pdo->prepare("
     SELECT
         m.id,
@@ -121,7 +118,6 @@ $pending_stmt = $pdo->prepare("
 $pending_stmt->execute();
 $pending_documents = $pending_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Get approved/rejected history
 $history_stmt = $pdo->prepare("
     SELECT
         m.id,
@@ -561,7 +557,6 @@ $history_documents = $history_stmt->fetchAll(PDO::FETCH_ASSOC);
 <script>
 function toggleRejectForm(btn) {
     if (btn === null) {
-        // Cancel button clicked - close all forms
         document.querySelectorAll('.rejection-form').forEach(f => f.classList.remove('show'));
     } else if (btn) {
         const form = btn.nextElementSibling;

@@ -25,7 +25,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ");
         $stmt->execute([$student_id, $log_date]);
 
-        // Log supervisor verification action
         audit_log($pdo, 'Verify Attendance', "Verified attendance for student ID: $student_id, Date: $log_date");
 
         $_SESSION['verified_student'] = $student;

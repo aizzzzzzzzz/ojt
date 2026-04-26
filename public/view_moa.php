@@ -2,13 +2,11 @@
 session_start();
 require_once __DIR__ . '/../private/config.php';
 
-// Check if user is logged in (any role)
 if (empty($_SESSION['student_id']) && empty($_SESSION['employer_id']) && empty($_SESSION['admin_id'])) {
     header('Location: login.php');
     exit;
 }
 
-// Determine current user
 $current_user_type = null;
 $current_user_id = null;
 $current_student_id = null;
@@ -25,7 +23,6 @@ if (!empty($_SESSION['student_id'])) {
     $current_user_id = $_SESSION['admin_id'];
 }
 
-// Get student info (for supervisors)
 $student_id = (int) ($_GET['student_id'] ?? 0);
 if ($current_user_type === 'student') {
     $student_id = $current_student_id;
@@ -35,7 +32,6 @@ if ($student_id <= 0) {
     die('Invalid student ID.');
 }
 
-// Get student info
 $stmt = $pdo->prepare("SELECT student_id, username, CONCAT(first_name, ' ', last_name) as full_name FROM students WHERE student_id = ?");
 $stmt->execute([$student_id]);
 $student = $stmt->fetch();
@@ -44,7 +40,6 @@ if (!$student) {
     die('Student not found.');
 }
 
-// Create table if it doesn't exist
 $createTableSQL = "
     CREATE TABLE IF NOT EXISTS moa_documents (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -69,7 +64,6 @@ $createTableSQL = "
 try {
     $pdo->exec($createTableSQL);
     
-    // Add missing columns if they don't exist
     $alterSQL = [
         "ALTER TABLE moa_documents ADD COLUMN supervisor_approval_status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending'",
         "ALTER TABLE moa_documents ADD COLUMN supervisor_approved_at TIMESTAMP NULL",
@@ -84,14 +78,12 @@ try {
         try {
             $pdo->exec($sql);
         } catch (PDOException $ae) {
-            // Column might already exist, that's fine
         }
     }
 } catch (PDOException $e) {
     error_log("Error creating MOA table: " . $e->getMessage());
 }
 
-// Get MOA documents
 $stmt = $pdo->prepare("
     SELECT id, student_id, document_type, filename, filepath, supervisor_signature_path, uploaded_at
     FROM moa_documents
@@ -101,7 +93,6 @@ $stmt = $pdo->prepare("
 $stmt->execute([$student_id]);
 $documents = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Handle download
 if (isset($_GET['download'])) {
     $doc_id = (int) $_GET['download'];
     $stmt = $pdo->prepare("SELECT filepath, filename, document_type FROM moa_documents WHERE id = ? AND student_id = ?");

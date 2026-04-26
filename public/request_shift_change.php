@@ -22,7 +22,6 @@ $schedule_stmt = $pdo->prepare("
 $schedule_stmt->execute([$student_id]);
 $current_schedule = $schedule_stmt->fetch(PDO::FETCH_ASSOC);
 
-// Fallback to company schedule
 if (!$current_schedule || empty($current_schedule['work_start'])) {
     $schedule_stmt = $pdo->prepare("
         SELECT e.work_start, e.work_end, e.employer_id
@@ -38,7 +37,6 @@ if (!$current_schedule || empty($current_schedule['work_start'])) {
 $default_start = $current_schedule['work_start'] ?? '08:00';
 $default_end = $current_schedule['work_end'] ?? '17:00';
 
-// Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $request_date = $_POST['request_date'] ?? '';
     $shift_start = $_POST['shift_start'] ?? '';
@@ -69,12 +67,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $request_id = $pdo->lastInsertId();
             
-            // Log activity
             log_activity('Shift Change Request', "Requested shift change for $request_date: $shift_start - $shift_end");
             
             $success = "Shift change request submitted successfully! Your supervisor will review it.";
             
-            // Clear form
             $_POST = array();
             
         } catch (PDOException $e) {
@@ -85,7 +81,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Get student's pending requests
 $requests_stmt = $pdo->prepare("
     SELECT * FROM shift_change_requests 
     WHERE student_id = ? 

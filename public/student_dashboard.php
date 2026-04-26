@@ -68,10 +68,6 @@ function get_student_schedule_settings($pdo, $student_id) {
     ];
 }
 
-/**
- * Check if student has an approved shift change for today
- * Returns the approved shift times if exists and not yet used
- */
 function get_approved_shift_change($pdo, $student_id, $date) {
     $stmt = $pdo->prepare("
         SELECT * FROM shift_change_requests
@@ -204,7 +200,6 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
 
                     $minutesWorked = max(0, (strtotime($record['time_out']) - strtotime($record['time_in'])) / 60);
 
-                    // Deduct 1 hour lunch only if worked 4+ hours (240 minutes)
                     if ($minutesWorked >= 240) {
                         $minutesWorked -= 60;
                     }
@@ -358,10 +353,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attendance_action']))
         $post_late_grace_minutes = $post_schedule['late_grace_minutes'];
         $post_eod_grace_hours    = $post_schedule['eod_grace_hours'];
         
-        // Check for approved shift change for today (same as dashboard load)
         $post_approved_shift = get_approved_shift_change($pdo, $student_id, $today);
         if ($post_approved_shift) {
-            // Use approved shift times if they exist
             $post_work_start_str = $post_approved_shift['requested_shift_start'];
             $post_work_end_str = $post_approved_shift['requested_shift_end'];
         }
@@ -374,7 +367,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attendance_action']))
         $post_eod_cutoff     = new DateTime($today . ' ' . $post_work_end_str, $post_tz);
         $post_eod_cutoff->modify("+{$post_eod_grace_hours} hours");
         
-        // Check if this is an afternoon shift (work starts at or after 12:00 PM)
         $is_afternoon_shift = $post_work_start_dt->format('H') >= 12;
 
         if (!$attendance_time_limits_disabled) {
@@ -406,7 +398,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attendance_action']))
                     $insert = $pdo->prepare("INSERT INTO attendance (student_id, employer_id, log_date, time_in, status) VALUES (?, NULL, ?, ?, 'present')");
                     $insert->execute([$student_id, $today, $now]);
                     
-                    // Mark approved shift change as used
                     if ($has_approved_shift && $approved_shift) {
                         $mark_used = $pdo->prepare("UPDATE shift_change_requests SET used = 1 WHERE id = ?");
                         $mark_used->execute([$approved_shift['id']]);
@@ -456,12 +447,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attendance_action']))
     }
 }
 
-// Handle DTR picture upload
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['dtr_picture'])) {
     if (!isset($_POST['csrf_token']) || !validate_csrf_token($_POST['csrf_token'])) {
         $messages[] = "Invalid request. Please try again.";
     } else if ($_FILES['dtr_picture']['error'] === UPLOAD_ERR_NO_FILE) {
-        // No file selected, skip silently
     } else if ($_FILES['dtr_picture']['error'] !== UPLOAD_ERR_OK) {
         $messages[] = "File upload error. Please try again.";
     } else {
@@ -486,25 +475,20 @@ $work_end_str   = $schedule['work_end'];
 $late_grace_minutes = $schedule['late_grace_minutes'];
 $eod_grace_hours    = $schedule['eod_grace_hours'];
 
-// Check for approved shift change for today
 $approved_shift = get_approved_shift_change($pdo, $student_id, $today);
 $has_approved_shift = false;
 $original_work_start_str = $work_start_str;
 $original_work_end_str = $work_end_str;
 
 if ($approved_shift) {
-    // Check if shift spans midnight (overnight shift)
     $shift_start = $approved_shift['requested_shift_start'];
     $shift_end = $approved_shift['requested_shift_end'];
     
-    // Handle overnight shifts (e.g., 22:00 → 07:00 means next day)
     if ($shift_start > $shift_end) {
-        // Overnight shift - use the approved times as-is
         $work_start_str = $shift_start;
         $work_end_str = $shift_end;
         $has_approved_shift = true;
     } else {
-        // Normal same-day shift
         $work_start_str = $shift_start;
         $work_end_str = $shift_end;
         $has_approved_shift = true;
@@ -519,7 +503,6 @@ $time_in_cutoff->modify("+{$late_grace_minutes} minutes");
 $eod_cutoff_dt    = new DateTime($today . ' ' . $work_end_str, $tz);
 $eod_cutoff_dt->modify("+{$eod_grace_hours} hours");
 
-// Check if this is an afternoon shift (work starts at or after 12:00 PM)
 $is_afternoon_shift = $work_start_dt->format('H') >= 12;
 
 $before_work_start      = $now_dt < $work_start_dt;
@@ -550,7 +533,6 @@ foreach ($attendance as $row) {
         $time_out = strtotime($row['time_out']);
         $minutesWorked = max(0, ($time_out - $time_in) / 60);
 
-        // Deduct 1 hour lunch only if worked 4+ hours (240 minutes)
         if ($minutesWorked >= 240) {
             $minutesWorked -= 60;
         }
@@ -1217,7 +1199,6 @@ function switchTab(tabName, button) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Live Clock Update
     function updateClock() {
         const now = new Date();
         const timeString = now.toLocaleTimeString('en-US', { 

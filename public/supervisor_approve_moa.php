@@ -12,7 +12,6 @@ $success_message = '';
 $error_message = '';
 $employer_id = $_SESSION['employer_id'] ?? null;
 
-// Handle approval/rejection
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     check_csrf($_POST['csrf_token'] ?? '');
     
@@ -35,7 +34,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $update_stmt->execute([$doc_id]);
                 $success_message = "Document approved successfully!";
             } else {
-                // Reject
                 if (empty($rejection_reason)) {
                     $error_message = "Please provide a rejection reason.";
                 } else {
@@ -56,7 +54,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 }
 
-// Create MOA table if not exists
 $createTableSQL = "CREATE TABLE IF NOT EXISTS moa_documents (
     id INT AUTO_INCREMENT PRIMARY KEY,
     student_id INT NOT NULL,
@@ -79,7 +76,6 @@ $createTableSQL = "CREATE TABLE IF NOT EXISTS moa_documents (
 try {
     $pdo->exec($createTableSQL);
     
-    // Add missing columns if they don't exist
     $alterSQL = [
         "ALTER TABLE moa_documents ADD COLUMN supervisor_approval_status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending'",
         "ALTER TABLE moa_documents ADD COLUMN supervisor_approved_at TIMESTAMP NULL",
@@ -94,14 +90,12 @@ try {
         try {
             $pdo->exec($sql);
         } catch (PDOException $ae) {
-            // Column might already exist, that's fine
         }
     }
 } catch (PDOException $e) {
     error_log("Error creating MOA table: " . $e->getMessage());
 }
 
-// Get pending documents for supervisor approval
 $pending_stmt = $pdo->prepare("
     SELECT
         m.id,
@@ -121,7 +115,6 @@ $pending_stmt = $pdo->prepare("
 $pending_stmt->execute();
 $pending_documents = $pending_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Get approved/rejected history
 $history_stmt = $pdo->prepare("
     SELECT
         m.id,

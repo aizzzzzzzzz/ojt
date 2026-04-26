@@ -54,13 +54,11 @@ foreach ($documents as $doc) {
     }
 }
 
-// If MOA and Endorsement Letter are both approved, redirect to dashboard
 if ($has_moa && $has_endorsement) {
     $moa_approved = ($moa_doc['supervisor_approval_status'] === 'approved' && $moa_doc['admin_approval_status'] === 'approved');
     $endo_approved = ($endo_doc['supervisor_approval_status'] === 'approved' && $endo_doc['admin_approval_status'] === 'approved');
     
     if ($moa_approved && $endo_approved) {
-        // Mark all documents as no longer new
         $update_stmt = $pdo->prepare("UPDATE moa_documents SET is_new_student = 0 WHERE student_id = ? AND is_new_student = 1");
         $update_stmt->execute([$student_id]);
         header("Location: student_dashboard.php");

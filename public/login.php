@@ -123,7 +123,6 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     header("Location: change_password.php"); exit;
                 }
 
-                // Ensure MOA table has all required columns
                 $alterSQL = [
                     "ALTER TABLE moa_documents ADD COLUMN supervisor_approval_status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending'",
                     "ALTER TABLE moa_documents ADD COLUMN supervisor_approved_at TIMESTAMP NULL",
@@ -138,11 +137,9 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     try {
                         $pdo->exec($sql);
                     } catch (PDOException $ae) {
-                        // Column might already exist, that's fine
                     }
                 }
 
-                // Check MOA approval status for new students
                 $moa_stmt = $pdo->prepare("
                     SELECT 
                         document_type,
@@ -157,7 +154,6 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $moa_docs = $moa_stmt->fetchAll(PDO::FETCH_ASSOC);
                 
                 if (!empty($moa_docs)) {
-                    // Check if both MOA and Endorsement Letter exist
                     $has_moa = false;
                     $has_endorsement = false;
                     $all_approved = true;
@@ -169,29 +165,23 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $has_endorsement = true;
                         }
                         
-                        // Check if this document is fully approved
                         if ($doc['supervisor_approval_status'] !== 'approved' || $doc['admin_approval_status'] !== 'approved') {
                             $all_approved = false;
                         }
                     }
                     
-                    // If both documents exist and both are approved, proceed to dashboard
                     if ($has_moa && $has_endorsement && $all_approved) {
-                        // Mark documents as no longer new
                         $update_stmt = $pdo->prepare("UPDATE moa_documents SET is_new_student = 0 WHERE student_id = ? AND is_new_student = 1");
                         $update_stmt->execute([$student['student_id']]);
                         header("Location: student_dashboard.php"); exit;
                     } else {
-                        // Redirect to approval status page
                         header("Location: approval_status.php"); exit;
                     }
                 } else {
-                    // No MOA documents uploaded yet - redirect to approval status
                     header("Location: approval_status.php"); exit;
                 }
             }
 
-            // Check if username exists in any table
             $userExists = false;
             foreach (['admins' => 'username', 'employers' => 'username', 'students' => 'username'] as $table => $col) {
             $chk = $pdo->prepare("SELECT 1 FROM `$table` WHERE `$col` = ? LIMIT 1");

@@ -5,7 +5,6 @@ require_once __DIR__ . '/../includes/middleware.php';
 require_admin();
 $csrf_token = generate_csrf_token();
 
-// Get admin info
 $stmt = $pdo->prepare("SELECT username, full_name FROM admins WHERE admin_id=?");
 $stmt->execute([$_SESSION['admin_id']]);
 $admin = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -16,23 +15,19 @@ if (!$admin) {
     exit;
 }
 
-// Get counts for header
 $students_count = $pdo->query("SELECT COUNT(*) AS count FROM students")->fetch(PDO::FETCH_ASSOC)['count'];
 $employers = $pdo->query("SELECT employer_id, username, name, company, work_start, work_end FROM employers ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 $evaluations_count = $pdo->query("SELECT COUNT(*) AS count FROM evaluations")->fetch(PDO::FETCH_ASSOC)['count'];
 
-// Get filter parameters
 $filter_student = $_GET['student_id'] ?? '';
 $filter_date_from = $_GET['date_from'] ?? '';
 $filter_date_to = $_GET['date_to'] ?? '';
 $filter_status = $_GET['status'] ?? '';
 $search = $_GET['search'] ?? '';
 
-// Fetch all students for filter dropdown
 $students_stmt = $pdo->query("SELECT student_id, first_name, last_name, course, school FROM students ORDER BY last_name, first_name");
 $students = $students_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Build query for student attendance summary
 $summary_query = "
     SELECT 
         s.student_id,
@@ -113,7 +108,6 @@ $summary_stmt = $pdo->prepare($summary_query);
 $summary_stmt->execute($params);
 $student_summaries = $summary_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Fetch detailed attendance for selected student
 $attendance_details = [];
 $selected_student = null;
 
@@ -672,7 +666,6 @@ include_once __DIR__ . '/../templates/admin_header.php';
                     if (!empty($startTime) && !empty($row['time_out']) &&
                         strpos($startTime, '0000') === false && strpos($row['time_out'], '0000') === false) {
                         $minutesWorked = max(0, (strtotime($row['time_out']) - strtotime($startTime)) / 60);
-                        // Auto-deduct 60 minutes if shift is greater than 4 hours (240 minutes)
                         if ($minutesWorked > 240) {
                             $minutesWorked -= 60;
                         }

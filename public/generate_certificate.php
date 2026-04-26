@@ -18,7 +18,6 @@ if (!isset($_SESSION['employer_id']) || $_SESSION['role'] !== "employer") {
 
 $employer_id = (int)$_SESSION['employer_id'];
 
-// Handle AJAX request
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
     header('Content-Type: application/json');
     
@@ -29,7 +28,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
 
     $student_id = (int)$_POST['student_id'];
     
-    // Fetch student data
     $stmt = $pdo->prepare("SELECT *,
         CONCAT(
             first_name,
@@ -47,7 +45,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
         exit;
     }
 
-    // Fetch evaluation
     $eval_check = $pdo->prepare("SELECT * FROM evaluations WHERE student_id = ? AND employer_id = ?");
     $eval_check->execute([$student_id, $employer_id]);
     $evaluation = $eval_check->fetch(PDO::FETCH_ASSOC);
@@ -57,7 +54,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
         exit;
     }
 
-    // Fetch attendance
     $attendance_stmt = $pdo->prepare("SELECT * FROM attendance WHERE student_id = ? ORDER BY log_date DESC");
     $attendance_stmt->execute([$student_id]);
     $attendance = $attendance_stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -114,7 +110,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
     }
     $signatureExists = !empty($signaturePath) && file_exists($signaturePath);
 
-    // Generate certificate PDF
     class CertificatePDF extends FPDF {
         public $certificate_no;
         public $signaturePath;
@@ -237,7 +232,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
 
     $pdf->Output('F', $certificatePath);
 
-    // Save to database
     $certStmt = $pdo->prepare("INSERT INTO certificates
         (student_id, employer_id, certificate_no, file_path, hours_completed, generated_at)
         VALUES (?, ?, ?, ?, ?, NOW())
@@ -263,7 +257,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
         exit;
     }
 
-    // Verify the certificate was saved
     usleep(100000);
     $verify_stmt = $pdo->prepare("SELECT certificate_id FROM certificates WHERE student_id = ? AND employer_id = ?");
     $verify_stmt->execute([$student_id, $employer_id]);
@@ -275,11 +268,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
         exit;
     }
 
-    // Save certificate hash
     $hashStmt = $pdo->prepare("INSERT INTO certificate_hashes (student_id, certificate_hash, generated_at) VALUES (?, ?, NOW()) ON DUPLICATE KEY UPDATE certificate_hash = VALUES(certificate_hash), generated_at = NOW()");
     $hashStmt->execute([$student_id, $certificate_no]);
 
-    // Send email notification
     if (!empty($student['email'])) {
         $capitalized_student_name = ucwords(strtolower($student['name']));
         $certificateAbsolutePath = __DIR__ . DIRECTORY_SEPARATOR . ltrim($certificatePath, '/\\');
@@ -293,7 +284,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
         }
     }
 
-    // Log to audit
     audit_log($pdo, 'Generate Certificate', "Certificate generated for student ID: $student_id, Certificate No: $certificate_no");
 
     echo json_encode([
@@ -304,7 +294,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
     exit;
 }
 
-// Regular page request (for backward compatibility)
 if (!isset($_GET['student_id'])) {
     header("Location: supervisor_dashboard.php");
     exit;
@@ -348,7 +337,6 @@ foreach ($attendance as $row) {
         $time_in = strtotime($row['time_in']);
         $time_out = strtotime($row['time_out']);
         $minutesWorked = max(0, ($time_out - $time_in) / 60);
-        // Auto-deduct 60 minutes if shift is greater than 4 hours (240 minutes)
         if ($minutesWorked > 240) {
             $minutesWorked -= 60;
         }
@@ -549,9 +537,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        // Verify the certificate was actually saved
-        // Add a small delay to ensure the write is committed
-        usleep(100000); // 100ms delay
+        usleep(100000);
         
         $verify_stmt = $pdo->prepare("SELECT certificate_id, file_path, generated_at FROM certificates WHERE student_id = ? AND employer_id = ?");
         $verify_stmt->execute([$student_id, $employer_id]);
@@ -591,7 +577,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         $_SESSION['success_message'] = "Certificate generated successfully and notification email sent to student!";
 
-        // Log supervisor certificate generation to audit_logs
         audit_log($pdo, 'Generate Certificate', "Certificate generated for student ID: $student_id, Certificate No: $certificate_no");
 
         header("Location: supervisor_dashboard.php?cert_generated=1");

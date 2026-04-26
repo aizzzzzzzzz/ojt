@@ -12,7 +12,6 @@ $employer_id = (int)$_SESSION['employer_id'];
 $success = "";
 $error = "";
 
-// Handle approve/reject actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $request_id = (int)($_POST['request_id'] ?? 0);
     $action = $_POST['action']; // 'approve' or 'reject'
@@ -20,7 +19,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     
     if ($request_id > 0 && in_array($action, ['approve', 'reject'])) {
         try {
-            // Verify this request belongs to a student under this supervisor
             $check_stmt = $pdo->prepare("
                 SELECT scr.student_id, s.created_by, s.company_id
                 FROM shift_change_requests scr
@@ -42,7 +40,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $approved_at = ($action === 'approve') ? 'NOW()' : 'NULL';
                 $update_stmt->execute([$status, $employer_id, $approved_at, $review_notes, $request_id]);
 
-                // Log action
                 audit_log($pdo, ucfirst($action) . ' Shift Request', "Shift request #$request_id {$status}d for student ID: {$request['student_id']}");
 
                 $success = "Request " . ($action === 'approve' ? 'approved' : 'rejected') . " successfully!";
@@ -56,7 +53,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 }
 
-// Get pending requests for this supervisor's students
 $pending_stmt = $pdo->prepare("
     SELECT scr.*, 
            CONCAT(s.first_name, ' ', s.last_name) AS student_name,
@@ -72,7 +68,6 @@ $pending_stmt = $pdo->prepare("
 $pending_stmt->execute([$employer_id, $employer_id]);
 $pending_requests = $pending_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Get recent processed requests
 $processed_stmt = $pdo->prepare("
     SELECT scr.*, 
            CONCAT(s.first_name, ' ', s.last_name) AS student_name,

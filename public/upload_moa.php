@@ -11,7 +11,6 @@ $csrf_token = generate_csrf_token();
 $success_message = '';
 $error_message = '';
 
-// Fetch all students for MOA assignment
 $students_stmt = $pdo->prepare("SELECT student_id, username, CONCAT(first_name, ' ', last_name) as full_name FROM students ORDER BY last_name, first_name");
 $students_stmt->execute();
 $students = $students_stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -39,7 +38,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($_FILES['moa_file']['size'] > 20 * 1024 * 1024) {
             $error_message = "File size must not exceed 20MB.";
         } else {
-            // Create table if it doesn't exist
             $createTableSQL = "
                 CREATE TABLE IF NOT EXISTS moa_documents (
                     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -64,7 +62,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $pdo->exec($createTableSQL);
                 
-                // Add missing columns if they don't exist
                 $alterSQL = [
                     "ALTER TABLE moa_documents ADD COLUMN supervisor_approval_status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending'",
                     "ALTER TABLE moa_documents ADD COLUMN supervisor_approved_at TIMESTAMP NULL",
@@ -79,7 +76,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     try {
                         $pdo->exec($sql);
                     } catch (PDOException $ae) {
-                        // Column might already exist, that's fine
                     }
                 }
             } catch (PDOException $e) {
@@ -91,7 +87,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if (move_uploaded_file($_FILES['moa_file']['tmp_name'], $destPath)) {
                 try {
-                    // Resume doesn't need approval, MOA and Endorsement Letter do
                     $is_new_student = ($document_type === 'Resume') ? 0 : 1;
                     $supervisor_status = ($document_type === 'Resume') ? 'approved' : 'pending';
                     $admin_status = ($document_type === 'Resume') ? 'approved' : 'pending';

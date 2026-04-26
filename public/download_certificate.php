@@ -11,7 +11,6 @@ if (!isset($_SESSION['student_id']) || $_SESSION['role'] !== "student") {
     exit;
 }
 
-// Log student download activity
 log_activity('Download Certificate', "Downloaded OJT certificate");
 
 $student_id = (int)$_SESSION['student_id'];
@@ -43,7 +42,6 @@ foreach ($attendance as $row) {
         $time_in = strtotime($row['time_in']);
         $time_out = strtotime($row['time_out']);
         $minutesWorked = max(0, ($time_out - $time_in) / 60);
-        // Auto-deduct 60 minutes if shift is greater than 4 hours (240 minutes)
         if ($minutesWorked > 240) {
             $minutesWorked -= 60;
         }

@@ -4,7 +4,6 @@ require_once __DIR__ . '/../private/config.php';
 require_once __DIR__ . '/../includes/middleware.php';
 require_once __DIR__ . '/../includes/audit.php';
 
-// Only students can access this
 if (!isset($_SESSION['student_id']) || $_SESSION['role'] !== 'student') {
     header("Location: login.php");
     exit;
@@ -15,7 +14,6 @@ $csrf_token = generate_csrf_token();
 $success_message = '';
 $error_message = '';
 
-// Get document type from URL parameter
 $document_type = $_GET['type'] ?? '';
 if (!in_array($document_type, ['MOA', 'Endorsement Letter', 'Resume'])) {
     header("Location: approval_status.php");
@@ -40,7 +38,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($_FILES['document_file']['size'] > 20 * 1024 * 1024) {
             $error_message = "File size must not exceed 20MB.";
         } else {
-            // Create table if it doesn't exist
             $createTableSQL = "
                 CREATE TABLE IF NOT EXISTS moa_documents (
                     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -65,7 +62,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $pdo->exec($createTableSQL);
 
-                // Add missing columns if they don't exist
                 $alterSQL = [
                     "ALTER TABLE moa_documents ADD COLUMN supervisor_approval_status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending'",
                     "ALTER TABLE moa_documents ADD COLUMN supervisor_approved_at TIMESTAMP NULL",
@@ -81,7 +77,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     try {
                         $pdo->exec($sql);
                     } catch (PDOException $ae) {
-                        // Column might already exist, that's fine
                     }
                 }
             } catch (PDOException $e) {
@@ -93,7 +88,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (move_uploaded_file($_FILES['document_file']['tmp_name'], $destPath)) {
                 try {
-                    // Delete any row with empty document_type for this student (cleanup bad data)
                     $pdo->prepare("DELETE FROM moa_documents WHERE student_id = ? AND (document_type = '' OR document_type IS NULL)")->execute([$student_id]);
                     
                     $stmt = $pdo->prepare("

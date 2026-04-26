@@ -11,7 +11,6 @@ if (!isset($_SESSION['employer_id']) || $_SESSION['role'] !== "employer") {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['student_id'])) {
     $student_id = (int) $_POST['student_id'];
 
-    // Get student name for logging
     $stmt = $pdo->prepare("SELECT username FROM students WHERE student_id = ?");
     $stmt->execute([$student_id]);
     $student = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -25,7 +24,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['student_id'])) {
     $stmt3 = $pdo->prepare("DELETE FROM students WHERE student_id = ?");
     $stmt3->execute([$student_id]);
 
-    // Log supervisor delete action
     audit_log($pdo, 'Delete Student', "Deleted student: " . ($student['username'] ?? "ID: $student_id"));
 
     $_SESSION['success'] = "Student deleted successfully.";

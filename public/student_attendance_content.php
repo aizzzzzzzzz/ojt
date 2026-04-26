@@ -149,7 +149,6 @@ $minutesWorked = 0;
 if (!empty($row['time_in']) && !empty($row['time_out'])) {
     $minutesWorked = max(0, (strtotime($row['time_out']) - strtotime($row['time_in'])) / 60);
 
-    // Auto-deduct 60 minutes if shift is greater than 4 hours (240 minutes)
     if ($minutesWorked > 240) {
         $minutesWorked -= 60;
     }
@@ -217,7 +216,6 @@ if (!empty($row['time_in']) && !empty($row['time_out'])) {
                 $minutesWorked = 0;
                 if (!empty($row['time_in']) && !empty($row['time_out'])) {
                     $minutesWorked = max(0, (strtotime($row['time_out']) - strtotime($row['time_in'])) / 60);
-                    // Auto-deduct 60 minutes if shift is greater than 4 hours (240 minutes)
                     if ($minutesWorked > 240) {
                         $minutesWorked -= 60;
                     }

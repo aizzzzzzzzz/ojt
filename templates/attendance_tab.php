@@ -204,7 +204,6 @@
         
         $shift_badge = '';
         
-        // Only show shift status if time_in exists, otherwise show Absent
         if (empty($row['time_in']) || strpos($row['time_in'], '0000') !== false) {
             $shift_badge = '<span class="shift-status-badge" style="color: #dc3545; font-weight: bold;">❌ Absent</span>';
         } elseif ($shift_status === 'on_time') {
@@ -238,7 +237,6 @@
 
         $minutesWorked = max(0, (strtotime($row['time_out']) - strtotime($startTime)) / 60);
 
-        // Auto-deduct 60 minutes if shift is greater than 4 hours (240 minutes)
         if ($minutesWorked > 240) {
             $minutesWorked -= 60;
         }
@@ -280,7 +278,6 @@
 
                 $shift_badge = '';
                 
-                // Only show shift status if time_in exists, otherwise show Absent
                 if (empty($row['time_in']) || strpos($row['time_in'], '0000') !== false) {
                     $shift_badge = '<span style="color: #dc3545; font-weight: bold;">❌ Absent</span>';
                 } elseif ($shift_status === 'on_time') {
@@ -321,7 +318,6 @@
                     if (!empty($startTime) && !empty($row['time_out']) &&
                         strpos($startTime, '0000') === false && strpos($row['time_out'], '0000') === false) {
                         $minutesWorked = max(0, (strtotime($row['time_out']) - strtotime($startTime)) / 60);
-                        // Auto-deduct 60 minutes if shift is greater than 4 hours (240 minutes)
                         if ($minutesWorked > 240) {
                             $minutesWorked -= 60;
                         }
