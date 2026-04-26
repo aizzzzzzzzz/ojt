@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 26, 2026 at 09:45 AM
+-- Generation Time: Apr 27, 2026 at 01:54 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -243,15 +243,6 @@ CREATE TABLE `moa_documents` (
   `admin_rejection_reason` text DEFAULT NULL,
   `is_new_student` tinyint(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `moa_documents`
---
-
-INSERT INTO `moa_documents` (`id`, `student_id`, `document_type`, `filename`, `filepath`, `supervisor_signature_path`, `uploaded_at`, `updated_at`, `supervisor_approval_status`, `supervisor_approved_at`, `supervisor_rejection_reason`, `admin_approval_status`, `admin_approved_at`, `admin_rejection_reason`, `is_new_student`) VALUES
-(1, 1, 'MOA', 'MEMORANDUM OF AGREEMENT.docx', 'C:\\xampp\\htdocs\\ojt\\public/../uploads/moa/69de24c10a2b8_MEMORANDUM OF AGREEMENT.docx', NULL, '2026-04-14 11:28:01', '2026-04-14 11:37:59', 'approved', '2026-04-14 11:37:02', NULL, 'approved', '2026-04-14 11:37:18', NULL, 0),
-(2, 1, 'Endorsement Letter', 'endorsement letter.docx', 'C:\\xampp\\htdocs\\ojt\\public/../uploads/moa/69de24c913e4f_endorsement letter.docx', NULL, '2026-04-14 11:28:09', '2026-04-14 11:37:59', 'approved', '2026-04-14 11:37:02', NULL, 'approved', '2026-04-14 11:37:19', NULL, 0),
-(8, 1, 'Resume', 'Resume.docx', 'C:\\xampp\\htdocs\\ojt\\public/../uploads/moa/69de2eb5434d3_Resume.docx', NULL, '2026-04-14 12:10:29', '2026-04-14 12:12:56', 'approved', '2026-04-14 12:10:39', NULL, 'approved', '2026-04-14 12:10:49', NULL, 0);
 
 -- --------------------------------------------------------
 
