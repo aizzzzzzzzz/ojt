@@ -627,7 +627,7 @@ $schedule_window = date('h:i A', strtotime($work_start_raw)) . ' - ' . date('h:i
                 <div class="actions-section">
                     <div class="action-card">
                         <div class="icon">👤</div>
-                        <a href="add_student.php">Add New Student</a>
+                        <a href="add_student.php">Add Student</a>
                     </div>
                     <div class="action-card">
                         <div class="icon">✅</div>
